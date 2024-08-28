@@ -63,7 +63,6 @@ let benefit2_uuid: Uuid
 let benefit3_uuid: Uuid
 let benefit4_uuid: Uuid
 
-
 describe("E2E Benefit tests", () => {
   describe("E2E Create benefit", () => {
     it("Should be able to create a new benefit", async () => {
