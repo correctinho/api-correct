@@ -87,6 +87,7 @@ export class CreateBusinessRegisterUsecase {
     })
   }
   private async verifyItems(items_uuid: string[]) {
+
     items_uuid.map(async (item) => {
       const findItem = await this.itemRepository.find(new Uuid(item))
       if (!findItem) throw new CustomError("Item not found", 404);

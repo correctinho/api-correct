@@ -12,7 +12,7 @@ const benefitInputCreate: InputCreateBenefitDto = {
     created_at: '',
     updated_at: ''
   }
-  
+
   const benefit = new BenefitsEntity(benefitInputCreate)
 
   const benefitInputUpdate: InputUpdateBenefitDTO = {
@@ -22,7 +22,7 @@ const benefitInputCreate: InputCreateBenefitDto = {
     item_type: 'gratuito',
     item_category: 'pre_pago',
     parent_uuid: null,
-   
+
   }
 
   const MockRepository = () => {
@@ -31,6 +31,8 @@ const benefitInputCreate: InputCreateBenefitDto = {
       find: jest.fn().mockReturnValue(Promise.resolve(benefit)),
       update: jest.fn(),
       findAll: jest.fn(),
+      findByName: jest.fn(),
+      findWithBranches: jest.fn()
     };
   };
 
@@ -41,7 +43,7 @@ const benefitInputCreate: InputCreateBenefitDto = {
 
         const output = await benefitUpdateUsecase.execute(benefitInputUpdate)
 
-        expect(output.uuid).toEqual(benefitInputUpdate.uuid)
+        expect(output.uuid).toEqual(benefitInputUpdate.uuid.uuid)
         expect(output.name).toEqual(benefitInputUpdate.name)
         expect(output.description).toEqual(benefitInputUpdate.description)
         expect(output.item_type).toEqual(benefitInputUpdate.item_type)
@@ -49,4 +51,3 @@ const benefitInputCreate: InputCreateBenefitDto = {
         expect(output.parent_uuid).toEqual(benefitInputUpdate.parent_uuid)
     })
   })
-  

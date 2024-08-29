@@ -65,10 +65,9 @@ export const companyIsAuth = async (req: Request, res: Response, next: NextFunct
           return next()
       }
     }catch(err: any){
-      console.log("Erro ao verificar token");
+      console.log("Erro ao verificar token do company admin");
 
     }
-
 
     return res.status(401).json({
         error: "Invalid Token"

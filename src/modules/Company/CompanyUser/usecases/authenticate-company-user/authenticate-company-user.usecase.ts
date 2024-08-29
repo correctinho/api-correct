@@ -55,7 +55,6 @@ export class AuthenticateCompanyUserUsecase {
         })
 
         const tokenGenerated = response.data.token
-
         return {
           token: tokenGenerated
         }

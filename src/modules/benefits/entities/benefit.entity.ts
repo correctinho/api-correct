@@ -43,7 +43,7 @@ export class BenefitsEntity {
     this._description = props.description;
     this._item_type = props.item_type;
     this._item_category = props.item_category;
-    this._parent_uuid = props.parent_uuid
+    this._parent_uuid = props.parent_uuid ?? null
     this._business_info_uuid = props.business_info_uuid ?? null
     this._created_at = props.created_at
     this._updated_at = props.updated_at

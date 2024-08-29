@@ -18,6 +18,8 @@ const MockRepository = () => {
       find: jest.fn(),
       update: jest.fn(),
       findAll: jest.fn(),
+      findByName: jest.fn(),
+      findWithBranches: jest.fn()
     };
   };
 
@@ -27,14 +29,15 @@ describe("Unit test create benefit usecase", () => {
         const createBenefitUsecase = new CreateBenefitUsecase(benefitMockRepository)
 
         const output = await createBenefitUsecase.execute(input)
+        expect(output).toHaveProperty('uuid')
+        expect(output.name).toBe(input.name)
+        expect(output.description).toBe(input.description)
+        expect(output.item_type).toBe(input.item_type)
+        expect(output.item_category).toBe(input.item_category)
+        expect(output.parent_uuid).toBe(input.parent_uuid)
+        expect(output.business_info_uuid).toBeFalsy()
 
-        expect(output).toEqual({
-            uuid: expect.any(Uuid),
-            name: input.name,
-            description: input.description,
-            item_type: input.item_type,
-            item_category: input.item_category
-        })
+
     })
 
     it("Should thrown an error if name is missing", async () => {

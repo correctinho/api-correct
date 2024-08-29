@@ -1,4 +1,4 @@
-import { Router, request } from "express";
+import { Router } from "express";
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
 import { updateBusinessInfo } from "../../modules/Company/CompanyData/usecases/update-business-info";
 import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/company-admin-auth.middlware";

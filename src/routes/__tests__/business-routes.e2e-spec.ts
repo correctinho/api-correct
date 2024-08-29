@@ -2,10 +2,12 @@ import request from 'supertest'
 import { app } from '../../app'
 import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo'
-
+import {randomUUID} from 'crypto'
 let correctAdminToken: string
-let business_info_uuid: string
+let partner_info_uuid: string
 let business_address_uuid: string
+
+let employer_info_uuid: string
 
 let business_user_token: string
 let business_admin_uuid: string
@@ -563,7 +565,7 @@ describe("E2E Business tests", () => {
             document: "comercio",
             classification: "Classificação",
             colaborators_number: 5,
-            email: "email@email.com",
+            email: "comercio@comercio.com",
             phone_1: "215745158",
             phone_2: "124588965",
             business_type: "comercio",
@@ -571,7 +573,7 @@ describe("E2E Business tests", () => {
           }
 
           const result = await request(app).post("/business/register").send(input)
-          business_info_uuid = result.body.business_info_uuid
+          partner_info_uuid = result.body.business_info_uuid
           business_address_uuid = result.body.address_uuid
 
           expect(result.statusCode).toBe(201)
@@ -596,7 +598,7 @@ describe("E2E Business tests", () => {
           expect(result.body.address_uuid).toEqual(result.body.address_fk_uuid)
         })
 
-        it("Should throw an error if business is already registered", async () => {
+        it("Should throw an error if business document is already registered", async () => {
           const input = {
             line1: "Rua",
             line2: "72B",
@@ -641,7 +643,7 @@ describe("E2E Business tests", () => {
             document: "comercio2",
             classification: "Classificação",
             colaborators_number: 5,
-            email: "email@email.com",
+            email: "comercio@comercio.com",
             phone_1: "215745158",
             phone_2: "124588965",
             business_type: "comercio",
@@ -683,7 +685,7 @@ describe("E2E Business tests", () => {
           expect(result.body.error).toBe("Item is required")
         })
 
-        it("Should throw an error if item is empty", async () => {
+        it("Should register new employer ", async () => {
           const input = {
             line1: "Rua",
             line2: "72B",
@@ -701,12 +703,15 @@ describe("E2E Business tests", () => {
             phone_1: "215745158",
             phone_2: "124588965",
             business_type: "empregador",
-            branch_name: "Frigoríficio",
-            items_uuid: [benefit1_uuid]
+            employer_branch: "Frigoríficio",
+            items_uuid: [benefit1_uuid, benefit3_uuid, benefit2_uuid]
           }
 
           const result = await request(app).post("/business/register").send(input)
           expect(result.statusCode).toBe(201)
+
+          employer_info_uuid = result.body.business_info_uuid
+
         })
       })
     })
@@ -759,17 +764,17 @@ describe("E2E Business tests", () => {
         const input = {
           address_uuid: business_address_uuid,
           fantasy_name: "Empresa novo nome",
-          document: "CNPJ",
+          document: "comercio",
           classification: "Classificação",
           colaborators_number: 5,
-          email: "email@email.com",
+          email: "comercio@comercio.com",
           phone_1: "215745158",
           phone_2: "124588965",
           business_type: "comercio"
         }
 
         const query = {
-          business_info_uuid: business_info_uuid
+          business_info_uuid: partner_info_uuid
         }
         const result = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(input)
         expect(result.statusCode).toBe(200)
@@ -790,7 +795,7 @@ describe("E2E Business tests", () => {
       it("Should throw an error if password is missing", async () => {
         const input = {
           password: "",
-          business_info_uuid,
+          partner_info_uuid,
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
 
@@ -812,7 +817,7 @@ describe("E2E Business tests", () => {
       it("Should throw an error if email is missing", async () => {
         const input = {
           password: "123456",
-          business_info_uuid
+          business_info_uuid: partner_info_uuid
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
 
@@ -823,7 +828,7 @@ describe("E2E Business tests", () => {
       it("Should throw an error if email is not found in company registeres", async () => {
         const input = {
           password: "123456",
-          business_info_uuid,
+          business_info_uuid: partner_info_uuid,
           email: "differentemail@email.com"
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
@@ -835,8 +840,8 @@ describe("E2E Business tests", () => {
       it("Should throw an error if business is still not validated by correct", async () => {
         const input = {
           password: "123456",
-          business_info_uuid,
-          email: "email@email.com"
+          business_info_uuid: partner_info_uuid,
+          email: "comercio@comercio.com"
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
 
@@ -849,24 +854,24 @@ describe("E2E Business tests", () => {
         const inputToInactivate = {
           address_uuid: business_address_uuid,
           fantasy_name: "Empresa novo nome",
-          document: "CNPJ",
+          document: "comercio",
           classification: "Classificação",
           colaborators_number: 5,
-          email: "email@email.com",
+          email: "comercio@comercio.com",
           phone_1: "215745158",
           phone_2: "124588965",
           business_type: "comercio",
           status: "inactive"
         }
         const query = {
-          business_info_uuid: business_info_uuid
+          business_info_uuid: partner_info_uuid
         }
         await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToInactivate)
 
         const input = {
           password: "123456",
-          business_info_uuid,
-          email: "email@email.com"
+          business_info_uuid: partner_info_uuid,
+          email: "comercio@comercio.com"
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
 
@@ -876,34 +881,33 @@ describe("E2E Business tests", () => {
 
       it("Should create business user", async () => {
         //activate business
-        const inputToInactivate = {
+        const inputToActivate = {
           address_uuid: business_address_uuid,
           fantasy_name: "Empresa novo nome",
-          document: "CNPJ",
+          document: "comercio",
           classification: "Classificação",
           colaborators_number: 5,
-          email: "email@email.com",
+          email: "comercio@comercio.com",
           phone_1: "215745158",
           phone_2: "124588965",
           business_type: "comercio",
           status: "active"
         }
         const query = {
-          business_info_uuid: business_info_uuid
+          business_info_uuid: partner_info_uuid
         }
-        await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToInactivate)
+        await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToActivate)
 
         const input = {
           password: "123456",
-          business_info_uuid,
-          email: "email@email.com"
+          business_info_uuid: partner_info_uuid,
+          email: "comercio@comercio.com"
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
-
         business_admin_uuid = result.body.uuid
         expect(result.statusCode).toBe(201)
         expect(result.body.uuid).toBeTruthy()
-        expect(result.body.business_info_uuid).toBe(business_info_uuid)
+        expect(result.body.business_info_uuid).toBe(partner_info_uuid)
         expect(result.body.email).toBe(input.email)
         expect(result.body.document).toBeFalsy()
         expect(result.body.is_admin).toBe(true)
@@ -917,8 +921,8 @@ describe("E2E Business tests", () => {
 
         const input = {
           password: "123456",
-          business_info_uuid,
-          email: "email@email.com"
+          business_info_uuid: partner_info_uuid,
+          email: "comercio@comercio.com"
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
 
@@ -975,9 +979,9 @@ describe("E2E Business tests", () => {
 
       it("Should throw an error if trying to login with right email and wrong password", async () => {
         const input = {
-          business_document: "CNPJ",
+          business_document: "comercio",
           password: "9847878",
-          email: "email@email.com"
+          email: "comercio@comercio.com"
         }
 
         const result = await request(app).post("/business/admin/login").send(input)
@@ -987,14 +991,13 @@ describe("E2E Business tests", () => {
 
       it("Should login user", async () => {
         const input = {
-          business_document: "CNPJ",
+          business_document: "comercio",
           password: "123456",
-          email: "email@email.com"
+          email: "comercio@comercio.com"
         }
 
         const result = await request(app).post("/business/admin/login").send(input)
         business_user_token = result.body.token
-
         expect(result.statusCode).toBe(200)
         expect(result.body.token).toBeTruthy()
       })
@@ -1123,7 +1126,7 @@ describe("E2E Business tests", () => {
       it("Should throw an error if user name is missing", async () => {
         const input = {
           password: "1345687",
-          business_info_uuid,
+          partner_info_uuid,
           user_name: ""
         }
         const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${business_user_token}`).send(input)
@@ -1134,7 +1137,7 @@ describe("E2E Business tests", () => {
       it("Should register a new user", async () => {
         const input = {
           password: "1345687",
-          business_info_uuid,
+          partner_info_uuid,
           user_name: 'user_name',
           permissions: ['finances']
         }
@@ -1142,7 +1145,7 @@ describe("E2E Business tests", () => {
         company_user_uuid = result.body.uuid
         expect(result.statusCode).toBe(201)
         expect(result.body.uuid).toBeTruthy()
-        expect(result.body.business_info_uuid).toBe(input.business_info_uuid)
+        expect(result.body.business_info_uuid).toBe(input.partner_info_uuid)
         expect(result.body.email).toBeFalsy()
         expect(result.body.document).toBeFalsy()
         expect(result.body.is_admin).toBeFalsy()
@@ -1156,7 +1159,7 @@ describe("E2E Business tests", () => {
       it("Should throw an error if user name already exists", async () => {
         const input = {
           password: "1345687",
-          business_info_uuid,
+          partner_info_uuid,
           user_name: 'user_name',
           permissions: ['finances']
         }
@@ -1185,7 +1188,7 @@ describe("E2E Business tests", () => {
         const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${business_user_token}`).query({ user_uuid: company_user_uuid })
         expect(result.statusCode).toBe(200)
         expect(result.body.uuid).toEqual(company_user_uuid)
-        expect(result.body.business_info_uuid).toEqual(business_info_uuid)
+        expect(result.body.business_info_uuid).toEqual(partner_info_uuid)
       })
     })
 
@@ -1193,13 +1196,13 @@ describe("E2E Business tests", () => {
       beforeAll(async () => {
         const input1 = {
           password: "1345687",
-          business_info_uuid,
+          partner_info_uuid,
           user_name: 'user_name2',
           permissions: ['finances']
         }
         const input2 = {
           password: "1345687",
-          business_info_uuid,
+          partner_info_uuid,
           user_name: 'user_name3',
           permissions: ['finances']
         }
@@ -1278,7 +1281,7 @@ describe("E2E Business tests", () => {
     describe("E2E Get Business data by business admin", () => {
       it("Should return business data", async () => {
         const result = await request(app).get("/business/info").set('Authorization', `Bearer ${business_user_token}`)
-        business_info_uuid = result.body.uuid
+        partner_info_uuid = result.body.uuid
         expect(result.statusCode).toBe(200)
       })
     })
@@ -1337,7 +1340,7 @@ describe("E2E Business tests", () => {
           business_type: "comercio"
         }
         const query = {
-          business_info_uuid: business_info_uuid
+          business_info_uuid: partner_info_uuid
         }
         const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
         expect(result.statusCode).toBe(200)
@@ -1410,6 +1413,129 @@ describe("E2E Business tests", () => {
         expect(data.body.Address.line1).toBe('Rua nova')
         expect(data.body.Address.line3).toBe('Complemento novo')
       })
+    })
+  })
+
+  describe("Employer Item Details by Correct Admin", () => {
+    let item_details_1: string
+    describe("E2E Find All Employer item details by correct admin", () => {
+      it("Should return an empty array", async () => {
+        const input = {
+          business_info_uuid: randomUUID()
+        }
+        const result = await request(app).get(`/business/item/details/correct/${input.business_info_uuid}`).set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.length).toBe(0)
+      })
+      it("Should return an array with item details", async () => {
+        const input = {
+          business_info_uuid: employer_info_uuid
+        }
+        const result = await request(app).get(`/business/item/details/correct/${input.business_info_uuid}`).set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.length).toBe(3)
+        expect(result.body[0].item_uuid).toEqual(benefit1_uuid)
+        expect(result.body[1].item_uuid).toEqual(benefit3_uuid)
+        expect(result.body[2].item_uuid).toEqual(benefit2_uuid)
+        expect(result.body[0].business_info_uuid).toEqual(employer_info_uuid)
+        expect(result.body[1].business_info_uuid).toEqual(employer_info_uuid)
+        expect(result.body[2].business_info_uuid).toEqual(employer_info_uuid)
+
+        item_details_1 = result.body[0].uuid
+      })
+    })
+    describe("E2E Find one item details by correct admin", () => {
+      it("Should throw an error if item details is not found", async () => {
+        const input = {
+          id: randomUUID()
+        }
+        const result = await request(app).get(`/business/item/details/${input.id}/correct/`).set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+        expect(result.statusCode).toBe(404)
+        expect(result.body.error).toBe("Item details not found")
+      })
+      it("Should return an item details", async () => {
+        const input = {
+          id: item_details_1
+        }
+        const result = await request(app).get(`/business/item/details/${input.id}/correct/`).set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.uuid).toEqual(item_details_1)
+      })
+    })
+    describe("E2E Update Business cycles by correct admin", () => {
+      it("Should throw an error if business id is missing", async () => {
+        const input = {
+          business_info_uuid: '',
+          item_uuid: 'any uuid',
+          cycle_end_day: 2
+        }
+        const result = await request(app).patch("/business/item/details/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe('Business Id is required')
+      })
+
+      it("Should throw an error if business id is missing", async () => {
+        const input = {
+          business_info_uuid: 'any uuid',
+          item_uuid: '',
+          cycle_end_day: 2
+        }
+        const result = await request(app).patch("/business/item/details/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe('Item Id is required')
+      })
+
+      it("Should throw an error if cycle end day is missing", async () => {
+        const input = {
+          business_info_uuid: 'any uuid',
+          item_uuid: 'any uuid',
+        }
+        const result = await request(app).patch("/business/item/details/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe('Cycle end day is required')
+      })
+      it("Should throw an error if cycle end day is equal to zero", async () => {
+        const input = {
+          business_info_uuid: 'any uuid',
+          item_uuid: 'any uuid',
+          cycle_end_day: 0
+
+        }
+        const result = await request(app).patch("/business/item/details/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe('Cycle end day is required')
+      })
+      it("Should throw an error if item cannot be found", async () => {
+        const input = {
+          business_info_uuid: 'any uuid',
+          item_uuid: 'any uuid',
+          cycle_end_day: 1
+
+        }
+        const result = await request(app).patch("/business/item/details/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+
+        expect(result.statusCode).toBe(404)
+        expect(result.body.error).toBe('Item not found')
+      })
+
+      it("Should set new cycle end day", async () => {
+        const input = {
+          business_info_uuid: employer_info_uuid,
+          item_uuid: benefit1_uuid,
+          cycle_end_day: 5
+
+        }
+        const result = await request(app).patch("/business/item/details/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+
+        expect(result.statusCode).toBe(200)
+        expect(result.body.cycle_end_day).toBe(5)
+        expect(result.body.cycle_start_day).toBe(4)
+      })
+
     })
   })
 })

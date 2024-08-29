@@ -39,7 +39,7 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
           created_at: newDateF(new Date())
         }
       }),
-      prismaClient.businessInfoItem.createMany({
+      prismaClient.employerItemDetails.createMany({
         data: data.items_uuid.map(itemUuid => ({
           uuid: randomUUID(),
           item_uuid: itemUuid,

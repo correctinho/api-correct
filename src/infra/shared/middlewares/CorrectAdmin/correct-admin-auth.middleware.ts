@@ -51,7 +51,7 @@ export const correctIsAuth = async (req: Request, res: Response, next: NextFunct
       return next();
     }
   } catch (err: any) {
-    console.log("Erro ao verificar token");
+    console.log("Erro ao verificar token do correct Admin");
   }
 
   return res.status(401).json({
