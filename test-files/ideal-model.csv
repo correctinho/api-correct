@@ -1,0 +1,16 @@
+﻿codigo_interno,company_owner,nome_completo,sexo,rg,cpf,data_nascimento,estado_civil,total_dependentes,cargo,remuneracao
+4,false,João da Silva,M,6514651,596.602.790-00,3/15/1985,Solteiro,2,Analista de Vendas,5000
+91,false,Maria Santos,F,987616565543-2,601.943.590-34,7/25/1990,Casado,1,Gerente de Marketing,8000
+91,false,Pedro Oliveira,M,65165,11444843087,12/10/1988,Divorciado,0,Analista de TI,6000
+98198,false,Ana Pereira,F,651,40650089057,9/3/1995,Solteiro,3,Designer Gráfico,4500
+19,false,Carlos Rodrigues,M,8748,875.488.760-76,5/18/1983,Casado,2,Engenheiro Civil,7000
+196,false,Sofia Almeida,F,561,789.448.820-88,11/22/1987,Viúvo,0,Recepcionista,3500
+1,false,André Fernandes,M,6591,343.942.110-42,2/5/1992,Solteiro,1,Analista de RH,5500
+9198,false,Laura Costa,F,59681,25512160010,8/12/1998,Casado,2,Contador,6500
+1,false,José Pereira,M,8949841648,36336363074,4/30/1980,Divorciado,4,Gerente de Produção,7500
+16,false,Rita Ferreira,F,9581,88296253020,6/20/1993,Solteiro,0,Analista de Marketing,5000
+16,false,Manuel Santos,M,2109898198,54716718050,1/8/1986,Casado,2,Advogado,8000
+165,false,Beatriz Silva,F,891,77415409043,10/14/1997,Solteira,0,Estudante,2000
+1698,false,Miguel Sousa,M,98432,350.707.670-54,7/27/1989,Casado,3,Médico,9000
+18,false,Helena Ramos,F,9843,403.539.780-60,4/11/1994,Solteira,1,Analista Financeiro,6000
+691,false,Guilherme Mendes,M,64981,93775279024,9/19/1982,Divorciado,2,Consultor de Vendas,7000

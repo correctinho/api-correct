@@ -1,5 +1,5 @@
 import { Router, response } from "express";
-import uploadConfig from '../../infra/shared/multer/multer.config'
+import uploadConfig from '../../infra/shared/multer/multer.csv.memory.config'
 import multer from 'multer'
 import { authenticateAppUserController } from "../../modules/AppUser/AppUserManagement/usecases/UserAuth/app-user-authentication";
 import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
@@ -19,7 +19,7 @@ import { getUserAddressController } from "../../modules/AppUser/AppUserManagemen
 import { updateUserAddressController } from "../../modules/AppUser/AppUserManagement/usecases/UserAddress/update-app-user-address";
 
 const appUserRouter = Router()
-const upload = multer(uploadConfig.upload("./tmp"))
+const upload = multer(uploadConfig.upload())
 
 
 //**********User Auth*********** */

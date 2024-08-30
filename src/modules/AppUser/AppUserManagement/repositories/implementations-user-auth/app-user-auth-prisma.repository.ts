@@ -2,12 +2,10 @@ import { prismaClient } from "../../../../../infra/databases/prisma.config";
 import { AppUserAuthSignUpEntity } from "../../entities/app-user-auth.entity";
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { IAppUserAuthRepository } from "../app-use-auth-repository";
+import { newDateF } from "../../../../../utils/date";
 
 export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
-    update(entity: AppUserAuthSignUpEntity): Promise<void> {
-        throw new Error("Method not implemented.");
-    }
-   
+
     async find(id: Uuid): Promise<AppUserAuthSignUpEntity | null> {
         const user = await prismaClient.userAuth.findUnique({
             where:{
@@ -47,19 +45,19 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
     }
 
 
-    // async update(data: AppUserAuthSignUpEntity): Promise<void> {
-    //     await prismaClient.userAuth.update({
-    //         where: {
-    //             document: data.document
-    //         },
-    //         data: {
-    //             user_info_uuid: data.user_info_uuid,
-    //             document: data.document,
-    //             email: data.email,
-    //             updated_at: newDateF(new Date())
-    //         }
-    //     })
-    // }
+    async update(data: AppUserAuthSignUpEntity): Promise<void> {
+        await prismaClient.userAuth.update({
+            where: {
+                document: data.document
+            },
+            data: {
+                user_info_uuid: data.user_info_uuid.uuid,
+                document: data.document,
+                email: data.email,
+                updated_at: newDateF(new Date())
+            }
+        })
+    }
 
     // async saveOrUpdate(data: AppUserAuthSignUpEntity): Promise<void> {
     //     await prismaClient.userAuth.upsert({
@@ -123,7 +121,7 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
             created_at: appUser.created_at,
             updated_at: appUser.updated_at
 
-        } as AppUserAuthSignUpEntity 
+        } as AppUserAuthSignUpEntity
     }
 
     async findByDocument(document: string): Promise<AppUserAuthSignUpEntity | null> {

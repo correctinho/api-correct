@@ -23,7 +23,14 @@ declare global {
         created_at: string,
         updated_at: string
       },
-      appUserId: string
+      appUser: {
+        appUserId: string
+        document: string,
+        email:string,
+        created_at: string,
+        updated_at: string | null
+
+      }
     }
   }
 }

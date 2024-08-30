@@ -41,7 +41,7 @@ describe("Unity Tests Find Employer item details usecase", () => {
 
 
     const result = await usecase.execute(input.id.uuid)
-    expect(result.employer_item_details.length).toBe(0)
+    expect(result.length).toBe(0)
   })
 
   it("Should return an list of arrays", async () => {
@@ -85,7 +85,7 @@ describe("Unity Tests Find Employer item details usecase", () => {
 
 
     const result = await usecase.execute(input.id.uuid)
-    expect(result.employer_item_details.length).toBe(3)
+    expect(result.length).toBe(3)
   })
 
 

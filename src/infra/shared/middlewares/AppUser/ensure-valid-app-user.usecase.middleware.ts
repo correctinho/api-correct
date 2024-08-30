@@ -11,6 +11,6 @@ export class EnsureValidAppUserUsecase {
         const appUser = await this.appUserAutRepository.find(id)
         if(!appUser) throw new CustomError("User is not allowed to access", 401)
 
-       return appUser.uuid
+       return appUser
     }
 }

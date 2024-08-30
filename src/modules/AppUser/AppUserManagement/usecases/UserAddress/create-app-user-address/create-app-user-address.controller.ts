@@ -17,8 +17,8 @@ export class CreateAppUserAddressController{
     async handle(req: Request, res: Response){
         try{
             const data:InputCreateUserAddressDTO = req.body
-            
-            data.user_uuid = new Uuid(req.appUserId)
+
+            data.user_uuid = new Uuid(req.appUser.appUserId)
 
             const addressUsecase = new CreateAppUserAddressUsecase(this.addressRepository, this.userInfoRepository, this.userAuthRepository)
 

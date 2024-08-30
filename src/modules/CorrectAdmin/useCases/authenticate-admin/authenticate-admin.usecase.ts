@@ -34,7 +34,7 @@ export class AuthenticateAdminUseCase{
               data:{
                 user_uuid: admin.uuid.uuid
               },
-              seconds: 600
+              seconds: 2000
             })
 
             const tokenGenerated = response.data.token

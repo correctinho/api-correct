@@ -9,7 +9,7 @@ export class DocumentValidator {
         const onlyNumberDocument = this.processDocument(document)
 
         //validate document length
-        if (onlyNumberDocument.length !== 11) throw new CustomError("Document must have 11 characters", 400)
+        if (onlyNumberDocument.length !== 11) throw new CustomError(`Document must have 11 characters: ${document}`, 400)
 
         //validate if document has only numbers
         const documentRegex = /^[0-9]+$/;

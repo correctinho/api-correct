@@ -1,142 +1,167 @@
-import path from 'path'
-import fs from 'fs'
-import csv from 'csv-parser'
+import csv from 'csv-parser';
+import { Readable } from 'stream';
 import { CustomError } from '../../../../../errors/custom.error';
 import { AppUserInfoRequest } from '../../../app-user-dto/app-user.dto';
 import { IAppUserInfoRepository } from '../../../AppUserManagement/repositories/app-user-info.repository';
-import { AppUserInfoEntity, AppUserInfoProps } from '../../../AppUserManagement/entities/app-user-info.entity';
+import { AppUserInfoCreateCommand, AppUserInfoEntity, AppUserInfoProps } from '../../../AppUserManagement/entities/app-user-info.entity';
 import { ICompanyDataRepository } from '../../../../Company/CompanyData/repositories/company-data.repository';
 import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
+import { IAppUserAuthRepository } from '../../../AppUserManagement/repositories/app-use-auth-repository';
+import { AppUserAuthSignUpEntity } from '../../../AppUserManagement/entities/app-user-auth.entity';
 
+export class CreateAppUserByCorrectUsecaseTest {
+  constructor(
+    private appUserInfoRepository: IAppUserInfoRepository,
+    private businessRepository: ICompanyDataRepository,
+    private appUserAuthRepository: IAppUserAuthRepository
+  ) { }
 
+  async execute(fileBuffer: Buffer, business_info_uuid: string) {
+    let validatedUser: AppUserInfoEntity[] = [];
+    let errorUser: string[] = [];
+    let usersRegistered: string[] = [];
+    let associatedUsers: string[] = [];
 
-export class CreateAppUserByCorrectUsecase {
-    constructor(
-        private appUserInfoRepository: IAppUserInfoRepository,
-        private businessRepository: ICompanyDataRepository
-    ) { }
+    if (!business_info_uuid) throw new CustomError("Business Id is required", 400);
 
-    async execute(csvFilePath: string, business_info_uuid: string) {
+    const business = await this.businessRepository.findById(business_info_uuid);
+    if (!business) throw new CustomError("Business not found", 404);
+    if (business.status !== 'active') throw new CustomError("Business must be activated", 400);
 
-        //find business by id
-        const business = await this.businessRepository.findById(business_info_uuid)
-        if(!business) throw new CustomError("Business not found", 404)
+    const users = await this.readCSV(fileBuffer);
+    await this.validateUser(users, business_info_uuid, validatedUser, errorUser);
+    await this.processUsers(validatedUser, business_info_uuid, usersRegistered, associatedUsers);
 
-        const filePath = path.join(__dirname, '..', '..', '..', '..', '..','..', 'tmp', csvFilePath);
-        if (!fs.existsSync(filePath)) throw new CustomError("File not found", 400);
-        
-        return await this.readCSV(filePath, business_info_uuid)
-        
-    }
+    return { usersRegistered, errorUser, associatedUsers };
+  }
 
-    private async readCSV(filePath: string, business_info_uuid: string){
-        let results: AppUserInfoRequest[] = [];
-        let usersRegistered: AppUserInfoRequest[] = [];
-        let alreadyRegistered: string[] = [];
+  private async readCSV(fileBuffer: Buffer): Promise<AppUserInfoRequest[]> {
+    let usersFromCSV: AppUserInfoRequest[] = [];
 
+    return new Promise((resolve, reject) => {
+      const stream = Readable.from(fileBuffer.toString());
 
-        return new Promise((resolve, reject) => {
+      stream
+        .pipe(csv({ separator: ',' }))
+        .on('data', (data) => {
+          try {
+            if (data['\ufeffcodigo_interno'] && data['company_owner'] && data['nome_completo'] && data['sexo'] && data['rg'] && data['cpf'] && data['data_nascimento'] && data['estado_civil'] && data['total_dependentes'] && data['cargo'] && data['remuneracao']) {
 
-            fs.createReadStream(filePath)
-                .pipe(csv({ separator: ',' }))
-                .on('data', async (data) => {
-                    try{
-                       
-                        
-                    // All csv header title must be in this condition
-                    if (data['\ufeffcodigo_interno'] && data['company_owner'] && data['nome_completo'] && data['sexo'] && data['rg'] && data['cpf'] && data['data_nascimento'] && data['estado_civil'] && data['total_dependentes'] && data['cargo'] && data['remuneracao']) {
+              const internal_company_code = data['\ufeffcodigo_interno'];
+              const company_owner = JSON.parse(data['company_owner']);
+              const full_name = data['nome_completo'];
+              const gender = data['sexo'];
+              const document2 = data['rg'];
+              const document = data['cpf'];
+              const date_of_birth = data['data_nascimento'];
+              const marital_status = data['estado_civil'];
+              const dependents_quantity = +data['total_dependentes'];
+              const user_function = data['cargo'];
+              const salary = Number(data['remuneracao']);
 
-                        // Process CSV data
-                        const internal_company_code = await data['codigo_interno'];
-                        const company_owner = JSON.parse(await data['company_owner']);
-                        const full_name = await data['nome_completo'];
-                        const gender = await data['sexo'];
-                        const document2 = await data['rg'];
-                        const document = await data['cpf'];
-                        const date_of_birth = await data['data_nascimento'];
-                        const marital_status = await data['estado_civil'];
-                        const dependents_quantity = +await data['total_dependentes'];
-                        const user_function = await data['cargo']
-                        const salary = await data['remuneracao']
+              const userDataFromCSV: AppUserInfoRequest = {
+                document,
+                document2,
+                full_name,
+                internal_company_code,
+                gender,
+                company_owner,
+                date_of_birth,
+                marital_status,
+                dependents_quantity,
+                user_function,
+                salary
+              };
 
-                        const userDataFromCSV: AppUserInfoRequest = {
-                            
-                            document,
-                            document2,
-                            full_name,
-                            internal_company_code,
-                            gender,
-                            company_owner,
-                            date_of_birth,
-                            marital_status,
-                            dependents_quantity,
-                            user_function,
-                            salary
-
-                        };
-
-                        //if everything works fine, add all data to results Array
-                        results.push(userDataFromCSV);
-                    } else {
-                        throw new CustomError("Caiu aqui", 400)
-                    }
-                }catch(err){
-                    reject(err)
-                }
-
-                })
-                .on('end', async () => {
-
-                    //after adding everything, pass each user from Results array
-                    for (const user of results) {
-                        const data: AppUserInfoProps = {
-                            business_info_uuid: new Uuid(business_info_uuid),
-                            document: user.document,
-                            document2: user.document2,
-                            document3: null,
-                            address_uuid: null,
-                            is_authenticated: false,
-                            full_name: user.full_name,
-                            phone:null,
-                            status: 'pending',
-                            internal_company_code: user.internal_company_code,
-                            company_owner: user.company_owner,
-                            gender: user.gender,
-                            date_of_birth: user.date_of_birth,
-                            function: user.user_function,
-                            salary: user.salary,
-                            dependents_quantity: user.dependents_quantity,
-                            marital_status: user.marital_status,
-                            display_name: '',
-                            email: null,
-                            user_document_validation_uuid:null,
-                            recommendation_code: ''
-
-                        }
-                        const appUser = await AppUserInfoEntity.create(data)
-                        
-                        const findUser = await this.appUserInfoRepository.findByDocumentUserInfo(user.document)
-
-                        // const findByDocument2 = await this.appUserInfoRepository.findByDocument2UserInfo(user.document2)
-                        
-                        if (findUser) {
-                            // if(findByDocument2?.document === findUser.document){
-                            //     alreadyRegistered.push(user.document);
-                            // } else {
-                            //     alreadyRegistered.push(user.document);
-
-                            // }
-
-                            alreadyRegistered.push(user.document);
-                        } else {
-                            await this.appUserInfoRepository.saveOrUpdate(appUser)
-                            usersRegistered.push(user)
-
-                        }
-                    }
-
-                    resolve({ usersRegistered, alreadyRegistered });
-                });
+              usersFromCSV.push(userDataFromCSV);
+            } else {
+              throw new CustomError("Caiu aqui", 400);
+            }
+          } catch (err) {
+            reject(err);
+          }
+        })
+        .on('end', () => {
+          resolve(usersFromCSV);
+        })
+        .on('error', (err) => {
+          reject(err);
         });
+    });
+  }
+
+  private async validateUser(users: AppUserInfoRequest[], business_info_uuid: string, validatedUser: AppUserInfoEntity[], errorUser: string[]) {
+    for (const user of users) {
+      const data: AppUserInfoCreateCommand = {
+        business_info_uuid: new Uuid(business_info_uuid),
+        address_uuid: null,
+        document: user.document,
+        document2: user.document2,
+        document3: null,
+        full_name: user.full_name,
+        display_name: '',
+        internal_company_code: user.internal_company_code,
+        gender: user.gender,
+        date_of_birth: user.date_of_birth,
+        phone: null,
+        email: null,
+        salary: user.salary,
+        company_owner: user.company_owner,
+        status: 'pending',
+        function: user.user_function,
+        recommendation_code: null,
+        is_authenticated: false,
+        marital_status: user.marital_status,
+        dependents_quantity: user.dependents_quantity,
+        user_document_validation_uuid: null,
+      };
+
+      try {
+        const appUser = await AppUserInfoEntity.create(data);
+        validatedUser.push(appUser);
+      } catch (error: any) {
+        errorUser.push(`Erro ao criar usuário: ${user.document} - ${error}`);
+      }
     }
+  }
+
+  private async processUsers(users: AppUserInfoEntity[], business_info_uuid: string, usersRegistered: string[], associatedUsers: string[]) {
+    for (const user of users) {
+      const existingUserInfo = await this.appUserInfoRepository.findByDocumentUserInfo(user.document);
+      const findUserAuth = await this.appUserAuthRepository.findByDocument(user.document);
+      if (existingUserInfo && (existingUserInfo?.business_info_uuid && existingUserInfo?.business_info_uuid?.uuid !== business_info_uuid)) {
+
+        associatedUsers.push(existingUserInfo?.document);
+
+      }else if (!existingUserInfo && !findUserAuth) {
+
+
+        const userInfoentity = new AppUserInfoEntity(user);
+        await this.appUserInfoRepository.saveOrUpdateByCSV(userInfoentity);
+        usersRegistered.push(userInfoentity.document);
+
+      } else if (findUserAuth && !existingUserInfo) {
+
+
+        await this.appUserInfoRepository.createUserInfoandUpdateUserAuthByCSV(user);
+        usersRegistered.push(user.document);
+
+      } else if (existingUserInfo) {
+
+        const userInfoentity = new AppUserInfoEntity(user);
+        userInfoentity.changeBusinessInfoUuid(new Uuid(business_info_uuid));
+
+        await this.appUserInfoRepository.saveOrUpdateByCSV(user);
+        usersRegistered.push(user.document);
+
+        if (findUserAuth) {
+
+
+          const userAuthEntity = new AppUserAuthSignUpEntity(findUserAuth);
+          userAuthEntity.changeUserInfo(existingUserInfo.uuid);
+          await this.appUserAuthRepository.update(userAuthEntity);
+        }
+      }
+    }
+  }
 }

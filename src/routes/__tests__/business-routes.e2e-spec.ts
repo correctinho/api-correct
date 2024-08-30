@@ -3,6 +3,8 @@ import { app } from '../../app'
 import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo'
 import {randomUUID} from 'crypto'
+import path from 'path'
+
 let correctAdminToken: string
 let partner_info_uuid: string
 let business_address_uuid: string
@@ -1538,4 +1540,6 @@ describe("E2E Business tests", () => {
 
     })
   })
+
+
 })

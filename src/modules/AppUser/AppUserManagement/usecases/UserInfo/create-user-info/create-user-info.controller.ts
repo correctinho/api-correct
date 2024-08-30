@@ -17,13 +17,13 @@ export class CreateUserInfoController{
         try{
 
             const data = req.body as InputCreateUserInfoDTO
-    
-            data.user_id = new Uuid(req.appUserId)
-    
+
+            data.user_id = new Uuid(req.appUser.appUserId)
+
             const userInfoUsecase = new CreateAppUserInfoUsecase(this.appUserInfoRepository, this.appUserAuthRepository)
-    
+
             await userInfoUsecase.execute(data)
-            
+
             return res.status(201).json({sucess: "User info registered successfully"})
         }catch(err: any){
             return res.status(err.statusCode).json({
