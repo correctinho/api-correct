@@ -19,7 +19,9 @@ const BenefitsMockRepository = () => {
     update: jest.fn(),
     findAll: jest.fn(),
     findByName: jest.fn(),
-    findWithBranches: jest.fn()
+    findWithBranches: jest.fn(),
+    createCustomBenefit: jest.fn(),
+    findByBusiness: jest.fn()
   };
 };
 

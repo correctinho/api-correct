@@ -1,6 +1,6 @@
 import request from 'supertest'
 import { app } from '../../app'
-import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
+import { InputCreateBenefitDto, ItemCategory, ItemType } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo'
 import { randomUUID } from 'crypto'
 import path from 'path'
@@ -1497,6 +1497,21 @@ describe("E2E Business tests", () => {
       });
     })
     describe("E2E Find All Employer item details by correct admin", () => {
+      beforeAll(async () => {
+        const input = {
+          name: "Vale Alimentação",
+          description: "Descrição",
+          parent_uuid: null as any,
+          item_type: 'gratuito' as ItemType,
+          item_category: 'pre_pago' as ItemCategory,
+          business_info_uuid: employer_info_uuid,
+          cycle_end_day: 2
+        }
+
+        const result = await request(app).post('/benefit/custom').set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+        expect(result.statusCode).toBe(201)
+
+      })
       it("Should return an empty array", async () => {
         const input = {
           business_info_uuid: randomUUID()
@@ -1511,7 +1526,7 @@ describe("E2E Business tests", () => {
         }
         const result = await request(app).get(`/business/item/details/correct/${input.business_info_uuid}`).set('Authorization', `Bearer ${correctAdminToken}`).send(input)
         expect(result.statusCode).toBe(200)
-        expect(result.body.length).toBe(4)
+        expect(result.body.length).toBe(5)
         expect(result.body[0].item_uuid).toEqual(benefit1_uuid)
         expect(result.body[1].item_uuid).toEqual(benefit3_uuid)
         expect(result.body[2].item_uuid).toEqual(benefit2_uuid)

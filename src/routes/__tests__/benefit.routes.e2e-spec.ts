@@ -1,9 +1,9 @@
 import request from 'supertest'
 import { app } from '../../app'
-import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
+import { InputCreateBenefitDto, ItemCategory, ItemType } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo';
 import { BranchDTO } from '../../modules/benefits/usecases/get-benefit-by-id/get-benefit.dto';
-
+import {randomUUID} from 'crypto'
 const inputNewAdmin = {
   name: "Admin Correct",
   email: "admincorrect@correct.com.br",
@@ -98,7 +98,127 @@ describe("E2E Benefit tests", () => {
       // expect(result.body.description).toEqual(updateInput.description);
     });
   })
+
+  describe("E2E Create Custom business benefit", () => {
+    let employer_info_uuid: string
+    beforeAll(async () => {
+      const input = {
+        line1: "Rua",
+        line2: "72B",
+        line3: "",
+        neighborhood: "Bairro Teste",
+        postal_code: "5484248423",
+        city: "Cidade teste",
+        state: "Estado teste",
+        country: "País teste",
+        fantasy_name: "Empresa teste",
+        document: "empregador",
+        classification: "Classificação",
+        colaborators_number: 5,
+        email: "empregador@empregador.com",
+        phone_1: "215745158",
+        phone_2: "124588965",
+        business_type: "empregador",
+        employer_branch: "Frigoríficio",
+        items_uuid: [benefit1_uuid]
+      }
+
+      const result = await request(app).post("/business/register").send(input)
+      expect(result.statusCode).toBe(201)
+      employer_info_uuid = result.body.business_info_uuid
+
+    })
+
+    it("Should throw an error if business id is missing", async () => {
+      const input = {
+        name: "Vale Alimentação",
+        description: "Descrição do vale",
+        parent_uuid: null as any,
+        item_type: 'gratuito' as ItemType,
+        item_category: 'pre_pago' as ItemCategory,
+        business_info_uuid: '',
+        cycle_end_day: 2
+      }
+
+      const result = await request(app).post('/benefit/custom').set('Authorization', `Bearer ${authToken}`).send(input)
+      expect(result.statusCode).toBe(400)
+      expect(result.body.error).toBe("Business id is required")
+    })
+
+    it("Should throw an error if cycle end day is missing", async () => {
+      const input = {
+        name: "Vale Alimentação",
+        description: "Descrição do vale",
+        parent_uuid: null as any,
+        item_type: 'gratuito' as ItemType,
+        item_category: 'pre_pago' as ItemCategory,
+        business_info_uuid: employer_info_uuid,
+        cycle_end_day: 0
+      }
+
+      const result = await request(app).post('/benefit/custom').set('Authorization', `Bearer ${authToken}`).send(input)
+      expect(result.statusCode).toBe(400)
+      expect(result.body.error).toBe("Cycle end day is required")
+    })
+
+    it("Should throw an error if description is missing", async () => {
+      const input = {
+        name: "Vale Alimentação",
+        description: "",
+        parent_uuid: null as any,
+        item_type: 'gratuito' as ItemType,
+        item_category: 'pre_pago' as ItemCategory,
+        business_info_uuid: employer_info_uuid,
+        cycle_end_day: 2
+      }
+
+      const result = await request(app).post('/benefit/custom').set('Authorization', `Bearer ${authToken}`).send(input)
+      expect(result.statusCode).toBe(400)
+      expect(result.body.error).toBe("Description is required")
+    })
+
+    it("Should throw an error if business is not found", async () => {
+      const input = {
+        name: "Vale Alimentação",
+        description: "Descrição",
+        parent_uuid: null as any,
+        item_type: 'gratuito' as ItemType,
+        item_category: 'pre_pago' as ItemCategory,
+        business_info_uuid: randomUUID(),
+        cycle_end_day: 2
+      }
+
+      const result = await request(app).post('/benefit/custom').set('Authorization', `Bearer ${authToken}`).send(input)
+      expect(result.statusCode).toBe(404)
+      expect(result.body.error).toBe("Business not found")
+    })
+    it("Should create a new business custom benefit", async () => {
+      const input = {
+        name: "Vale Alimentação",
+        description: "Descrição",
+        parent_uuid: null as any,
+        item_type: 'gratuito' as ItemType,
+        item_category: 'pre_pago' as ItemCategory,
+        business_info_uuid: employer_info_uuid,
+        cycle_end_day: 2
+      }
+
+      const result = await request(app).post('/benefit/custom').set('Authorization', `Bearer ${authToken}`).send(input)
+      expect(result.statusCode).toBe(201)
+      expect(result.body).toHaveProperty('uuid')
+      expect(result.body.name).toBe(input.name)
+      expect(result.body.description).toBe(input.description)
+      expect(result.body.item_type).toBe(input.item_type)
+      expect(result.body.item_category).toBe(input.item_category)
+      expect(result.body.business_info_uuid).toBe(input.business_info_uuid)
+      expect(result.body.cycle_end_day).toBe(input.cycle_end_day)
+      expect(result.body.cycle_start_day).toBe(input.cycle_end_day + 1)
+
+    })
+  })
+
 })
+
 
 describe("E2E Branch tests", () => {
 

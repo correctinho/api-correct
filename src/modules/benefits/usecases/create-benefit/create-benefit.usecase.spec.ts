@@ -8,8 +8,6 @@ const input: InputCreateBenefitDto = {
     parent_uuid: null,
     item_type: 'gratuito',
     item_category: 'pre_pago',
-    created_at: '',
-    updated_at: ''
 }
 
 const MockRepository = () => {
@@ -19,7 +17,9 @@ const MockRepository = () => {
       update: jest.fn(),
       findAll: jest.fn(),
       findByName: jest.fn(),
-      findWithBranches: jest.fn()
+      findWithBranches: jest.fn(),
+      createCustomBenefit: jest.fn(),
+      findByBusiness: jest.fn()
     };
   };
 

@@ -8,10 +8,8 @@ export interface InputCreateBenefitDto {
     description: string
     item_type: ItemType
     item_category: ItemCategory
-    parent_uuid: Uuid | null
-    business_info_uuid?: Uuid | null
-    created_at?: string
-    updated_at?: string
+    parent_uuid: string | null
+    business_info_uuid?: string| null
 }
 
 export interface OutputCreateBenefitDto {

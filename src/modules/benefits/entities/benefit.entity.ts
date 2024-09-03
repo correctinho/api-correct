@@ -2,6 +2,7 @@ import { CustomError } from '../../../errors/custom.error';
 import { ItemType, ItemCategory } from '../usecases/create-benefit/create-benefit.dto';
 import { Uuid } from '../../../@shared/ValueObjects/uuid.vo';
 import { BenefitValidatorFactory } from '../benefit.validator';
+import { newDateF } from '../../../utils/date';
 
 export type BenefitsProps = {
   uuid?: Uuid
@@ -45,8 +46,8 @@ export class BenefitsEntity {
     this._item_category = props.item_category;
     this._parent_uuid = props.parent_uuid ?? null
     this._business_info_uuid = props.business_info_uuid ?? null
-    this._created_at = props.created_at
-    this._updated_at = props.updated_at
+    this._created_at = newDateF(new Date())
+    this._updated_at = newDateF(new Date())
     this.validate();
   }
 
