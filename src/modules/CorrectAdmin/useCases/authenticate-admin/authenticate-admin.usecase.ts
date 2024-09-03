@@ -43,7 +43,7 @@ export class AuthenticateAdminUseCase{
                 token: tokenGenerated
             }
           }catch(err: any){
-
+            console.log({err})
             return "Erro ao gerar token do correct admin"
           }
         //const tokenGenerated = await this.token.create(admin)

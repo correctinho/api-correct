@@ -1,7 +1,6 @@
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../errors/custom.error";
 import { newDateF } from "../../../../utils/date";
-import { BenefitCreateCommand } from "../../../benefits/entities/benefit.entity";
 
 type BusinessItemDetailsProps = {
   uuid?: Uuid

@@ -24,8 +24,17 @@ export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetails
       updated_at: result.updated_at
     } as BusinessItemsDetailsEntity
   }
-  create(entity: BusinessItemsDetailsEntity): Promise<void> {
-    throw new Error("Method not implemented.");
+  async create(entity: BusinessItemsDetailsEntity): Promise<void> {
+    await prismaClient.employerItemDetails.create({
+      data:{
+        uuid: entity.uuid.uuid,
+        item_uuid: entity.item_uuid.uuid,
+        business_info_uuid: entity.business_info_uuid.uuid,
+        cycle_end_day: entity.cycle_end_day,
+        cycle_start_day: entity.cycle_start_day,
+        created_at: entity.created_at
+      }
+    })
   }
   async update(entity: BusinessItemsDetailsEntity): Promise<void> {
     await prismaClient.employerItemDetails.update({

@@ -38,10 +38,6 @@
        POSTGRES_PASSWORD: admin
        POSTGRES_DB: syscorrect-db
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 1349532d9232e0df6fe0a7276f9c5722273747de
  #Set the version of docker compose to use
 #version: '3.9'
 

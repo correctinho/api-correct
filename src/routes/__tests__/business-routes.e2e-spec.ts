@@ -2,7 +2,7 @@ import request from 'supertest'
 import { app } from '../../app'
 import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo'
-import {randomUUID} from 'crypto'
+import { randomUUID } from 'crypto'
 import path from 'path'
 
 let correctAdminToken: string
@@ -1420,6 +1420,82 @@ describe("E2E Business tests", () => {
 
   describe("Employer Item Details by Correct Admin", () => {
     let item_details_1: string
+    describe("E2E Create Employer Item details by correct admin", () => {
+      it("Should throw an error if cycle end day is missing", async () => {
+        const input = {
+          item_uuid: randomUUID(),
+          business_info_uuid: randomUUID(),
+          cycle_end_day: 0
+        };
+        const result = await request(app)
+          .post("/business/item/details/correct")
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .send(input);
+        expect(result.statusCode).toBe(400);
+        expect(result.body.error).toBe("Cycle end day is required");
+      });
+      it("Should throw an error if item cannot be found", async () => {
+        const input = {
+          item_uuid: randomUUID(),
+          business_info_uuid: randomUUID(),
+          cycle_end_day: 1
+        };
+        const result = await request(app)
+          .post("/business/item/details/correct")
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .send(input);
+        expect(result.statusCode).toBe(404);
+        expect(result.body.error).toBe("Item not found");
+      });
+      it("Should throw an error if business cannot be found", async () => {
+        const input = {
+          item_uuid: benefit1_uuid,
+          business_info_uuid: randomUUID(),
+          cycle_end_day: 1
+        };
+        const result = await request(app)
+          .post("/business/item/details/correct")
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .send(input);
+        expect(result.statusCode).toBe(404);
+        expect(result.body.error).toBe("Business not found");
+      });
+
+      it("Should throw an error if business already has item registered", async () => {
+        const input = {
+          item_uuid: benefit1_uuid,
+          business_info_uuid: employer_info_uuid,
+          cycle_end_day: 1
+        };
+        const result = await request(app)
+          .post("/business/item/details/correct")
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .send(input);
+        expect(result.statusCode).toBe(409);
+        expect(result.body.error).toBe("Business Already has this item")
+      });
+
+      it("Should create a new item details", async () => {
+        const input = {
+          item_uuid: benefit4_uuid,
+          business_info_uuid: employer_info_uuid,
+          cycle_end_day: 1
+        };
+        const result = await request(app)
+          .post("/business/item/details/correct")
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .send(input);
+
+        const findItemDetails = await request(app).get(`/business/item/details/${result.body.uuid}/correct/`).set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+
+        expect(result.statusCode).toBe(201);
+        expect(findItemDetails.statusCode).toBe(200)
+        expect(findItemDetails.body.item_uuid).toBe(input.item_uuid)
+        expect(findItemDetails.body.business_info_uuid).toBe(input.business_info_uuid)
+        expect(findItemDetails.body.cycle_end_day).toBe(input.cycle_end_day)
+        expect(findItemDetails.body.cycle_start_day).toBe(input.cycle_end_day + 1)
+      });
+    })
     describe("E2E Find All Employer item details by correct admin", () => {
       it("Should return an empty array", async () => {
         const input = {
@@ -1435,7 +1511,7 @@ describe("E2E Business tests", () => {
         }
         const result = await request(app).get(`/business/item/details/correct/${input.business_info_uuid}`).set('Authorization', `Bearer ${correctAdminToken}`).send(input)
         expect(result.statusCode).toBe(200)
-        expect(result.body.length).toBe(3)
+        expect(result.body.length).toBe(4)
         expect(result.body[0].item_uuid).toEqual(benefit1_uuid)
         expect(result.body[1].item_uuid).toEqual(benefit3_uuid)
         expect(result.body[2].item_uuid).toEqual(benefit2_uuid)
@@ -1540,6 +1616,7 @@ describe("E2E Business tests", () => {
 
     })
   })
+
 
 
 })

@@ -1,6 +1,7 @@
 export interface InputSetEmployerCyclesDTO {
   business_info_uuid: string,
   item_uuid: string,
+  cycle_start_day?: number,
   cycle_end_day: number
 }
 

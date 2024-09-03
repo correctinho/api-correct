@@ -6,7 +6,8 @@ const MockRepository = () => {
       update: jest.fn(),
       find: jest.fn(),
       findAll: jest.fn(),
-      findByItemUuidAndBusinessInfo:jest.fn()
+      findByItemUuidAndBusinessInfo:jest.fn(),
+      findAllEmployerItems: jest.fn()
   };
 };
 
