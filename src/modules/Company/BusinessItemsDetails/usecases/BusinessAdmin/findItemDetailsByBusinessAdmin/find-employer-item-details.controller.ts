@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
-import { CustomError } from "../../../../../errors/custom.error";
-import { IBusinessItemDetailsRepository } from "../../repositories/business-item-details.repository";
+import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
+import { CustomError } from "../../../../../../errors/custom.error";
+import { IBusinessItemDetailsRepository } from "../../../repositories/business-item-details.repository";
 import { OutputFindEmployerItemDetailsDTO } from "./dto/find-employer-item.dto";
 import { FindEmployerItemDetailsUsecase } from "./find-employer-item-details.usecase";
 
@@ -10,10 +10,12 @@ export class FindEmployerItemDetailsController {
 
   async handle(req: Request, res: Response){
     try{
+      const businessInfoUuid = req.companyUser.businessInfoUuid
+
       const id = req.params.id as string
       const usecase = new FindEmployerItemDetailsUsecase(this.itemDetailsRepository)
 
-      const result = await usecase.execute(id)
+      const result = await usecase.execute(id, businessInfoUuid)
 
       return res.json(result)
     }catch(err: any){

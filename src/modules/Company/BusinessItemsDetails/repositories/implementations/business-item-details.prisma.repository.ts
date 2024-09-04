@@ -1,6 +1,7 @@
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { prismaClient } from "../../../../../infra/databases/prisma.config";
 import { BusinessItemsDetailsEntity } from "../../entities/businessItemDetails.entity";
+import { OutputFindEmployerItemDetailsDTO } from "../../usecases/AppUser/findItemDetailsByCorrect/dto/find-employer-item.dto";
 import { IBusinessItemDetailsRepository } from "../business-item-details.repository";
 
 export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetailsRepository{
@@ -71,11 +72,21 @@ export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetails
     return result as BusinessItemsDetailsEntity[] | []
   }
 
-  async findAllEmployerItems(businessInfoId: string): Promise<BusinessItemsDetailsEntity[]> {
+  async findAllEmployerItems(businessInfoId: string): Promise<OutputFindEmployerItemDetailsDTO[]> {
     const result = await prismaClient.employerItemDetails.findMany({
-      where:{ business_info_uuid: businessInfoId}
+      where:{ business_info_uuid: businessInfoId},
+      select:{
+        uuid: true,
+        item_uuid: true,
+        business_info_uuid: true,
+        cycle_start_day: true,
+        cycle_end_day: true,
+        created_at: true,
+        updated_at: true,
+        Item:true
+      }
     })
-    return result as BusinessItemsDetailsEntity[] | []
+    return result as OutputFindEmployerItemDetailsDTO[] | []
 
   }
 

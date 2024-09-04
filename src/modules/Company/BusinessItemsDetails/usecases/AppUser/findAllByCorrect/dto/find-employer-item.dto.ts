@@ -1,4 +1,4 @@
-import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo"
+import { Uuid } from "../../../../../../../@shared/ValueObjects/uuid.vo"
 
 export interface OutputFindEmployerItemDetailsDTO {
   uuid: Uuid

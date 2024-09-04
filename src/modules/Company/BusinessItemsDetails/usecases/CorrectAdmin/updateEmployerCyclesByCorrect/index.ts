@@ -1,4 +1,4 @@
-import { BusinessItemDetailsPrismaRepository } from "../../repositories/implementations/business-item-details.prisma.repository";
+import { BusinessItemDetailsPrismaRepository } from "../../../repositories/implementations/business-item-details.prisma.repository";
 import { SetEmployerCycleController } from "./set-employer-cycles.controller";
 
 const itemsDetailsRepository = new BusinessItemDetailsPrismaRepository()

@@ -3,7 +3,6 @@ import { app } from '../../app'
 import { InputCreateBenefitDto, ItemCategory, ItemType } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo'
 import { randomUUID } from 'crypto'
-import path from 'path'
 
 let correctAdminToken: string
 let partner_info_uuid: string
@@ -11,9 +10,11 @@ let business_address_uuid: string
 
 let employer_info_uuid: string
 
-let business_user_token: string
-let business_admin_uuid: string
-let company_user_uuid: string
+let partner_user_token: string
+let partner_user_uuid: string
+
+let employer_user_token: string
+let employer_user_uuid: string
 
 let benefit1_uuid: Uuid
 let benefit2_uuid: Uuid
@@ -27,6 +28,7 @@ let branch3_uuid: string
 let branch4_uuid: string
 let branch5_uuid: string
 
+let item_details_2: string
 describe("E2E Business tests", () => {
   beforeAll(async () => {
     const inputNewAdmin = {
@@ -906,7 +908,7 @@ describe("E2E Business tests", () => {
           email: "comercio@comercio.com"
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
-        business_admin_uuid = result.body.uuid
+        partner_user_uuid = result.body.uuid
         expect(result.statusCode).toBe(201)
         expect(result.body.uuid).toBeTruthy()
         expect(result.body.business_info_uuid).toBe(partner_info_uuid)
@@ -999,7 +1001,7 @@ describe("E2E Business tests", () => {
         }
 
         const result = await request(app).post("/business/admin/login").send(input)
-        business_user_token = result.body.token
+        partner_user_token = result.body.token
         expect(result.statusCode).toBe(200)
         expect(result.body.token).toBeTruthy()
       })
@@ -1041,7 +1043,7 @@ describe("E2E Business tests", () => {
           business_info_uuid: ""
         }
 
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
+        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe('User ID is required')
       })
@@ -1055,7 +1057,7 @@ describe("E2E Business tests", () => {
           user_id: "1"
         }
 
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
+        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
         expect(result.statusCode).toBe(404)
         expect(result.body.error).toBe('User not found')
 
@@ -1067,9 +1069,9 @@ describe("E2E Business tests", () => {
         }
 
         const query = {
-          user_id: business_admin_uuid
+          user_id: partner_user_uuid
         }
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
+        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
 
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe('Password must be updated')
@@ -1082,9 +1084,9 @@ describe("E2E Business tests", () => {
         }
 
         const query = {
-          user_id: business_admin_uuid
+          user_id: partner_user_uuid
         }
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
+        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
 
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe('Document is required')
@@ -1098,9 +1100,9 @@ describe("E2E Business tests", () => {
         }
 
         const query = {
-          user_id: business_admin_uuid
+          user_id: partner_user_uuid
         }
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
+        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
         expect(result.statusCode).toBe(409)
         expect(result.body.error).toBe('Password must not be the same')
 
@@ -1113,9 +1115,9 @@ describe("E2E Business tests", () => {
         }
 
         const query = {
-          user_id: business_admin_uuid
+          user_id: partner_user_uuid
         }
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
+        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
 
         expect(result.statusCode).toBe(200)
 
@@ -1131,7 +1133,7 @@ describe("E2E Business tests", () => {
           partner_info_uuid,
           user_name: ""
         }
-        const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${business_user_token}`).send(input)
+        const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_user_token}`).send(input)
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe('User name is required')
       })
@@ -1143,8 +1145,8 @@ describe("E2E Business tests", () => {
           user_name: 'user_name',
           permissions: ['finances']
         }
-        const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${business_user_token}`).send(input)
-        company_user_uuid = result.body.uuid
+        const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_user_token}`).send(input)
+        partner_user_uuid = result.body.uuid
         expect(result.statusCode).toBe(201)
         expect(result.body.uuid).toBeTruthy()
         expect(result.body.business_info_uuid).toBe(input.partner_info_uuid)
@@ -1165,7 +1167,7 @@ describe("E2E Business tests", () => {
           user_name: 'user_name',
           permissions: ['finances']
         }
-        const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${business_user_token}`).send(input)
+        const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_user_token}`).send(input)
         expect(result.statusCode).toBe(409)
         expect(result.body.error).toBe('User name already registered')
       })
@@ -1173,23 +1175,23 @@ describe("E2E Business tests", () => {
 
     describe("E2E Get single user by admin", () => {
       it("Should throw an error if id is missing", async () => {
-        const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${business_user_token}`).query({ user_uuid: '' })
+        const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${partner_user_token}`).query({ user_uuid: '' })
 
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe("Id is required")
       })
 
       it("Should throw an error if user cannot be found", async () => {
-        const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${business_user_token}`).query({ user_uuid: '1' })
+        const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${partner_user_token}`).query({ user_uuid: '1' })
 
         expect(result.statusCode).toBe(404)
         expect(result.body.error).toBe("User not found")
       })
 
       it("Should return user details", async () => {
-        const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${business_user_token}`).query({ user_uuid: company_user_uuid })
+        const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${partner_user_token}`).query({ user_uuid: partner_user_uuid })
         expect(result.statusCode).toBe(200)
-        expect(result.body.uuid).toEqual(company_user_uuid)
+        expect(result.body.uuid).toEqual(partner_user_uuid)
         expect(result.body.business_info_uuid).toEqual(partner_info_uuid)
       })
     })
@@ -1208,12 +1210,12 @@ describe("E2E Business tests", () => {
           user_name: 'user_name3',
           permissions: ['finances']
         }
-        await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${business_user_token}`).send(input1)
-        await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${business_user_token}`).send(input2)
+        await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_user_token}`).send(input1)
+        await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_user_token}`).send(input2)
       })
 
       it("Should return users", async () => {
-        const result = await request(app).get("/company-users").set('Authorization', `Bearer ${business_user_token}`)
+        const result = await request(app).get("/company-users").set('Authorization', `Bearer ${partner_user_token}`)
         expect(result.statusCode).toBe(200)
         expect(result.body.length).toBe(3)
       })
@@ -1221,14 +1223,14 @@ describe("E2E Business tests", () => {
 
     describe("E2E Delete user by admin", () => {
       it("Should throw an error if user id is missing", async () => {
-        const result = await request(app).patch("/company-user/delete").set('Authorization', `Bearer ${business_user_token}`).query({ user_id: '' })
+        const result = await request(app).patch("/company-user/delete").set('Authorization', `Bearer ${partner_user_token}`).query({ user_id: '' })
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe("User id is required")
 
       })
 
       it("Should throw an error if user is not found", async () => {
-        const result = await request(app).patch("/company-user/delete").set('Authorization', `Bearer ${business_user_token}`).query({ user_id: '12345' })
+        const result = await request(app).patch("/company-user/delete").set('Authorization', `Bearer ${partner_user_token}`).query({ user_id: '12345' })
         expect(result.statusCode).toBe(404)
         expect(result.body.error).toBe("User not found")
 
@@ -1236,7 +1238,7 @@ describe("E2E Business tests", () => {
 
 
       it("Should delete an user", async () => {
-        const result = await request(app).patch("/company-user/delete").set('Authorization', `Bearer ${business_user_token}`).query({ user_id: company_user_uuid })
+        const result = await request(app).patch("/company-user/delete").set('Authorization', `Bearer ${partner_user_token}`).query({ user_id: partner_user_uuid })
         expect(result.statusCode).toBe(200)
         expect(result.body.message).toBe("Usuário excluído com sucesso")
 
@@ -1249,7 +1251,7 @@ describe("E2E Business tests", () => {
         const input = {
           password: ''
         }
-        const result = await request(app).post("/confirm-password").set('Authorization', `Bearer ${business_user_token}`).send(input)
+        const result = await request(app).post("/confirm-password").set('Authorization', `Bearer ${partner_user_token}`).send(input)
 
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe("Incorrect credentials")
@@ -1260,7 +1262,7 @@ describe("E2E Business tests", () => {
         const input = {
           password: '16548'
         }
-        const result = await request(app).post("/confirm-password").set('Authorization', `Bearer ${business_user_token}`).send(input)
+        const result = await request(app).post("/confirm-password").set('Authorization', `Bearer ${partner_user_token}`).send(input)
 
         expect(result.statusCode).toBe(403)
         expect(result.body.error).toBe("Incorrect credentials")
@@ -1271,7 +1273,7 @@ describe("E2E Business tests", () => {
         const input = {
           password: '12398754'
         }
-        const result = await request(app).post("/confirm-password").set('Authorization', `Bearer ${business_user_token}`).send(input)
+        const result = await request(app).post("/confirm-password").set('Authorization', `Bearer ${partner_user_token}`).send(input)
 
         expect(result.statusCode).toBe(200)
         expect(result.body.message).toBe("Password matches")
@@ -1282,7 +1284,7 @@ describe("E2E Business tests", () => {
   describe("Business Data by Business admin", () => {
     describe("E2E Get Business data by business admin", () => {
       it("Should return business data", async () => {
-        const result = await request(app).get("/business/info").set('Authorization', `Bearer ${business_user_token}`)
+        const result = await request(app).get("/business/info").set('Authorization', `Bearer ${partner_user_token}`)
         partner_info_uuid = result.body.uuid
         expect(result.statusCode).toBe(200)
       })
@@ -1304,7 +1306,7 @@ describe("E2E Business tests", () => {
         const query = {
           business_info_uuid: ''
         }
-        const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
+        const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe("Business info Id is required")
       })
@@ -1324,7 +1326,7 @@ describe("E2E Business tests", () => {
         const query = {
           business_info_uuid: '123'
         }
-        const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
+        const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
         expect(result.statusCode).toBe(404)
         expect(result.body.error).toBe("Business info not found")
       })
@@ -1344,7 +1346,7 @@ describe("E2E Business tests", () => {
         const query = {
           business_info_uuid: partner_info_uuid
         }
-        const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
+        const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
         expect(result.statusCode).toBe(200)
       })
     })
@@ -1367,7 +1369,7 @@ describe("E2E Business tests", () => {
         const query = {
           address_uuid: ''
         }
-        const result = await request(app).put("/company-address").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
+        const result = await request(app).put("/company-address").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe('Address Id is required')
 
@@ -1388,7 +1390,7 @@ describe("E2E Business tests", () => {
         const query = {
           address_uuid: '1'
         }
-        const result = await request(app).put("/company-address").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
+        const result = await request(app).put("/company-address").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe('Address not found')
 
@@ -1408,8 +1410,8 @@ describe("E2E Business tests", () => {
         const query = {
           address_uuid: business_address_uuid
         }
-        const result = await request(app).put("/company-address").set('Authorization', `Bearer ${business_user_token}`).query(query).send(input)
-        const data = await request(app).get("/business/info").set('Authorization', `Bearer ${business_user_token}`)
+        const result = await request(app).put("/company-address").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
+        const data = await request(app).get("/business/info").set('Authorization', `Bearer ${partner_user_token}`)
 
         expect(result.statusCode).toBe(200)
         expect(data.body.Address.line1).toBe('Rua nova')
@@ -1487,6 +1489,8 @@ describe("E2E Business tests", () => {
           .send(input);
 
         const findItemDetails = await request(app).get(`/business/item/details/${result.body.uuid}/correct/`).set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+        item_details_2 = findItemDetails.body.uuid
+
 
         expect(result.statusCode).toBe(201);
         expect(findItemDetails.statusCode).toBe(200)
@@ -1498,8 +1502,9 @@ describe("E2E Business tests", () => {
     })
     describe("E2E Find All Employer item details by correct admin", () => {
       beforeAll(async () => {
+        //create custom benefit
         const input = {
-          name: "Vale Alimentação",
+          name: "Vale Alimentação Customizado",
           description: "Descrição",
           parent_uuid: null as any,
           item_type: 'gratuito' as ItemType,
@@ -1631,7 +1636,81 @@ describe("E2E Business tests", () => {
 
     })
   })
+  describe("Employer Item Details By Business Admin", () => {
+    beforeAll(async () => {
+      //activate business
+      const inputToActivate = {
+        address_uuid: business_address_uuid,
+        fantasy_name: "Empresa novo nome",
+        document: "empregador",
+        classification: "Classificação",
+        colaborators_number: 5,
+        email: "empregador@empregador.com",
+        phone_1: "215745158",
+        phone_2: "124588965",
+        business_type: "empregador",
+        status: "active"
+      }
+      const query = {
+        business_info_uuid: employer_info_uuid
+      }
+      const activate = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToActivate)
+      expect(activate.statusCode).toBe(200)
+
+      //create employer user
+      const input = {
+        password: "123456",
+        business_info_uuid: employer_info_uuid,
+        email: "empregador@empregador.com"
+      }
+      const create = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+      employer_user_uuid = create.body.uuid
+      expect(create.statusCode).toBe(201)
+
+      //authenticate employer
+      const authInput = {
+        business_document: "empregador",
+        password: "123456",
+        email: "empregador@empregador.com"
+      }
+
+      const auth = await request(app).post("/business/admin/login").send(authInput)
+      expect(auth.statusCode).toBe(200)
+      employer_user_token = auth.body.token
+
+    })
 
 
+    describe("E2E Find All Employer item details by business admin", () => {
+      it("Should return an array with item details", async () => {
+
+        const result = await request(app).get(`/business/item/details`).set('Authorization', `Bearer ${employer_user_token}`)
+
+        expect(result.statusCode).toBe(200)
+        expect(result.body.length).toBe(5)
+
+      })
+    })
+
+    describe("E2E Find single employer item detail by business admin", () => {
+      it("Should throw an error if item detail is not found", async () => {
+        const input = {
+          id: randomUUID(),
+        }
+
+        const result = await request(app).get(`/business/item/details/${input.id}/employer`).set('Authorization', `Bearer ${employer_user_token}`)
+        expect(result.statusCode).toBe(404)
+        expect(result.body.error).toBe("Item details not found")
+      })
+      it("Should return an item detail", async () => {
+        const input = {
+          id: item_details_2,
+        }
+        const result = await request(app).get(`/business/item/details/${input.id}/employer`).set('Authorization', `Bearer ${employer_user_token}`)
+        expect(result.statusCode).toBe(200)
+      })
+
+    })
+  })
 
 })

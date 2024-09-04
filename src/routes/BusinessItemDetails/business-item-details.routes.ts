@@ -1,13 +1,18 @@
-import { request, Router } from "express";
-import { setEmployerCyclesController } from "../../modules/Company/BusinessItemsDetails/usecases/updateEmployerCycles";
+import { Router } from "express";
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
-import { findEmployerItemDetails } from "../../modules/Company/BusinessItemsDetails/usecases/findItemDetails";
-import { findAllEmployerItemDetails } from "../../modules/Company/BusinessItemsDetails/usecases/findAll";
-import { createEmployerItemDetails } from "../../modules/Company/BusinessItemsDetails/usecases/createEmployerItemByCorrect";
+import { findEmployerItemDetails } from "../../modules/Company/BusinessItemsDetails/usecases/AppUser/findItemDetailsByCorrect";
+import { findAllEmployerItemDetails } from "../../modules/Company/BusinessItemsDetails/usecases/AppUser/findAllByCorrect";
+import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/company-admin-auth.middlware";
+import { createEmployerItemDetails } from "../../modules/Company/BusinessItemsDetails/usecases/CorrectAdmin/createEmployerItemByCorrect";
+import { setEmployerCyclesController } from "../../modules/Company/BusinessItemsDetails/usecases/CorrectAdmin/updateEmployerCyclesByCorrect";
+import { findAllEmployerItemDetailsBusinessAdmin } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessAdmin/findAllByBusinessAdmin";
+import { findEmployerItemDetailsByBusiness } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessAdmin/findItemDetailsByBusinessAdmin";
 
 export const businessItemDetailsRouter = Router()
 
-//create employer item details by correct admin - not TESTED
+/*****CORRECT ENDPOINTS****** */
+
+//create employer item details by correct admin - TESTED
 businessItemDetailsRouter.post("/business/item/details/correct", correctIsAuth, async (request, response) => {
   await createEmployerItemDetails.handle(request, response)
 })
@@ -24,4 +29,17 @@ businessItemDetailsRouter.get("/business/item/details/:id/correct/", correctIsAu
 //find all employer items by correct - TESTED
 businessItemDetailsRouter.get("/business/item/details/correct/:business_info_uuid/", correctIsAuth, async (request, response) => {
   await findAllEmployerItemDetails.handle(request, response)
+})
+
+
+/*****BUSINESS ENDPOINTS****** */
+
+//find many by business admin - TESTED
+businessItemDetailsRouter.get("/business/item/details", companyIsAuth, async (request, response) => {
+  await findAllEmployerItemDetailsBusinessAdmin.handle(request, response)
+})
+
+//find single by business admin - TESTED
+businessItemDetailsRouter.get("/business/item/details/:id/employer", companyIsAuth, async (request, response) => {
+  await findEmployerItemDetailsByBusiness.handle(request, response)
 })

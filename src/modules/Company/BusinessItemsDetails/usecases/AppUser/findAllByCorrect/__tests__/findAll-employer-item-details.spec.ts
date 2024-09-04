@@ -1,4 +1,4 @@
-import { Uuid } from '../../../../../../@shared/ValueObjects/uuid.vo';
+import { Uuid } from '../../../../../../../@shared/ValueObjects/uuid.vo';
 import { FindAllEmployerItemDetailsUsecase } from '../findAll-employer-item-details.usecase'
 
 import { randomUUID } from 'crypto'

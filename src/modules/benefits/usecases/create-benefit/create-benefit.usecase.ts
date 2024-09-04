@@ -2,6 +2,7 @@ import { IBenefitsRepository } from '../../repositories/benefit.repository';
 import { BenefitsEntity } from '../../entities/benefit.entity';
 import { InputCreateBenefitDto, OutputCreateBenefitDto } from './create-benefit.dto';
 import { Uuid } from '../../../../@shared/ValueObjects/uuid.vo';
+import { CustomError } from '../../../../errors/custom.error';
 
 export class CreateBenefitUsecase {
     constructor(
@@ -18,6 +19,10 @@ export class CreateBenefitUsecase {
           business_info_uuid: input.business_info_uuid ? new Uuid(input.business_info_uuid) : null
         }
         const benefit = BenefitsEntity.create(entityData)
+
+        //check if benefit name already exists
+        const findByName = await this.benefitsRepository.findByName(benefit.name)
+        if(findByName) throw new CustomError("Item name is already registered", 409)
 
         await this.benefitsRepository.create(benefit)
 

@@ -1,4 +1,4 @@
-import { Uuid } from '../../../../../../@shared/ValueObjects/uuid.vo';
+import { Uuid } from '../../../../../../../@shared/ValueObjects/uuid.vo';
 import { FindEmployerItemDetailsUsecase } from '../find-employer-item-details.usecase'
 import {randomUUID} from 'crypto'
 const MockRepository = () => {
@@ -15,14 +15,15 @@ const MockRepository = () => {
 describe("Unity Tests Find Employer item details usecase", () => {
   it("Should throw an error if id is missing", async () => {
     const input = {
-      id: ''
+      id: '',
+      business_info_uuid: ''
     }
 
     const itemDetailsRepository = MockRepository()
     const usecase = new FindEmployerItemDetailsUsecase(itemDetailsRepository)
 
     try{
-      await usecase.execute(input.id)
+      await usecase.execute(input.id, input.business_info_uuid)
     }catch(err: any){
       expect(err.statusCode).toBe(400)
       expect(err.message).toBe("Id is required")
@@ -31,7 +32,8 @@ describe("Unity Tests Find Employer item details usecase", () => {
 
   it("Should throw an error if id cannot be found", async () => {
     const input = {
-      id: new Uuid()
+      id: randomUUID(),
+      business_info_uuid: ''
     }
 
     const foundItem = {
@@ -48,7 +50,7 @@ describe("Unity Tests Find Employer item details usecase", () => {
 
 
     try{
-      await usecase.execute(input.id.uuid)
+      await usecase.execute(input.id, input.business_info_uuid)
     }catch(err: any){
       expect(err.statusCode).toBe(404)
       expect(err.message).toBe("Item details not found")
@@ -71,7 +73,7 @@ describe("Unity Tests Find Employer item details usecase", () => {
     itemDetailsRepository.find.mockResolvedValueOnce(foundItem)
     const usecase = new FindEmployerItemDetailsUsecase(itemDetailsRepository)
 
-    const result = await usecase.execute(foundItem.uuid.uuid)
+    const result = await usecase.execute(foundItem.uuid.uuid, foundItem.business_info_uuid.uuid)
     expect(result.uuid).toEqual(foundItem.uuid.uuid)
     expect(result.item_uuid).toEqual(foundItem.item_uuid.uuid)
     expect(result.business_info_uuid).toEqual(foundItem.business_info_uuid.uuid)

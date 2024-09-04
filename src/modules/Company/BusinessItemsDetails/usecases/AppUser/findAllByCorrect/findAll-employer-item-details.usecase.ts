@@ -1,6 +1,5 @@
-import { CustomError } from "../../../../../errors/custom.error";
-import { BusinessItemsDetailsEntity } from "../../entities/businessItemDetails.entity";
-import { IBusinessItemDetailsRepository } from "../../repositories/business-item-details.repository";
+import { CustomError } from "../../../../../../errors/custom.error";
+import { IBusinessItemDetailsRepository } from "../../../repositories/business-item-details.repository";
 import { OutputFindEmployerItemDetailsDTO } from "./dto/find-employer-item.dto";
 
 export class FindAllEmployerItemDetailsUsecase {
@@ -12,17 +11,16 @@ export class FindAllEmployerItemDetailsUsecase {
     const itemDetails = await this.itemDetailsRepository.findAllEmployerItems(id)
 
     // Mapear os detalhes dos itens para o formato esperado
-    const output: OutputFindEmployerItemDetailsDTO[] = itemDetails.map(item => ({
-      uuid: item.uuid,
-      item_uuid: item.item_uuid,
-      business_info_uuid: item.business_info_uuid,
-      cycle_start_day: item.cycle_start_day,
-      cycle_end_day: item.cycle_end_day,
-      created_at: item.created_at,
-      updated_at: item.updated_at
-    }));
-    return output;
-
+    // const output: OutputFindEmployerItemDetailsDTO[] = itemDetails.map(item => ({
+    //   uuid: item.uuid,
+    //   item_uuid: item.item_uuid,
+    //   business_info_uuid: item.business_info_uuid,
+    //   cycle_start_day: item.cycle_start_day,
+    //   cycle_end_day: item.cycle_end_day,
+    //   created_at: item.created_at,
+    //   updated_at: item.updated_at
+    // }));
+    return itemDetails as OutputFindEmployerItemDetailsDTO[]
   }
 
 }

@@ -1,4 +1,3 @@
-import { Uuid } from '../../../../../../@shared/ValueObjects/uuid.vo';
 import { CreateEmployerItemByCorrectUsecase } from '../create-employer-item-by-correct.usecase'
 import { randomUUID} from 'crypto'
 const ItemDetailsMockRepository = () => {

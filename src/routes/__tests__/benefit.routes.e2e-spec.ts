@@ -192,9 +192,10 @@ describe("E2E Benefit tests", () => {
       expect(result.statusCode).toBe(404)
       expect(result.body.error).toBe("Business not found")
     })
+
     it("Should create a new business custom benefit", async () => {
       const input = {
-        name: "Vale Alimentação",
+        name: "Vale Customizado",
         description: "Descrição",
         parent_uuid: null as any,
         item_type: 'gratuito' as ItemType,
@@ -215,9 +216,24 @@ describe("E2E Benefit tests", () => {
       expect(result.body.cycle_start_day).toBe(input.cycle_end_day + 1)
 
     })
-  })
+    it("Should throw an error if business already have this custom item", async () => {
+      const input = {
+        name: "Vale Customizado",
+        description: "Descrição",
+        parent_uuid: null as any,
+        item_type: 'gratuito' as ItemType,
+        item_category: 'pre_pago' as ItemCategory,
+        business_info_uuid: employer_info_uuid,
+        cycle_end_day: 2
+      }
 
-})
+      const result = await request(app).post('/benefit/custom').set('Authorization', `Bearer ${authToken}`).send(input)
+      expect(result.statusCode).toBe(409)
+      expect(result.body.error).toBe("Business already has this custom item")
+
+    })
+  })
+  })
 
 
 describe("E2E Branch tests", () => {

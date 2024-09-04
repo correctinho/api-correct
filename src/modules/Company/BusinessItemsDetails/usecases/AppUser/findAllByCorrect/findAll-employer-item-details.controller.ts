@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { IBusinessItemDetailsRepository } from "../../repositories/business-item-details.repository";
+import { IBusinessItemDetailsRepository } from "../../../repositories/business-item-details.repository";
 import { FindAllEmployerItemDetailsUsecase } from "./findAll-employer-item-details.usecase";
 
 export class FindAllEmployerItemDetailsController {

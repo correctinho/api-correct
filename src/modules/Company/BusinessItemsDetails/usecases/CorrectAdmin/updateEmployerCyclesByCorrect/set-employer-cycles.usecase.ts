@@ -1,6 +1,6 @@
-import { CustomError } from "../../../../../errors/custom.error";
-import { BusinessItemsDetailsEntity } from "../../entities/businessItemDetails.entity";
-import { IBusinessItemDetailsRepository } from "../../repositories/business-item-details.repository";
+import { CustomError } from "../../../../../../errors/custom.error";
+import { BusinessItemsDetailsEntity } from "../../../entities/businessItemDetails.entity";
+import { IBusinessItemDetailsRepository } from "../../../repositories/business-item-details.repository";
 import { InputSetEmployerCyclesDTO, OutputSetEmployerCyclesDTO } from "./dto/set-cycles.dto";
 
 export class SetEmployerCycleUsecase {

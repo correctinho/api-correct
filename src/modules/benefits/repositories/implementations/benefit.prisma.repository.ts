@@ -2,7 +2,6 @@ import { prismaClient } from '../../../../infra/databases/prisma.config';
 import { BenefitsEntity, BenefitsProps } from '../../entities/benefit.entity';
 import { IBenefitsRepository } from '../benefit.repository';
 import { newDateF } from '../../../../utils/date';
-import { OutputGetBenefitsDTO } from '../../usecases/get-benefit-by-id/get-benefit.dto';
 import { ItemCategory, ItemType } from '../../usecases/create-benefit/create-benefit.dto';
 import { Uuid } from '../../../../@shared/ValueObjects/uuid.vo';
 import { BusinessItemsDetailsEntity } from '../../../Company/BusinessItemsDetails/entities/businessItemDetails.entity';
@@ -141,7 +140,7 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
   async update(data: BenefitsEntity): Promise<void> {
     await prismaClient.item.update({
       where: {
-        uuid: data.uuid.uuid as string
+        uuid: data.uuid.uuid
       },
       data: {
         name: data.name,

@@ -1,6 +1,6 @@
-import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
-import { CustomError } from "../../../../../errors/custom.error";
-import { IBusinessItemDetailsRepository } from "../../repositories/business-item-details.repository";
+import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
+import { CustomError } from "../../../../../../errors/custom.error";
+import { IBusinessItemDetailsRepository } from "../../../repositories/business-item-details.repository";
 import { OutputFindEmployerItemDetailsDTO } from "./dto/find-employer-item.dto";
 
 export class FindEmployerItemDetailsUsecase {

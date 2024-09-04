@@ -24,6 +24,15 @@ const MockRepository = () => {
   };
 
 describe("Unit test create benefit usecase", () => {
+  it("Should thrown an error if item name is already registered", async () => {
+    const benefitMockRepository = MockRepository()
+    const createBenefitUsecase = new CreateBenefitUsecase(benefitMockRepository)
+
+    benefitMockRepository.findByName.mockResolvedValueOnce({})
+
+
+    await expect(createBenefitUsecase.execute(input)).rejects.toThrow("Item name is already registered")
+})
     it("Should create a benefit", async () => {
         const benefitMockRepository = MockRepository()
         const createBenefitUsecase = new CreateBenefitUsecase(benefitMockRepository)
