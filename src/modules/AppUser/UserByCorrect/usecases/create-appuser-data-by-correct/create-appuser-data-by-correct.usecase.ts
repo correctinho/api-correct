@@ -20,7 +20,7 @@ export class CreateAppUserByCorrectUsecaseTest {
     let validatedUser: AppUserInfoEntity[] = [];
     let errorUser: string[] = [];
     let usersRegistered: string[] = [];
-    let associatedUsers: string[] = [];
+    let associatedUsers: string[] = []; //Users in this array will not be registered, because they are already associated with another company
 
     if (!business_info_uuid) throw new CustomError("Business Id is required", 400);
 
@@ -147,7 +147,6 @@ export class CreateAppUserByCorrectUsecaseTest {
         usersRegistered.push(user.document);
 
       } else if (existingUserInfo) {
-
         const userInfoentity = new AppUserInfoEntity(user);
         userInfoentity.changeBusinessInfoUuid(new Uuid(business_info_uuid));
 
@@ -155,8 +154,6 @@ export class CreateAppUserByCorrectUsecaseTest {
         usersRegistered.push(user.document);
 
         if (findUserAuth) {
-
-
           const userAuthEntity = new AppUserAuthSignUpEntity(findUserAuth);
           userAuthEntity.changeUserInfo(existingUserInfo.uuid);
           await this.appUserAuthRepository.update(userAuthEntity);

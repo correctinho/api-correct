@@ -20,6 +20,10 @@ export class CreateUserInfoController{
 
             data.user_id = new Uuid(req.appUser.appUserId)
 
+            data.document = req.appUser.document
+
+            data.email = req.appUser.email
+
             const userInfoUsecase = new CreateAppUserInfoUsecase(this.appUserInfoRepository, this.appUserAuthRepository)
 
             await userInfoUsecase.execute(data)

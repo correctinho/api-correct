@@ -1631,7 +1631,7 @@ describe("E2E Business tests", () => {
 
         expect(result.statusCode).toBe(200)
         expect(result.body.cycle_end_day).toBe(5)
-        expect(result.body.cycle_start_day).toBe(4)
+        expect(result.body.cycle_start_day).toBe(6)
       })
 
     })

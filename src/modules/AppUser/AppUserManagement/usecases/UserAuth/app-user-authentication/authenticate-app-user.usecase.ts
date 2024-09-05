@@ -44,7 +44,7 @@ export class AuthenticateAppuserUsecase {
       }
     } catch (err: any) {
 
-      return "Erro ao gerar token do correct admin"
+      return "Erro ao gerar token do app user"
     }
   }
 

@@ -21,7 +21,7 @@ declare global {
         permissions: string[],
         status: string,
         created_at: string,
-        updated_at: string
+        updated_at: string | null
       },
       appUser: {
         appUserId: string
@@ -29,7 +29,7 @@ declare global {
         email:string,
         created_at: string,
         updated_at: string | null
-
+        user_info_uuid: string | null
       }
     }
   }

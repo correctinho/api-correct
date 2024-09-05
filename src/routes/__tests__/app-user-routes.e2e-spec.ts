@@ -6,6 +6,9 @@ import { InputUpdateAppUserAddressDTO } from "../../modules/AppUser/AppUserManag
 import { Uuid } from "../../@shared/ValueObjects/uuid.vo";
 import { InputCreateBenefitDto } from "../../modules/benefits/usecases/create-benefit/create-benefit.dto";
 import path from 'path'
+import { randomUUID } from 'crypto'
+import { UserItemStatus } from "@prisma/client";
+import { create } from "lodash";
 
 let userToken1: string;
 let userToken2: string;
@@ -17,6 +20,14 @@ let business_address_uuid: string
 
 let employer_info_uuid: string
 let employer_info_uuid2: string
+
+let employee_user_info: string
+let non_employee_user_info: string
+
+let employer_user_uuid: string
+let employer_user_uuid2: string
+
+let employer_user_token: string
 
 let business_user_token: string
 let business_admin_uuid: string
@@ -194,6 +205,7 @@ describe("E2E App User tests", () => {
     branch4_uuid = branches.body[3].uuid
     branch5_uuid = branches.body[4].uuid
 
+    //create businiss info 1
     const input = {
       line1: "Rua",
       line2: "72B",
@@ -217,6 +229,7 @@ describe("E2E App User tests", () => {
 
     const businessInfo = await request(app).post("/business/register").send(input)
 
+    //create businiss info 1
     const input2 = {
       line1: "Rua",
       line2: "72B",
@@ -242,12 +255,12 @@ describe("E2E App User tests", () => {
 
     employer_info_uuid = businessInfo.body.business_info_uuid
     employer_info_uuid2 = businessInfo2.body.business_info_uuid
+
+
   })
   describe("E2E App User Auth", () => {
 
     describe("Create app user", () => {
-
-
       it("Should throw an error if document is invalid", async () => {
         const inputNewAppUser12: InputCreateAppUserDTO = {
           user_info_uuid: null,
@@ -394,7 +407,6 @@ describe("E2E App User tests", () => {
           .get("/app-user")
           .set('Authorization', `Bearer ${userToken1}`)
 
-
         expect(result.statusCode).toBe(200)
         expect(result.body.status).toBeFalsy()
         expect(result.body.UserAuthDetails.document).toEqual("87548876076")
@@ -410,7 +422,6 @@ describe("E2E App User tests", () => {
   })
 
   describe("E2E tests App User Info", () => {
-
     describe("Create App User Info", () => {
       it("Should create a new user info", async () => {
 
@@ -1066,9 +1077,6 @@ describe("E2E App User tests", () => {
       })
 
       it("Should throw an error if user address is not found", async () => {
-
-
-
         const inputCreateUserInfo: InputCreateUserInfoDTO = {
           business_info_uuid: null,
           address_uuid: new Uuid("8c47d070-d708-4eb3-a981-f5fb69184c74"),
@@ -1513,7 +1521,6 @@ describe("E2E App User tests", () => {
         .query(query)
         .set('Authorization', `Bearer ${correctAdminToken}`)
         .attach('file', csvFilePath)
-
       const onlyUserAuthDetails = await request(app)
         .get("/app-user")
         .set('Authorization', `Bearer ${userAuthToken}`)
@@ -1521,7 +1528,7 @@ describe("E2E App User tests", () => {
 
       const findUser = await request(app).get("/app-user/info").set('Authorization', `Bearer ${userAuthToken}`)
 
-
+      employee_user_info = findUser.body.uuid.uuid
       expect(onlyUserAuthDetails.body.UserAuthDetails.user_info_uuid).toBe(findUser.body.uuid.uuid)
       expect(result.statusCode).toBe(200);
       expect(result.body.usersRegistered.length).toBe(15)
@@ -1567,24 +1574,239 @@ describe("E2E App User tests", () => {
       const input = {
         email: 'alreadyregistered@email.com',
         password: 'senha123',
-        document: '40650089057' //Este CPF está no modelo de arquivo csv. Utilizar ele indica que este cpf já foi userInfo
+        document: '40650089057' //Este CPF está no modelo de arquivo csv. Utilizar ele indica que este cpf já possui userInfo registrado pela Correct
       }
-      const createUserAuth = await request(app).post("/app-user").send(input)
-      //authenticate user auth)
+      await request(app).post("/app-user").send(input)
+
+      //authenticate user auth details
       const authInput = {
         document: input.document,
         password: input.password
       }
-
       const userAuthResponse = await request(app).post("/login-app-user").send(authInput)
       const userAuthToken = userAuthResponse.body.token
 
+      //get userAuth details
+      const userAuthDetails = await request(app)
+        .get("/app-user")
+        .set('Authorization', `Bearer ${userAuthToken}`)
 
+      //get userInfo
       const userInfoDetails = await request(app).get("/app-user/info").set('Authorization', `Bearer ${userAuthToken}`).send(input)
-      expect(createUserAuth.body.user_info_uuid.uuid).toBe(userInfoDetails.body.uuid.uuid)
+      expect(userAuthDetails.body.status).toBeFalsy()
+      expect(userAuthDetails.body.UserAuthDetails.user_info_uuid).toBe(userInfoDetails.body.uuid.uuid)
+      expect(userAuthDetails.body.UserInfo).toBeTruthy()
+      expect(userAuthDetails.body.UserAddress).toBeFalsy()
+      expect(userAuthDetails.body.UserValidation).toBeFalsy()
 
     })
   })
+  describe("E2E tests create user item by employer", () => {
+    beforeAll(async () => {
+      //create employer user
+      const inputEmployer = {
+        password: "123456",
+        business_info_uuid: employer_info_uuid,
+        email: "empregador@empregador.com"
+      }
+      const createEmployer = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputEmployer)
 
-  //Fazer testes de quando o usuário já estiver registrado em userInfo
+      employer_user_uuid = createEmployer.body.uuid
+      expect(createEmployer.statusCode).toBe(201)
+
+      //authenticate employer
+      const authInput = {
+        business_document: "empregador",
+        password: "123456",
+        email: "empregador@empregador.com"
+      }
+
+      const auth = await request(app).post("/business/admin/login").send(authInput)
+      expect(auth.statusCode).toBe(200)
+      employer_user_token = auth.body.token
+
+      //create non employee user auth
+      const inputNonEmployee: any = {
+        user_info_uuid: null,
+        document: '000.458.150-46',
+        email: 'non_employee@email.com',
+        password: 'senha123'
+      }
+      const non_employee = await request(app).post("/app-user").send(inputNonEmployee)
+      expect(non_employee.statusCode).toBe(201)
+
+      const authNonEmployeeInput = {
+        document: inputNonEmployee.document,
+        password: inputNonEmployee.password
+      }
+
+      //authenticate non employee user
+      const auth_non_employe = await request(app).post("/login-app-user").send(authNonEmployeeInput)
+      expect(auth_non_employe.statusCode).toBe(200)
+      const non_employee_token = auth_non_employe.body.token
+
+      const nonEmployeeUserInput: any = {
+        full_name: "User Full Name",
+        gender: 'Male',
+        date_of_birth: '15/08/1998',
+        dependents_quantity: 1
+      }
+
+      const userInfoNonEmployee = await request(app).post("/app-user/info").set('Authorization', `Bearer ${non_employee_token}`).send(nonEmployeeUserInput)
+      expect(userInfoNonEmployee.statusCode).toBe(201)
+
+      const nonEmployeeUserDetails = await request(app)
+        .get("/app-user")
+        .set('Authorization', `Bearer ${non_employee_token}`)
+
+      non_employee_user_info = nonEmployeeUserDetails.body.UserAuthDetails.user_info_uuid
+
+      expect(nonEmployeeUserDetails.statusCode).toBe(200)
+    })
+
+    it("Should throw an error if user info id is missing", async () => {
+      const input = {
+        user_info_uuid: '',
+        item_uuid: randomUUID(),
+        balance: 1,
+        status: 'cancelled' as UserItemStatus,
+        business_info_uuid: randomUUID()
+      }
+
+      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      expect(result.statusCode).toBe(400)
+      expect(result.body.error).toBe("User Info id is required")
+    })
+    it("Should throw an error if item id is missing", async () => {
+      const input = {
+        user_info_uuid: randomUUID(),
+        item_uuid: '',
+        balance: 1,
+        status: 'cancelled' as UserItemStatus,
+        business_info_uuid: randomUUID()
+      }
+
+      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      expect(result.statusCode).toBe(400)
+      expect(result.body.error).toBe("Item id is required")
+    })
+
+    it("Should throw an error if balance is negative", async () => {
+      const input = {
+        user_info_uuid: randomUUID(),
+        item_uuid: randomUUID(),
+        balance: -1,
+        status: 'cancelled' as UserItemStatus,
+        business_info_uuid: randomUUID()
+      }
+
+      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      expect(result.statusCode).toBe(400)
+      expect(result.body.error).toBe("Balance cannot be negative")
+    })
+
+    it("Should throw an error if balance is not a number", async () => {
+      const input = {
+        user_info_uuid: randomUUID(),
+        item_uuid: randomUUID(),
+        balance: '1',
+        status: 'cancelled' as UserItemStatus,
+        business_info_uuid: randomUUID()
+      }
+
+      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      expect(result.statusCode).toBe(400)
+      expect(result.body.error).toBe("Balance must be a valid number")
+    })
+
+    it("Should throw an error if status is invalid", async () => {
+      const input: any = {
+        user_info_uuid: randomUUID(),
+        item_uuid: randomUUID(),
+        balance: 1,
+        status: 'any status',
+        business_info_uuid: randomUUID()
+      }
+
+      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      expect(result.statusCode).toBe(400)
+      expect(result.body.error).toBe("Invalid status")
+    })
+
+    it("Should throw an error if status is cancelled", async () => {
+      const input: any = {
+        user_info_uuid: randomUUID(),
+        item_uuid: randomUUID(),
+        balance: 1,
+        status: 'cancelled',
+        business_info_uuid: randomUUID()
+      }
+
+      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      expect(result.statusCode).toBe(400)
+      expect(result.body.error).toBe("Invalid status")
+    })
+
+    it("Should throw an error if user is not found", async () => {
+      const input: any = {
+        user_info_uuid: randomUUID(),
+        item_uuid: randomUUID(),
+        balance: 1,
+        status: 'active',
+        business_info_uuid: randomUUID()
+      }
+
+      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      expect(result.statusCode).toBe(404)
+      expect(result.body.error).toBe("App User not found")
+    })
+
+    it("Should throw an error if employer is trying to create a non employee user item", async () => {
+
+      const input: any = {
+        user_info_uuid: non_employee_user_info,
+        item_uuid: randomUUID(),
+        balance: 1,
+        status: 'active',
+      }
+
+      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      expect(result.statusCode).toBe(403)
+      expect(result.body.error).toBe("Unauthorized access")
+    })
+    it("Should create a new item", async () => {
+
+      const input: any = {
+        user_info_uuid: employee_user_info,
+        item_uuid: benefit1_uuid,
+        balance: 1,
+        status: 'active',
+      }
+
+      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      expect(result.statusCode).toBe(201)
+      expect(result.body.uuid).toBeTruthy()
+      expect(result.body.user_info_uuid).toBe(input.user_info_uuid)
+      expect(result.body.item_name).toBe("Vale Alimentação")
+      expect(result.body.balance).toBe(1)
+      expect(result.body.status).toBe(input.status)
+      expect(result.body.business_info_uuid).toBe(employer_info_uuid)
+      expect(result.body.created_at).toBeTruthy()
+
+    })
+    it("Should throw an error if user already has this item", async () => {
+
+      const input: any = {
+        user_info_uuid: employee_user_info,
+        item_uuid: benefit1_uuid,
+        balance: 1,
+        status: 'active',
+      }
+
+      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      expect(result.statusCode).toBe(409)
+      expect(result.body.error).toBe("User already has this item")
+    })
+  })
+
 })

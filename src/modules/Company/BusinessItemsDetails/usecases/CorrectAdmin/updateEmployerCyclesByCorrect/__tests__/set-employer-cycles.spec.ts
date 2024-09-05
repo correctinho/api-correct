@@ -1,20 +1,21 @@
-import { Uuid } from '../../../../../../@shared/ValueObjects/uuid.vo';
 import { SetEmployerCycleUsecase } from '../set-employer-cycles.usecase'
+import { randomUUID } from 'crypto'
+
 const MockRepository = () => {
   return {
-      create: jest.fn(),
-      update: jest.fn(),
-      find: jest.fn(),
-      findAll: jest.fn(),
-      findByItemUuidAndBusinessInfo:jest.fn(),
-      findAllEmployerItems: jest.fn()
+    create: jest.fn(),
+    update: jest.fn(),
+    find: jest.fn(),
+    findAll: jest.fn(),
+    findByItemUuidAndBusinessInfo: jest.fn(),
+    findAllEmployerItems: jest.fn()
   };
 };
 
 const foundItemDetails = {
-  uuid:'1',
-  item_uuid: '2',
-  business_info_uuid: '3',
+  uuid: randomUUID(),
+  item_uuid: randomUUID(),
+  business_info_uuid: randomUUID(),
   cycle_start_day: '',
   cycle_end_day: ''
 }
@@ -23,15 +24,15 @@ describe("Unity Test Set Employer Cycles Usecase", () => {
     const itemDetailsRepository = MockRepository()
     const input = {
       business_info_uuid: '',
-      item_uuid: 'any uuid',
+      item_uuid: randomUUID(),
       cycle_end_day: 0
 
     }
     const usecase = new SetEmployerCycleUsecase(itemDetailsRepository)
 
-    try{
+    try {
       await usecase.execute(input)
-    }catch(err: any){
+    } catch (err: any) {
       expect(err.message).toBe("Business Id is required")
       expect(err.statusCode).toBe(400)
     }
@@ -40,16 +41,16 @@ describe("Unity Test Set Employer Cycles Usecase", () => {
   it("Should throw an error if item id missing", async () => {
     const itemDetailsRepository = MockRepository()
     const input = {
-      business_info_uuid: 'any uuid',
+      business_info_uuid: randomUUID(),
       item_uuid: '',
       cycle_end_day: 0
 
     }
     const usecase = new SetEmployerCycleUsecase(itemDetailsRepository)
 
-    try{
+    try {
       await usecase.execute(input)
-    }catch(err: any){
+    } catch (err: any) {
       expect(err.message).toBe("Item Id is required")
       expect(err.statusCode).toBe(400)
     }
@@ -58,17 +59,17 @@ describe("Unity Test Set Employer Cycles Usecase", () => {
   it("Should throw an error if cycle end day is missing", async () => {
     const itemDetailsRepository = MockRepository()
     const input = {
-      business_info_uuid: 'any uuid',
-      item_uuid: 'any uuid',
+      business_info_uuid: randomUUID(),
+      item_uuid: randomUUID(),
       cycle_end_day: 0
 
     }
 
     const usecase = new SetEmployerCycleUsecase(itemDetailsRepository)
 
-    try{
+    try {
       await usecase.execute(input)
-    }catch(err: any){
+    } catch (err: any) {
       expect(err.message).toBe("Cycle end day is required")
       expect(err.statusCode).toBe(400)
     }
@@ -82,12 +83,16 @@ describe("Unity Test Set Employer Cycles Usecase", () => {
       cycle_end_day: 1
 
     }
-   itemDetailsRepository.findByItemUuidAndBusinessInfo.mockResolvedValueOnce(foundItemDetails)
+    itemDetailsRepository.findByItemUuidAndBusinessInfo.mockResolvedValueOnce(foundItemDetails)
 
     const usecase = new SetEmployerCycleUsecase(itemDetailsRepository)
 
+
     const result = await usecase.execute(input)
-    expect(result.cycle_end_day).toBe(1)
-    expect(result.cycle_start_day).toBe(0)
+    expect(result.business_info_uuid).toBe(input.business_info_uuid)
+    expect(result.item_uuid).toBe(input.item_uuid)
+    expect(result.cycle_end_day).toBe(input.cycle_end_day)
+    expect(result.cycle_start_day).toBe(input.cycle_end_day + 1)
+
   })
 })

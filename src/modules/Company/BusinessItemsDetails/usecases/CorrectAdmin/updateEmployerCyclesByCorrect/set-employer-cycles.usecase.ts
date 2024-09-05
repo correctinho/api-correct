@@ -1,5 +1,6 @@
+import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../../errors/custom.error";
-import { BusinessItemsDetailsEntity } from "../../../entities/businessItemDetails.entity";
+import { BusinessItemDetailsCreateCommand, BusinessItemsDetailsEntity } from "../../../entities/businessItemDetails.entity";
 import { IBusinessItemDetailsRepository } from "../../../repositories/business-item-details.repository";
 import { InputSetEmployerCyclesDTO, OutputSetEmployerCyclesDTO } from "./dto/set-cycles.dto";
 
@@ -17,8 +18,17 @@ export class SetEmployerCycleUsecase {
     const itemDetails = await this.itemDetailsRepository.findByItemUuidAndBusinessInfo(data.business_info_uuid, data.item_uuid)
     if (!itemDetails) throw new CustomError("Item not found", 404)
 
-    const itemEntity = new BusinessItemsDetailsEntity(itemDetails)
+    const businessItemDetailsData = {
+      uuid: new Uuid(itemDetails.uuid),
+      item_uuid: new Uuid(itemDetails.item_uuid),
+      business_info_uuid: new Uuid(itemDetails.business_info_uuid),
+      cycle_start_day: itemDetails.cycle_start_day,
+      cycle_end_day: itemDetails.cycle_end_day
+    }
+
+    const itemEntity = new BusinessItemsDetailsEntity(businessItemDetailsData)
     itemEntity.changeCycleEndDay(data.cycle_end_day)
+
     await this.itemDetailsRepository.update(itemEntity)
 
     return {

@@ -16,7 +16,7 @@ describe('BusinessItemsDetailsEntity unit tests', () => {
       const itemDetails = new BusinessItemsDetailsEntity(validInput);
       itemDetails.changeCycleEndDay(15);
       expect(itemDetails.cycle_end_day).toBe(15);
-      expect(itemDetails.cycle_start_day).toBe(14); // Verifica se o cycle_start_day foi atualizado corretamente
+      expect(itemDetails.cycle_start_day).toBe(16); // Verifica se o cycle_start_day foi atualizado corretamente
   });
 
     it('Should create a business item details entity', () => {

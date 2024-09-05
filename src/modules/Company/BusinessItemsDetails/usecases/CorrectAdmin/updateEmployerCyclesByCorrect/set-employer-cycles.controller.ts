@@ -1,8 +1,7 @@
 import { Request, Response } from "express";
-import { CustomError } from "../../../../../errors/custom.error";
-import { IBusinessItemDetailsRepository } from "../../repositories/business-item-details.repository";
 import { InputSetEmployerCyclesDTO, OutputSetEmployerCyclesDTO } from "./dto/set-cycles.dto";
 import { SetEmployerCycleUsecase } from "./set-employer-cycles.usecase";
+import { IBusinessItemDetailsRepository } from "../../../repositories/business-item-details.repository";
 
 export class SetEmployerCycleController {
   constructor(

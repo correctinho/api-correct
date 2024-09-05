@@ -12,7 +12,7 @@ type BusinessItemDetailsProps = {
   updated_at?: string
 }
 
-type BusinessItemDetailsCreateCommand = {
+export type BusinessItemDetailsCreateCommand = {
   item_uuid: Uuid
   business_info_uuid: Uuid
   cycle_start_day?: number
@@ -77,7 +77,7 @@ export class BusinessItemsDetailsEntity {
 
 
   private updateCycleStartDay(endDay: number) {
-    this._cycle_start_day = endDay - 1;
+    this._cycle_start_day = endDay + 1;
   }
 
   changeCycleEndDay(endDay: number) {

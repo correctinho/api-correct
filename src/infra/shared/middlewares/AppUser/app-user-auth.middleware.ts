@@ -32,7 +32,8 @@ export const appUserIsAuth = async (req: Request, res: Response, next: NextFunct
         document: '',
         email: '',
         created_at: '',
-        updated_at: ''
+        updated_at: '',
+        user_info_uuid: ''
       }
 
       const appUserAuthRepository = new AppUserAuthPrismaRepository()
@@ -43,8 +44,10 @@ export const appUserIsAuth = async (req: Request, res: Response, next: NextFunct
         appUserId: user.uuid.uuid,
         document: user.document,
         email: user.email,
+        user_info_uuid: user.user_info_uuid ? user.user_info_uuid.uuid : null,
         created_at: user.created_at,
-        updated_at: user.updated_at
+        updated_at: user.updated_at ? user.updated_at : null,
+
       }
       return next()
     }

@@ -59,7 +59,7 @@ export const companyIsAuth = async (req: Request, res: Response, next: NextFunct
             permissions: user.permissions,
             status: user.status,
             created_at: user.created_at,
-            updated_at: user.updated_at
+            updated_at: user.updated_at ? user.updated_at : null,
           }
 
           return next()

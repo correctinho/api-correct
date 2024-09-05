@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
-import { findEmployerItemDetails } from "../../modules/Company/BusinessItemsDetails/usecases/AppUser/findItemDetailsByCorrect";
-import { findAllEmployerItemDetails } from "../../modules/Company/BusinessItemsDetails/usecases/AppUser/findAllByCorrect";
+import { findEmployerItemDetails } from "../../modules/Company/BusinessItemsDetails/usecases/CorrectAdmin/findItemDetailsByCorrect";
+import { findAllEmployerItemDetails } from "../../modules/Company/BusinessItemsDetails/usecases/CorrectAdmin/findAllByCorrect";
 import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/company-admin-auth.middlware";
 import { createEmployerItemDetails } from "../../modules/Company/BusinessItemsDetails/usecases/CorrectAdmin/createEmployerItemByCorrect";
 import { setEmployerCyclesController } from "../../modules/Company/BusinessItemsDetails/usecases/CorrectAdmin/updateEmployerCyclesByCorrect";
