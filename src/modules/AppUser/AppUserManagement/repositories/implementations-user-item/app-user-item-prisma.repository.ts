@@ -1,9 +1,11 @@
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { prismaClient } from "../../../../../infra/databases/prisma.config";
 import { AppUserItemEntity } from "../../entities/app-user-item.entity";
+import { OutputFindAllAppUserItemsDTO } from "../../usecases/UserItem/find-all-by-employer/dto/find-user-item.dto";
 import { IAppUserItemRepository } from "../app-user-item-repository";
 
 export class AppUserItemPrismaRepository implements IAppUserItemRepository{
+
   async findByItemUuidAndUserInfo(userInfoId: string, itemId: string): Promise<AppUserItemEntity | null> {
     const userItem = await prismaClient.userItem.findFirst({
       where:{
@@ -94,6 +96,17 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
   }
   findAll(): Promise<AppUserItemEntity[]> {
     throw new Error("Method not implemented.");
+  }
+
+  async findAllUserItems(userInfoId: string): Promise<AppUserItemEntity[]> {
+    const userItems = await prismaClient.userItem.findMany({
+      where:{
+        user_info_uuid: userInfoId
+      }
+    })
+
+    return userItems as AppUserItemEntity[] | []
+
   }
 
 }

@@ -3,5 +3,6 @@ import { AppUserItemEntity } from "../entities/app-user-item.entity";
 
 export interface IAppUserItemRepository extends RepositoryInterface<AppUserItemEntity>{
   findByItemUuidAndUserInfo(userInfoId: string, itemId: string):Promise<AppUserItemEntity | null>
+  findAllUserItems(userInfoId: string): Promise<any>
 
 }
