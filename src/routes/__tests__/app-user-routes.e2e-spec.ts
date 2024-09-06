@@ -1850,4 +1850,73 @@ describe("E2E App User tests", () => {
     })
   })
 
+  describe("E2E Find all user items by employer", () => {
+    beforeAll(async () => {
+      //create 2 more user items
+      const userItem2: any = {
+        user_info_uuid: employee_user_info,
+        item_uuid: benefit2_uuid,
+        balance: 1,
+        status: 'active',
+      }
+      const userItem3: any = {
+        user_info_uuid: employee_user_info,
+        item_uuid: benefit3_uuid,
+        balance: 1,
+        status: 'active',
+      }
+      const createUserItem2 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem2)
+      const createUserItem3 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem3)
+
+      expect(createUserItem2.statusCode).toBe(201)
+      expect(createUserItem3.statusCode).toBe(201)
+
+    })
+    it("Should throw an error if user info is missing", async () => {
+      const input: any = {
+        user_info_uuid: '',
+      }
+
+      const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      expect(result.statusCode).toBe(400)
+      expect(result.body.error).toBe("User Info id is required")
+    })
+
+    it("Should throw an error if user is not found", async () => {
+      const input: any = {
+        userInfoUuid: randomUUID(),
+      }
+
+      const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+      expect(result.statusCode).toBe(404)
+      expect(result.body.error).toBe("User not found")
+    })
+
+    it("Should throw an error if user is not employee", async () => {
+      const input: any = {
+        userInfoUuid: non_employee_user_info,
+      }
+
+      const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+      expect(result.statusCode).toBe(403)
+      expect(result.body.error).toBe("Unauthorized access")
+    })
+
+    it("Should return a list of user items", async () => {
+      const input: any = {
+        userInfoUuid: employee_user_info,
+      }
+
+      const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+      console.log(result.body)
+      expect(result.statusCode).toBe(200)
+      expect(result.body.length).toBe(3)
+
+      result.body.forEach((userItem: any) => {
+        expect(userItem.user_info_uuid).toBe(employee_user_info)
+      });
+    })
+
+  })
+
 })

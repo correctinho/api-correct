@@ -18,7 +18,7 @@ appUserItemRouter.get("/user-item/employer", companyIsAuth, async (request, resp
   await findUserItemById.handle(request, response)
 })
 
-//find all user items by employer - NOT TESTED
+//find all user items by employer - TESTED
 appUserItemRouter.get("/user-item/all/employer", companyIsAuth, async (request, response) => {
   await findAllUserItemsByemployer.handle(request, response)
 })

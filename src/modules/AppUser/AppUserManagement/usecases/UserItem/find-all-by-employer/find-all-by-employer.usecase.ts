@@ -16,9 +16,9 @@ export class FindAllUserItemsByEmployerUsecase {
     // Check if app user exists
     const userInfo = await this.appuserInfoRepository.find(new Uuid(user_info_uuid));
     if (!userInfo) throw new CustomError("User not found", 404);
-    if (!userInfo.business_info_uuid) throw new CustomError("Unauthorized access - 1", 403);
+    if (!userInfo.business_info_uuid) throw new CustomError("Unauthorized access", 403);
 
-    if (userInfo.business_info_uuid.uuid !== business_info_uuid) throw new CustomError("Unauthorized access - 2", 403);
+    if (userInfo.business_info_uuid.uuid !== business_info_uuid) throw new CustomError("Unauthorized access", 403);
 
     const userItems = await this.appUserItemRepository.findAllUserItems(user_info_uuid);
 
