@@ -29,23 +29,32 @@ export class AuthenticateAppuserUsecase {
     const comparePasswordHash = await this.passwordCrypto.compare(password, appUser.password)
     if (!comparePasswordHash) throw new CustomError("Document/password is incorrect", 401)
 
-    try {
-      const response = await api.post("/api/v1/jwt/encode", {
-        data: {
-          user_uuid: appUser.uuid.uuid
-        },
-        seconds: 2000
-      })
-
-      const tokenGenerated = response.data.token
-
-      return {
-        token: tokenGenerated
-      }
-    } catch (err: any) {
-
-      return "Erro ao gerar token do app user"
+    //criar token através da api local
+    const tokenGenerated = await this.token.create(appUser)
+    return {
+      token: tokenGenerated
     }
+
+    //gerar token através da api go
+
+    //   try {
+    //     const response = await api.post("/api/v1/jwt/encode", {
+    //       data: {
+    //         user_uuid: appUser.uuid.uuid
+    //       },
+    //       seconds: 2000
+    //     })
+
+    //     const tokenGenerated = response.data.token
+
+    //     return {
+    //       token: tokenGenerated
+    //     }
+    //   } catch (err: any) {
+
+    //     return "Erro ao gerar token do app user"
+    //   }
+    // }
   }
 
   private processDocument(document: string) {

@@ -69,9 +69,9 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
     })
   }
   async find(id: Uuid): Promise<AppUserItemEntity> {
-    const userItem = await prismaClient.userItem.findFirst({
+    const userItem = await prismaClient.userItem.findUnique({
       where:{
-        item_uuid: id.uuid,
+        uuid: id.uuid,
       }
     })
 

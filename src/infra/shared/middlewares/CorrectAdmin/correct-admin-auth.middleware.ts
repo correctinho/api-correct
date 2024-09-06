@@ -23,36 +23,60 @@ export const correctIsAuth = async (req: Request, res: Response, next: NextFunct
     });
   }
 
-  try {
-    const response = await api.post("/api/v1/jwt/decode", {
-      token: token
-    });
-    const verifyToken = response.data;
+  //monolito mode
+  const verifyToken = new JWTToken().validate(token)
+  if (verifyToken) {
+    req.correctAdmin = {
+      correctAdminId: verifyToken.sub,
+      userName: '',
+      email: '',
+      isAdmin: false
+    };
 
-    if (verifyToken) {
-      // Inicialize req.correctAdmin com todas as propriedades necessárias
-      req.correctAdmin = {
-        correctAdminId: verifyToken.data.user_uuid,
-        userName: verifyToken.data.userName || '',
-        email: verifyToken.data.email || '',
-        isAdmin: verifyToken.data.isAdmin || false
-      };
+    const correctAdminRepository = new CorrectAdminPrismaRepository();
+    const ensureValidAdmin = new EnsureValidCorrectAdminController(correctAdminRepository);
+    const admin = await ensureValidAdmin.handle(req, res) as OutputAdminDetailDTO
 
-      const correctAdminRepository = new CorrectAdminPrismaRepository();
-      const ensureValidAdmin = new EnsureValidCorrectAdminController(correctAdminRepository);
-      const admin = await ensureValidAdmin.handle(req, res) as OutputAdminDetailDTO
-
-      req.correctAdmin = {
-        correctAdminId: admin.uuid || '',
-        userName: admin.userName || '',
-        email: admin.email || '',
-        isAdmin: admin.isAdmin || false
-      };
-      return next();
-    }
-  } catch (err: any) {
-    console.log("Erro ao verificar token do correct Admin");
+    req.correctAdmin = {
+      correctAdminId: admin.uuid || '',
+      userName: admin.userName || '',
+      email: admin.email || '',
+      isAdmin: admin.isAdmin || false
+    };
+    return next()
   }
+
+  //jwt with go ms
+  // try {
+  //   const response = await api.post("/api/v1/jwt/decode", {
+  //     token: token
+  //   });
+  //   const verifyToken = response.data;
+
+  //   if (verifyToken) {
+  //     // Inicialize req.correctAdmin com todas as propriedades necessárias
+  //     req.correctAdmin = {
+  //       correctAdminId: verifyToken.data.user_uuid,
+  //       userName: verifyToken.data.userName || '',
+  //       email: verifyToken.data.email || '',
+  //       isAdmin: verifyToken.data.isAdmin || false
+  //     };
+
+  //     const correctAdminRepository = new CorrectAdminPrismaRepository();
+  //     const ensureValidAdmin = new EnsureValidCorrectAdminController(correctAdminRepository);
+  //     const admin = await ensureValidAdmin.handle(req, res) as OutputAdminDetailDTO
+
+  //     req.correctAdmin = {
+  //       correctAdminId: admin.uuid || '',
+  //       userName: admin.userName || '',
+  //       email: admin.email || '',
+  //       isAdmin: admin.isAdmin || false
+  //     };
+  //     return next();
+  //   }
+  // } catch (err: any) {
+  //   console.log("Erro ao verificar token do correct Admin");
+  // }
 
   return res.status(401).json({
     error: "Authentication Error"

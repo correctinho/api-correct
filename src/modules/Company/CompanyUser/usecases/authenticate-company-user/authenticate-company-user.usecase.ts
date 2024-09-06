@@ -44,23 +44,26 @@ export class AuthenticateCompanyUserUsecase {
       //check if user status is inactive
       if (findUser.status === "inactive") throw new CustomError("User is not allowed to sign in", 401)
 
-      //const tokenGenerated = this.token.create(findUser)
-
-      try {
-        const response = await api.post("/api/v1/jwt/encode", {
-          data: {
-            user_uuid: findUser.uuid
-          },
-          seconds: 600
-        })
-
-        const tokenGenerated = response.data.token
-        return {
-          token: tokenGenerated
-        }
-      } catch (err: any) {
-        return "Erro ao gerar token"
+      const tokenGenerated = this.token.create(findUser)
+      return {
+        token: tokenGenerated
       }
+
+      // try {
+      //   const response = await api.post("/api/v1/jwt/encode", {
+      //     data: {
+      //       user_uuid: findUser.uuid
+      //     },
+      //     seconds: 600
+      //   })
+
+      //   const tokenGenerated = response.data.token
+      //   return {
+      //     token: tokenGenerated
+      //   }
+      // } catch (err: any) {
+      //   return "Erro ao gerar token"
+      // }
     }
 
     //login option by username
@@ -74,25 +77,28 @@ export class AuthenticateCompanyUserUsecase {
     const comparePasswordHash = await this.passwordCrypto.compare(password, findUser.password)
     if (!comparePasswordHash) throw new CustomError("Incorrect credentials", 401)
 
-    //const tokenGenerated = this.token.create(findUser)
-
-    try {
-      const response = await api.post("/api/v1/jwt/encode", {
-        data: {
-          user_uuid: findUser.uuid
-        },
-        seconds: 600
-      })
-
-      const tokenGenerated = response.data.token
-
-      return {
-        token: tokenGenerated
-      }
-    } catch (err: any) {
-
-      return "Erro ao gerar token"
+    const tokenGenerated = this.token.create(findUser)
+    console.log({tokenGenerated})
+    return {
+      token: tokenGenerated
     }
+    // try {
+    //   const response = await api.post("/api/v1/jwt/encode", {
+    //     data: {
+    //       user_uuid: findUser.uuid
+    //     },
+    //     seconds: 600
+    //   })
+
+    //   const tokenGenerated = response.data.token
+
+    //   return {
+    //     token: tokenGenerated
+    //   }
+    // } catch (err: any) {
+
+    //   return "Erro ao gerar token"
+    // }
 
   }
 }

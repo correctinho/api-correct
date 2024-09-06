@@ -14,6 +14,7 @@ export class AuthenticateAdminUseCase{
     constructor(
         private correctAdminRepository: ICorrectAdminRepository,
         private passwordCrypto: IPasswordCrypto,
+        private token: IToken
     ){}
 
     async execute( {userName, password }: AuthenticateAdminRequest){
@@ -26,27 +27,30 @@ export class AuthenticateAdminUseCase{
         if(!comparePasswordHash) throw new CustomError("Username/password is incorrect", 401)
 
           //criar token através da api local
-          //const tokenGenerated = await this.token.create(admin)
+          const tokenGenerated = await this.token.create(admin)
+
+          return {
+            token: tokenGenerated
+        }
 
           //gerar token através da api go
-          try{
-            const response = await api.post("/api/v1/jwt/encode", {
-              data:{
-                user_uuid: admin.uuid.uuid
-              },
-              seconds: 2000
-            })
+          // try{
+          //   const response = await api.post("/api/v1/jwt/encode", {
+          //     data:{
+          //       user_uuid: admin.uuid.uuid
+          //     },
+          //     seconds: 2000
+          //   })
 
-            const tokenGenerated = response.data.token
+          //   const tokenGenerated = response.data.token
 
-            return {
-                token: tokenGenerated
-            }
-          }catch(err: any){
-            console.log({err})
-            return "Erro ao gerar token do correct admin"
-          }
-        //const tokenGenerated = await this.token.create(admin)
+          //   return {
+          //       token: tokenGenerated
+          //   }
+          // }catch(err: any){
+          //   console.log({err})
+          //   return "Erro ao gerar token do correct admin"
+          // }
 
 
     }

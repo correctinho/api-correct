@@ -1601,8 +1601,11 @@ describe("E2E App User tests", () => {
 
     })
   })
+  let employeeUserItemUuid: string
   describe("E2E tests create user item by employer", () => {
+
     beforeAll(async () => {
+
       //create employer user
       const inputEmployer = {
         password: "123456",
@@ -1784,6 +1787,11 @@ describe("E2E App User tests", () => {
       }
 
       const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      employeeUserItemUuid = result.body.uuid
+      const searchUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query({userItemId: employeeUserItemUuid})
+
+      expect(searchUserItem.statusCode).toBe(200)
+      expect(searchUserItem.body.uuid).toBe(result.body.uuid)
       expect(result.statusCode).toBe(201)
       expect(result.body.uuid).toBeTruthy()
       expect(result.body.user_info_uuid).toBe(input.user_info_uuid)
@@ -1806,6 +1814,39 @@ describe("E2E App User tests", () => {
       const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
       expect(result.statusCode).toBe(409)
       expect(result.body.error).toBe("User already has this item")
+    })
+  })
+
+  describe("E2E find user item by id by employer", () => {
+    it("Should throw an errir if user item id is missing", async () => {
+      const input = {
+        userItemId: ''
+      }
+      const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+      expect(result.statusCode).toBe(400)
+      expect(result.body.error).toBe("User Item id is required")
+    })
+
+    it("Should throw an errir if user item is not found", async () => {
+      const input = {
+        userItemId: randomUUID()
+      }
+      const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+      expect(result.statusCode).toBe(404)
+      expect(result.body.error).toBe("User Item not found")
+    })
+
+    it("Should return user item", async () => {
+      const input = {
+        userItemId: employeeUserItemUuid
+      }
+      const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+      expect(result.statusCode).toBe(200)
+      expect(result.body.uuid).toBe(input.userItemId)
+      expect(result.body.item_name).toBe("Vale Alimentação")
+      expect(result.body.balance).toBe(1)
+      expect(result.body.status).toBe('active')
+
     })
   })
 

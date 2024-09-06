@@ -36,7 +36,7 @@ describe("Unity Test Authenticate admin", () => {
         const userName = '';
         const password = 'password';
 
-        const authUsecase = new AuthenticateAdminUseCase(adminMockRepository, passwordRepository);
+        const authUsecase = new AuthenticateAdminUseCase(adminMockRepository, passwordRepository, tokenRepository);
 
         await expect(authUsecase.execute({ userName, password })).rejects.toThrow("Username/password is incorrect");
     });
@@ -49,7 +49,7 @@ describe("Unity Test Authenticate admin", () => {
         const userName = 'username';
         const password = '';
 
-        const authUsecase = new AuthenticateAdminUseCase(adminMockRepository, passwordRepository);
+        const authUsecase = new AuthenticateAdminUseCase(adminMockRepository, passwordRepository, tokenRepository);
 
         await expect(authUsecase.execute({ userName, password })).rejects.toThrow("Username/password is incorrect");
     });
@@ -76,7 +76,7 @@ describe("Unity Test Authenticate admin", () => {
         // Configure the password repository to return false for incorrect password
         passwordRepository.compare.mockResolvedValue(false);
 
-        const authUsecase = new AuthenticateAdminUseCase(adminMockRepository, passwordRepository);
+        const authUsecase = new AuthenticateAdminUseCase(adminMockRepository, passwordRepository, tokenRepository);
 
         await expect(authUsecase.execute({ userName, password })).rejects.toThrow("Username/password is incorrect");
     });
@@ -106,7 +106,7 @@ describe("Unity Test Authenticate admin", () => {
         // Configure the token repository to return a mock token
         tokenRepository.create.mockResolvedValue('mock_token');
 
-        const authUsecase = new AuthenticateAdminUseCase(adminMockRepository, passwordRepository);
+        const authUsecase = new AuthenticateAdminUseCase(adminMockRepository, passwordRepository, tokenRepository);
 
         const result = await authUsecase.execute({ userName, password });
 
