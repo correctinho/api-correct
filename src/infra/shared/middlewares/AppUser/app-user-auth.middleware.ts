@@ -23,6 +23,7 @@ export const appUserIsAuth = async (req: Request, res: Response, next: NextFunct
 
   //monolito mode
   const verifyToken = new AppUserJWToken().validate(token)
+
   if (verifyToken) {
       req.appUser = {
         appUserId: verifyToken.sub,

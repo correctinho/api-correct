@@ -4,6 +4,7 @@ import { createAppUserItemController } from "../../modules/AppUser/AppUserManage
 import { findUserItemById } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/find-user-item-by-id";
 import { findAllUserItemsByemployer } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/find-all-by-employer";
 import { blockOrCancelUserItemByEmployer } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/block-or-cancel-user-item-by-employer";
+import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
 
 export const appUserItemRouter = Router()
 
@@ -24,8 +25,15 @@ appUserItemRouter.get("/user-item/all/employer", companyIsAuth, async (request, 
   await findAllUserItemsByemployer.handle(request, response)
 })
 
-
-//block or cancel user item by employer - NOT TESTED
+//block or cancel user item by employer - TESTED
 appUserItemRouter.patch("/user-item/employer", companyIsAuth, async (request, response) => {
   await blockOrCancelUserItemByEmployer.handle(request, response)
+})
+
+
+//*****APP USER ENDPOINTS****** */
+
+//find user item by user -  NOT TESTED
+appUserItemRouter.get("/user-item", appUserIsAuth, async (request, response) => {
+  await findUserItemById.handle(request, response)
 })
