@@ -12,17 +12,15 @@ export class GetSingleUserByBusinessAdminController{
     async handle(req: Request, res: Response){
 
         try{
-            const business_user_uuid = req.companyUserId
             const employee_uuid = req.query.employeeId as string
 
             const usecase = new GetSingleUserByBusinessAdminUsecase(this.appUsersRepository, this.businessUserRepository)
 
-            const result = await usecase.execute(employee_uuid, business_user_uuid)
+            const result = await usecase.execute(employee_uuid)
 
             return res.json(result)
 
         }catch(err: any){
-            console.log({err})
             return res.status(err.statusCode).json({
                 error: err.message
             })

@@ -9,7 +9,6 @@ export const branchRouter = Router();
 
 branchRouter.get(
     '/branch/:uuid',
-    correctIsAuth,
     async (request, response) =>
         await getBranchByIDController.handle(request, response)
 );

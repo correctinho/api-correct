@@ -19,7 +19,7 @@ export class CreateDocumentsValidationController{
         try{
 
             const data = req.body
-            data.user_uuid = new Uuid(req.appUserId)
+            data.user_uuid = new Uuid(req.appUser.appUserId)
 
             const documentsValidationUsecase = new CreateDocumentsValidationUsecase(
                 this.userAuthRepository,
@@ -30,7 +30,7 @@ export class CreateDocumentsValidationController{
             const result = await documentsValidationUsecase.execute(data)
 
             return res.status(201).json({success: "Documents registered successfully", result})
-            
+
         }catch(err: any){
             return res.status(err.statusCode).json({
                 error: err.message

@@ -10,5 +10,5 @@ export interface ICompanyUserRepository{
     findByEmail(email: string): Promise<CompanyUserEntity | null>
     updateUser(data: CompanyUserProps): Promise<BusinessUserResponse>
     saveUser(data: CompanyUserEntity): Promise<void>
-    deleteByAdminById(user_id: string): Promise<void>
+    inactivateByAdminById(user_id: string): Promise<void>
 }

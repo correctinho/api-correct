@@ -2,6 +2,7 @@ import { prismaClient } from "../../../../../infra/databases/prisma.config";
 import { CompanyUserEntity, CompanyUserProps } from "../../entities/company-user.entity";
 import { ICompanyUserRepository } from "../company-user.repository";
 import { BusinessUserResponse } from "../../companyUserDto/company-user.dto";
+import { update } from "lodash";
 
 
 export class CompanyUserPrismaRepository implements ICompanyUserRepository {
@@ -14,7 +15,7 @@ export class CompanyUserPrismaRepository implements ICompanyUserRepository {
 
         return companyUser
     }
-    
+
     async findByBusinessIdAndUsername(id: string, user_name: string | null): Promise<CompanyUserEntity | null> {
         const companyUser = await prismaClient.businessUser.findFirst({
             where:{
@@ -35,8 +36,8 @@ export class CompanyUserPrismaRepository implements ICompanyUserRepository {
 
         return companyUser
     }
-   
-       
+
+
 
     async findById(id: string): Promise<BusinessUserResponse | null> {
         const companyUser = await prismaClient.businessUser.findUnique({
@@ -54,14 +55,16 @@ export class CompanyUserPrismaRepository implements ICompanyUserRepository {
                 function: true,
                 permissions: true,
                 status: true,
-                BusinessInfo: true
+                BusinessInfo: true,
+                created_at: true,
+                updated_at: true
             },
-        
+
         })
-        return companyUser 
+        return companyUser
     }
 
-   
+
     async findByEmail(email: string): Promise<CompanyUserEntity | null> {
         const companyUser = await prismaClient.businessUser.findUnique({
             where: {
@@ -81,7 +84,7 @@ export class CompanyUserPrismaRepository implements ICompanyUserRepository {
         })
 
         return companyUser
-    }   
+    }
 
     async updateUser(data: CompanyUserEntity): Promise<BusinessUserResponse> {
         const updateUser = await prismaClient.businessUser.update({
@@ -121,17 +124,20 @@ export class CompanyUserPrismaRepository implements ICompanyUserRepository {
                 permissions: data.permissions,
                 status: data.status
             }
-                      
+
         })
 
     }
 
 
 
-    async deleteByAdminById(user_uuid: string): Promise<void> {
-        await prismaClient.businessUser.delete({
+    async inactivateByAdminById(user_uuid: string): Promise<void> {
+        await prismaClient.businessUser.update({
             where:{
                 uuid: user_uuid
+            },
+            data:{
+              status: 'inactive'
             }
         })
     }

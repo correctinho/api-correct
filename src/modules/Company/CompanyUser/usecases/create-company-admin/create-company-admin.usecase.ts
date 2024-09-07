@@ -1,3 +1,4 @@
+import { Permissions } from "@prisma/client"
 import { CustomError } from "../../../../../errors/custom.error"
 import { ICompanyDataRepository } from "../../../CompanyData/repositories/company-data.repository"
 import { CompanyUserEntity, CompanyUserProps } from "../../entities/company-user.entity"
@@ -11,34 +12,45 @@ export class CreateCompanyAdminUseCase {
   ) { }
 
   async execute(data: CompanyUserProps) {
-
-    if (!data.email) throw new CustomError("Email is required", 400)
-
-    //if email exists, it means that it's an admin being created  Correct
-    data.is_admin = true
-
-    //check if email is already registered in business info database
-    const findByEmail = await this.companyDataRepository.findByEmail(data.email)
-    if (!findByEmail) throw new CustomError("Email not found in company registers", 400)
-
-    if(findByEmail.status === 'pending_approval') throw new CustomError("Business must be validated before creating an Admin user", 401)
-    if(findByEmail.status === 'inactive') throw new CustomError("Business has inactive status", 401)
-
-    //if business info exists, relate to current user
-    data.business_info_uuid = findByEmail.uuid
-
-    //by default, admin status is 'pendind_password'
-    
     const admin = await CompanyUserEntity.create(data)
 
+    if (!admin.email) throw new CustomError("Email is required", 400)
+
+    //if email exists, it means that it's an admin being created  Correct
+    admin.is_admin = true
+
+    //check if email is already registered in business info database
+    const findByEmail = await this.companyDataRepository.findByEmail(admin.email)
+    if (!findByEmail) throw new CustomError("Email not found in company registers", 400)
+
+    if (findByEmail.status === 'pending_approval') throw new CustomError("Business must be validated before creating an Admin user", 401)
+    if (findByEmail.status === 'inactive') throw new CustomError("Business has inactive status", 401)
+
+    //if business info exists, relate to current user
+    admin.business_info_uuid = findByEmail.uuid
+    admin.permissions = [Permissions.all]
+
+    //by default, admin status is 'pendind_password'
+    admin.status = 'pending_password'
 
     //check if email already exists in users registers
-    const companyUserByEmail = await this.companyUserRepository.findByEmail(data.email)
-    if (companyUserByEmail) throw new CustomError("Email already registered", 400)
+    const companyUserByEmail = await this.companyUserRepository.findByEmail(admin.email)
+    if (companyUserByEmail) throw new CustomError("Email already registered", 409)
 
     //create company admin
-    const createCompanyAdmin = await this.companyUserRepository.saveUser(admin)
+    await this.companyUserRepository.saveUser(admin)
 
-    return createCompanyAdmin
+    return {
+      uuid: admin.uuid,
+      business_info_uuid: admin.business_info_uuid,
+      email: admin.email,
+      document: admin.document,
+      name: admin.name,
+      is_admin: admin.is_admin,
+      permissions: admin.permissions,
+      user_name: admin.user_name,
+      function: admin.function,
+      status: admin.status
+    }
   }
 }

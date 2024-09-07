@@ -9,7 +9,7 @@ export class UpdateCompanyDataAndAddressByAdminUsecase{
 
     async execute(data: CompanyAddressEntity){
         if(!data.uuid) throw new CustomError("Address Id is required", 400)
-        
+
         //check if uuid exists
         const findAddress = await this.companyAddressRepository.findById(data.uuid)
         if(!findAddress) throw new CustomError("Address not found", 400)

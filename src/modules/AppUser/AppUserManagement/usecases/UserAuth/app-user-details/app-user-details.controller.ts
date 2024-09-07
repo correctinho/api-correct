@@ -14,12 +14,12 @@ export class AppUserDetailsController {
 
     async handle(req: Request, res: Response){
         try{
-            const user_uuid = req.appUserId
+            const user_uuid = req.appUser.appUserId
 
             const userDetailsUsecase = new AppUserDetailsUsecase(this.appUserRepository, this.appUserInfoRepository)
 
             const userDetails = await userDetailsUsecase.execute(new Uuid(user_uuid))
-            
+
             return res.json(userDetails)
         }catch(err: any){
             return res.status(err.statusCode).json({

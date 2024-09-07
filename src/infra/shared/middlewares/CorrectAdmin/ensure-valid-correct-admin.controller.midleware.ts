@@ -3,27 +3,32 @@ import { ICorrectAdminRepository } from "../../../../modules/CorrectAdmin/reposi
 import { EnsureValidCorrectAdminUsecase } from "./ensure-valid-correct-admin.usecase.middlware";
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
 
-export class EnsureValidCorrectAdminController{
-    constructor(
-        private correctAdminRepository: ICorrectAdminRepository
-    ){}
 
-    async handle(req: Request, res: Response){
-        try{
-            const correctAdminId = req.correctAdminId
-            
-            const validAdminUsecase = new EnsureValidCorrectAdminUsecase(
-                this.correctAdminRepository
-            )
+export class EnsureValidCorrectAdminController {
+  constructor(
+    private correctAdminRepository: ICorrectAdminRepository
+  ) { }
 
-            const admin = await validAdminUsecase.execute(new Uuid(correctAdminId))
+  async handle(req: Request, res: Response) {
+    try {
+      const correctAdminId = req.correctAdmin.correctAdminId
+      const validAdminUsecase = new EnsureValidCorrectAdminUsecase(
+        this.correctAdminRepository
+      )
 
-            return admin
+      const admin = await validAdminUsecase.execute(new Uuid(correctAdminId))
 
-        }catch(err:any){
-            return res.status(err.statusCode).json({
-                error: err.message
-            })
-        }
+      return {
+        uuid: admin.uuid,
+        userName: admin.userName,
+        email: admin.email,
+        isAdmin: admin.isAdmin
+      }
+
+    } catch (err: any) {
+      return res.status(err.statusCode).json({
+        error: err.message
+      })
     }
+  }
 }

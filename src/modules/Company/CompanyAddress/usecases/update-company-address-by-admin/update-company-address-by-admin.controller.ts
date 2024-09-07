@@ -18,18 +18,14 @@ export class UpdateCompanyDataAndAddressByAdminController {
 
         try {
             const address: CompanyAddressEntity = {...req.body}
-            const data: CompanyDataEntity = {...req.body}
-            
+
             address.uuid = req.query.address_uuid as string
 
-            data.uuid = req.query.data_uuid as string
             const companyAddressUsecase = new UpdateCompanyDataAndAddressByAdminUsecase(this.companyAddressRepository)
-            const companyDataUsecase = new UpdateBusinessInfoUsecase(this.companyDataRepository)
 
             await companyAddressUsecase.execute(address)
-            await companyDataUsecase.execute(data)
-            
-            return res.json({message: "Info updated successfully"})
+
+            return res.json({message: "Address updated successfully"})
 
         } catch (err: any) {
             return res.status(err.statusCode).json({

@@ -13,27 +13,18 @@ export class CreateAppUserInfoUsecase {
     ) { }
 
     async execute(data: InputCreateUserInfoDTO): Promise<OutputCreateUserInfoDTO> {
-
-        //find authenticated user
-        const findAuthUser = await this.appUserAuthRepository.find(data.user_id)
-        if (!findAuthUser) throw new CustomError("Authorization Error", 401)
-
-        data.document = findAuthUser.document
-        data.email = findAuthUser.email
-
         //check if document is already registered
-        const findBydocument = await this.appUserInfoRepository.findByDocumentUserInfo(findAuthUser.document)
+        const findBydocument = await this.appUserInfoRepository.findByDocumentUserInfo(data.document)
+        // if (findBydocument && !findAuthUser.user_info_uuid) {
+        //     //In this situation, we are making sure that the tables UserAuth and UserInfo are connected
 
-        if (findBydocument && !findAuthUser.user_info_uuid) {
-            //In this situation, we are making sure that the tables UserAuth and UserInfo are connected
+        //     const authEntity = new AppUserAuthSignUpEntity(findAuthUser)
+        //     authEntity.changeUserInfo(findBydocument.uuid)
 
-            const authEntity = new AppUserAuthSignUpEntity(findAuthUser)
-            authEntity.changeUserInfo(findBydocument.uuid)
-
-            //update authUser table
-            await this.appUserAuthRepository.update(authEntity)
-            throw new CustomError("User Info already registered", 409)
-        }
+        //     //update authUser table
+        //     await this.appUserAuthRepository.update(authEntity)
+        //     throw new CustomError("User Info already registered", 409)
+        // }
 
         if (findBydocument) throw new CustomError("User Info already registered - 1", 409)
         const userInfoEntity = await AppUserInfoEntity.create(data)

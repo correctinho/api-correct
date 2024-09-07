@@ -11,6 +11,7 @@
     "pstudio": "npx prisma studio",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
+    "test:benefits": "jest --config jest-e2e.config.ts routes/__tests__/benefit.routes.e2e-spec.ts --runInBand --watch",
     "test": "jest --config jest.unit.config.ts --watch",
     "test:e2e": "jest --config jest-e2e.config.ts --runInBand --watch",
     "tsc": "tsc"
@@ -40,6 +41,7 @@
     "uuid": "^10.0.0"
   },
   "dependencies": {
+    "@aws-sdk/client-sqs": "^3.637.0",
     "@prisma/client": "^5.6.0",
     "@types/cors": "^2.8.16",
     "axios": "^1.7.4",

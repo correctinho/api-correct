@@ -10,13 +10,7 @@ export class GetBranchByIDController {
             const getBranchByIDUsecase = new GetBranchByIDUsecase(
                 this.branchRepository
             );
-            const uuid = req.params.uuid;
-
-            if (!uuid) {
-                return res.status(400).json({
-                    error: 'Branch uuid is required',
-                });
-            }
+            const uuid = req.params.uuid as string
 
             const resp = await getBranchByIDUsecase.execute(uuid);
 

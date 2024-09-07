@@ -17,7 +17,7 @@ export class CreateCompanyContractController{
 
     async handle( req: Request, res: Response){
         try{
-            const adminId = req.companyUserId
+            const adminId = req.companyUser.companyUserId
 
             const password = req.body.password as string
 
@@ -28,7 +28,7 @@ export class CreateCompanyContractController{
             await contractUsecase.execute(data, adminId, password)
 
             return res.json({message: "Contract signed successfully"})
-            
+
         }catch(err: any){
             logger.error(err.stack)
             res.status(err.statusCode).json({

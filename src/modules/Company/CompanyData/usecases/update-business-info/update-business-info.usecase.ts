@@ -9,6 +9,7 @@ export class UpdateBusinessInfoUsecase {
     ){}
 
     async execute(data: CompanyDataEntity){
+
         if(!data.uuid) throw new CustomError("Business info Id is required", 400)
 
         const findData = await this.businessInfoRepository.findById(data.uuid)

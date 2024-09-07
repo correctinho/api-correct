@@ -13,7 +13,7 @@ export class GetBenefitByIDController {
             );
             const uuid = req.params.uuid;
 
-            const resp = await getBenefitByIDUsecase.execute(new Uuid(uuid));
+            const resp = await getBenefitByIDUsecase.execute(uuid);
 
             return res.json(resp);
         } catch (err: any) {

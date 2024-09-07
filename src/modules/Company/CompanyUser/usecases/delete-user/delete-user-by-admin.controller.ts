@@ -11,11 +11,10 @@ export class DeleteUserByAdminController {
 
         try {
             const user_id = req.query.user_id as string
-
+            const business_info_uuid = req.companyUser.businessInfoUuid
             const deleteUsecase = new DeleteUserByAdminUsecase(this.companyUserRepository)
 
-            await deleteUsecase.execute(user_id)
-
+            await deleteUsecase.execute(user_id, business_info_uuid)
 
             // return res.json(deleteUser)
 

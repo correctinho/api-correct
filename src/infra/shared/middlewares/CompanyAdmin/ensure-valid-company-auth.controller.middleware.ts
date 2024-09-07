@@ -10,11 +10,10 @@ export class EnsureValidCompanyUserController{
     }
     async handle(req: Request, res: Response){
         try{
-            const companyUserId = req.companyUserId
+            const companyUserId = req.companyUser.companyUserId
             const validUserUsecase = new EnsureValidCompanyUserUsecase(this.companyUserRepository)
 
             const user = await validUserUsecase.execute(companyUserId)
-
             return user
         }catch(err: any){
             return res.status(err.statusCode).json({

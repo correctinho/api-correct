@@ -3,31 +3,36 @@ import { ICompanyUserRepository } from "../../repositories/company-user.reposito
 import { CompanyUserEntity } from "../../entities/company-user.entity";
 import { logger } from "../../../../../utils/logger";
 import { UpdateUserByAdminUsecase } from "./update-user-by-admin.usecase";
+import { IPasswordCrypto } from "../../../../../crypto/password.crypto";
 
 export class UpdateUserbyAdminController {
-    constructor(
-        private companyUserRepository: ICompanyUserRepository
-    ) { }
+  constructor(
+    private companyUserRepository: ICompanyUserRepository,
+    private passwordCrypto: IPasswordCrypto,
 
-    async handle(req: Request, res: Response) {
+  ) { }
 
-        try {
-            const data: CompanyUserEntity = req.body
-            data.uuid = req.query.user_id as string
+  async handle(req: Request, res: Response) {
 
-            const updateUserUsecase = new UpdateUserByAdminUsecase(this.companyUserRepository)
+    try {
+      const data: CompanyUserEntity = req.body
+      data.uuid = req.query.user_id as string
 
-            const updateUser = await updateUserUsecase.execute(data)
+      const businessAdminUuid = req.companyUser.companyUserId
+      const businessInfoUuid = req.companyUser.businessInfoUuid
+      const updateUserUsecase = new UpdateUserByAdminUsecase(this.companyUserRepository, this.passwordCrypto)
 
-            return res.json(updateUser)
+      const updateUser = await updateUserUsecase.execute(data, businessAdminUuid, businessInfoUuid)
 
-        } catch (err: any) {
-            logger.error(err.stack)
-            return res.status(err.statusCode).json({
-                error: err.message
-            })
-        }
+      return res.json(updateUser)
 
-
+    } catch (err: any) {
+      return res.status(err.statusCode).json({
+        error: err.message
+      })
     }
+
+
+
+  }
 }

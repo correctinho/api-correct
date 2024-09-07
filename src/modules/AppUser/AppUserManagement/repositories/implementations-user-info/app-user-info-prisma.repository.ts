@@ -1,10 +1,8 @@
+import { date } from "zod";
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { prismaClient } from "../../../../../infra/databases/prisma.config";
 import { newDateF } from "../../../../../utils/date";
-import { AppUserDataEntity } from "../../../UserByCorrect/entities/appuser-data.entity";
-import { UserInfoResponse, AppUserInfoRequest } from "../../../app-user-dto/app-user.dto";
 import { AppUserInfoEntity } from "../../entities/app-user-info.entity";
-import { InputCreateUserInfoDTO } from "../../usecases/UserInfo/create-user-info/dto/create-user-info.dto";
 import { IAppUserInfoRepository } from "../app-user-info.repository";
 
 export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
@@ -14,7 +12,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
     findByDocument2UserInfo(document2: string | null): Promise<AppUserInfoEntity> {
         throw new Error("Method not implemented.");
     }
-    
+
     async create(data: AppUserInfoEntity): Promise<void> {
         await prismaClient.$transaction([
 
@@ -34,7 +32,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
                     marital_status: data.marital_status,
                     dependents_quantity: data.dependents_quantity,
                     created_at: data.created_at,
-                    
+
                 }
             }),
 
@@ -114,8 +112,8 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
     //                     updated_at: true
     //                 }
     //             },
-                
-                
+
+
     //         }
     //     })
 
@@ -123,63 +121,123 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
 
     //     return []
     // }
-    async saveOrUpdate(data: InputCreateUserInfoDTO): Promise<void> {
-        throw new Error("Method not implemented.");
+    async saveOrUpdateByCSV(data: AppUserInfoEntity): Promise<string> {
 
-        // await prismaClient.userInfo.upsert({
-        //     where:{
-        //         document: data.document
-        //     },
-        //     create:{
-        //         uuid: data.uuid.uuid,
-        //         business_info_uuid: data.business_info_uuid ? data.business_info_uuid.uuid : null,
-        //         document: data.document,
-        //         document2: data.document2,
-        //         full_name: data.full_name,
-        //         internal_company_code: data.internal_company_code,
-        //         gender: data.gender,
-        //         date_of_birth: data.date_of_birth,
-        //         salary: data.salary,
-        //         phone: data.phone,
-        //         email: data.email,
-        //         company_owner: data.company_owner,
-        //         status: data.status,
-        //         function: data.function,
-        //         recommendation_code: data.recommendation_code,
-        //         is_authenticated: data.is_authenticated,
-        //         marital_status: data.marital_status,
-        //         dependents_quantity: data.dependents_quantity,
-        //         user_document_validation_uuid: data.user_document_validation_uuid ? data.user_document_validation_uuid.uuid : null,
-        //         created_at: data.created_at
+        await prismaClient.userInfo.upsert({
+            where:{
+                document: data.document
+            },
+            create:{
+                uuid: data.uuid.uuid,
+                business_info_uuid: data.business_info_uuid ? data.business_info_uuid.uuid : null,
+                document: data.document,
+                document2: data.document2,
+                full_name: data.full_name,
+                internal_company_code: data.internal_company_code,
+                gender: data.gender,
+                date_of_birth: data.date_of_birth,
+                salary: data.salary,
+                phone: data.phone,
+                email: data.email,
+                company_owner: data.company_owner,
+                status: data.status,
+                function: data.function,
+                recommendation_code: data.recommendation_code,
+                is_authenticated: data.is_authenticated,
+                marital_status: data.marital_status,
+                dependents_quantity: data.dependents_quantity,
+                user_document_validation_uuid: data.user_document_validation_uuid ? data.user_document_validation_uuid.uuid : null,
+                created_at: data.created_at
 
-        //     },
-        //     update:{
-        //         business_info_uuid: data.business_info_uuid ? data.business_info_uuid.uuid : null,
-        //         document: data.document,
-        //         document2: data.document2,
-        //         full_name: data.full_name,
-        //         internal_company_code: data.internal_company_code,
-        //         gender: data.gender,
-        //         date_of_birth: data.date_of_birth,
-        //         salary: data.salary,
-        //         phone: data.phone,
-        //         email: data.email,
-        //         company_owner: data.company_owner,
-        //         status: data.status,
-        //         function: data.function,
-        //         recommendation_code: data.recommendation_code,
-        //         is_authenticated: data.is_authenticated,
-        //         marital_status: data.marital_status,
-        //         dependents_quantity: data.dependents_quantity,
-        //         user_document_validation_uuid: data.user_document_validation_uuid ? data.user_document_validation_uuid.uuid : null,
-        //         updated_at: data.updated_at
+            },
+            update:{
+                business_info_uuid: data.business_info_uuid ? data.business_info_uuid.uuid : null,
+                document: data.document,
+                document2: data.document2,
+                full_name: data.full_name,
+                internal_company_code: data.internal_company_code,
+                gender: data.gender,
+                date_of_birth: data.date_of_birth,
+                salary: data.salary,
+                phone: data.phone,
+                email: data.email,
+                company_owner: data.company_owner,
+                status: data.status,
+                function: data.function,
+                recommendation_code: data.recommendation_code,
+                is_authenticated: data.is_authenticated,
+                marital_status: data.marital_status,
+                dependents_quantity: data.dependents_quantity,
+                user_document_validation_uuid: data.user_document_validation_uuid ? data.user_document_validation_uuid.uuid : null,
+                updated_at: data.updated_at
 
-        //     }
-        // })
-
-       
+            }
+        })
+        return data.uuid.uuid
     }
-    
+
+    async createUserInfoandUpdateUserAuthByCSV(userInfo: AppUserInfoEntity){
+      await prismaClient.$transaction([
+        prismaClient.userInfo.upsert({
+          where:{
+            document: userInfo.document
+          },
+          create:{
+            uuid: userInfo.uuid.uuid,
+            business_info_uuid: userInfo.business_info_uuid ? userInfo.business_info_uuid.uuid : null,
+            document: userInfo.document,
+            document2: userInfo.document2,
+            full_name: userInfo.full_name,
+            internal_company_code: userInfo.internal_company_code,
+            gender: userInfo.gender,
+            date_of_birth: userInfo.date_of_birth,
+            salary: userInfo.salary,
+            phone: userInfo.phone,
+            email: userInfo.email,
+            company_owner: userInfo.company_owner,
+            status: userInfo.status,
+            function: userInfo.function,
+            recommendation_code: userInfo.recommendation_code,
+            is_authenticated: userInfo.is_authenticated,
+            marital_status: userInfo.marital_status,
+            dependents_quantity: userInfo.dependents_quantity,
+            user_document_validation_uuid: userInfo.user_document_validation_uuid ? userInfo.user_document_validation_uuid.uuid : null,
+            created_at: userInfo.created_at
+          },
+          update:{
+            business_info_uuid: userInfo.business_info_uuid ? userInfo.business_info_uuid.uuid : null,
+            document: userInfo.document,
+            document2: userInfo.document2,
+            full_name: userInfo.full_name,
+            internal_company_code: userInfo.internal_company_code,
+            gender: userInfo.gender,
+            date_of_birth: userInfo.date_of_birth,
+            salary: userInfo.salary,
+            phone: userInfo.phone,
+            email: userInfo.email,
+            company_owner: userInfo.company_owner,
+            status: userInfo.status,
+            function: userInfo.function,
+            recommendation_code: userInfo.recommendation_code,
+            is_authenticated: userInfo.is_authenticated,
+            marital_status: userInfo.marital_status,
+            dependents_quantity: userInfo.dependents_quantity,
+            user_document_validation_uuid: userInfo.user_document_validation_uuid ? userInfo.user_document_validation_uuid.uuid : null,
+            updated_at: newDateF(new Date())
+          }
+        }),
+        prismaClient.userAuth.update({
+          where:{
+            document:userInfo.document
+          },
+          data:{
+            user_info_uuid: userInfo.uuid.uuid,
+            updated_at: newDateF(new Date())
+
+          }
+        })
+      ])
+    }
 
     // async findById(id: string): Promise<UserInfoResponse | null> {
     //     const user = await prismaClient.userInfo.findUnique({
@@ -205,8 +263,8 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
     //                     updated_at: true
     //                 }
     //             },
-                
-                
+
+
     //         }
     //     })
 
@@ -232,7 +290,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
                     marital_status: data.marital_status,
                     dependents_quantity: data.dependents_quantity,
                     created_at: newDateF(new Date()),
-                    
+
                 }
             }),
 
@@ -247,14 +305,14 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
             })
         ])
     }
-   
+
 
     async findByDocumentUserInfo(document: string): Promise<AppUserInfoEntity | null> {
         const user = await prismaClient.userInfo.findUnique({
             where: {
                 document: document
             }
-            
+
         })
         if(!user) return null
 
