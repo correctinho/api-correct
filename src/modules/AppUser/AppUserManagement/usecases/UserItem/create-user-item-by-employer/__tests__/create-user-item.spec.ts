@@ -36,7 +36,8 @@ const AppUserItemMockRepository = () => {
     update: jest.fn(),
     find: jest.fn(),
     findAll: jest.fn(),
-    findByItemUuidAndUserInfo: jest.fn()
+    findByItemUuidAndUserInfo: jest.fn(),
+    findAllUserItems: jest.fn()
   }
 }
 

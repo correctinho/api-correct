@@ -1,6 +1,6 @@
 import { UserItemStatus } from "@prisma/client";
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
-import { newDateF } from "../../../../utils/date";
+import { addDaysToDate, newDateF } from "../../../../utils/date";
 import { CustomError } from "../../../../errors/custom.error";
 
 export type AppUserItemProps = {
@@ -12,6 +12,7 @@ export type AppUserItemProps = {
   status: UserItemStatus
   blocked_at?: string
   cancelled_at?: string
+  cancelling_request_at?: string
   block_reason?: string
   cancel_reason?: string
   grace_period_end_date?: string
@@ -25,11 +26,11 @@ export type AppUserItemCreateCommand = {
   item_name?: string
   balance: number
   status: UserItemStatus
-  blocked_at?: string
-  cancelled_at?: string
-  block_reason?: string
-  cancel_reason?: string
-  grace_period_end_date?: string
+  // blocked_at?: string
+  // cancelled_at?: string
+  // block_reason?: string
+  // cancel_reason?: string
+  // grace_period_end_date?: string
   created_at?: string
   updated_at?: string
 }
@@ -43,6 +44,7 @@ export class AppUserItemEntity {
   private _status: UserItemStatus
   private _blocked_at?: string
   private _cancelled_at?: string
+  private _cancelling_request_at?: string
   private _block_reason?: string
   private _cancel_reason?: string
   private _grace_period_end_date?: string
@@ -58,6 +60,7 @@ export class AppUserItemEntity {
     this._status = props.status
     this._blocked_at = props.blocked_at
     this._cancelled_at = props.cancel_reason
+    this._cancelling_request_at = props.cancelling_request_at
     this._block_reason = props.block_reason
     this._cancel_reason = props.cancel_reason
     this._grace_period_end_date = props.grace_period_end_date
@@ -92,6 +95,10 @@ export class AppUserItemEntity {
 
   get blocked_at(): string | undefined {
     return this._blocked_at
+  }
+
+  get cancelling_request_at(): string | undefined {
+    return this._cancelling_request_at
   }
 
   get cancelled_at(): string | undefined {
@@ -135,6 +142,24 @@ export class AppUserItemEntity {
     this._status = 'cancelled'
   }
 
+  toBeCancelStatus() {
+    this._status = 'to_be_cancelled'
+  }
+
+  async scheduleCancelling() {
+    this.toBeCancelStatus()
+
+    const requestedAt = newDateF(new Date())
+
+    this.changeCancellingRequestAt(requestedAt)
+
+    //add 60 days
+    const dateToCancel = await addDaysToDate(requestedAt, 60)
+
+    this.changeGracePeriodEndDate(dateToCancel)
+    this.validate()
+  }
+
   changeItemName(itemName: string) {
     this._item_name = itemName;
     this.validate();
@@ -165,6 +190,10 @@ export class AppUserItemEntity {
     this.validate();
   }
 
+  changeCancellingRequestAt(cancelRequestAt: string | undefined) {
+    this._cancelling_request_at = cancelRequestAt
+    this.validate()
+  }
 
   validate() {
     if (!this._user_info_uuid) throw new CustomError("User Info id is required", 400)

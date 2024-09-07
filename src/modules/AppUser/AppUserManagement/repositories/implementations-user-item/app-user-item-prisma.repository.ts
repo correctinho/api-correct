@@ -26,6 +26,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
       cancelled_at: userItem.cancelled_at,
       block_reason: userItem.block_reason,
       cancel_reason: userItem.cancel_reason,
+      cancelling_request_at: userItem.cancelling_request_at,
       grace_period_end_date: userItem.grace_period_end_date,
       created_at: userItem.created_at,
       updated_at: userItem.updated_at
@@ -65,6 +66,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
         cancelled_at: entity.cancelled_at,
         block_reason: entity.block_reason,
         cancel_reason: entity.cancel_reason,
+        cancelling_request_at: entity.cancelling_request_at,
         grace_period_end_date: entity.grace_period_end_date,
         updated_at: entity.updated_at,
       }
@@ -89,6 +91,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
       cancelled_at: userItem.cancelled_at,
       block_reason: userItem.block_reason,
       cancel_reason: userItem.cancel_reason,
+      cancelling_request_at: userItem.cancelling_request_at,
       grace_period_end_date: userItem.grace_period_end_date,
       created_at: userItem.created_at,
       updated_at: userItem.updated_at

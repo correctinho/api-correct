@@ -1,7 +1,14 @@
 import { UserItemStatus } from "@prisma/client"
 
+export type InputBlockOrCancelUserItemByEmployer = {
+  business_info_uuid: string,
+  user_item_uuid: string,
+  status: UserItemStatus,
+  block_reason?: string,
+  cancel_reason?: string
+}
 
-export type OutputFindAppUserItemByIdDTO = {
+export type OutputBlockOrCancelUserItemByEmployer = {
   uuid: string
   user_info_uuid: string
   item_uuid: string

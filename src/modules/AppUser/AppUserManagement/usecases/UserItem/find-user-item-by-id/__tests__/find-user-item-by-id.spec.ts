@@ -41,7 +41,9 @@ describe("Unity tests Find User Item by id", () => {
       user_item_uuid: randomUUID()
     }
     appUserItemRepository.find.mockResolvedValueOnce({
-      uuid: input.user_item_uuid
+      uuid: input.user_item_uuid,
+      user_info_uuid: randomUUID(),
+      item_uuid: randomUUID(),
     })
     const usecase = new FindUserItemByIdUsecase(appUserItemRepository)
 

@@ -123,14 +123,14 @@ describe("E2E App User tests", () => {
       description: "Descrição do vale",
       parent_uuid: null,
       item_type: 'gratuito',
-      item_category: 'pre_pago',
+      item_category: 'pos_pago',
     }
     const benefit3: InputCreateBenefitDto = {
       name: "Convênio",
       description: "Descrição do vale",
       parent_uuid: null,
       item_type: 'gratuito',
-      item_category: 'pre_pago',
+      item_category: 'pos_pago',
     }
     const benefit4: InputCreateBenefitDto = {
       name: "Vale Refeição",
@@ -1601,9 +1601,10 @@ describe("E2E App User tests", () => {
 
     })
   })
-  let employeeUserItemUuid: string
-  describe("E2E tests create user item by employer", () => {
+  let pre_paid_user_item_uuid: string
+  let post_paid_user_item_uuid: string
 
+  describe("E2E Tests User Items", () => {
     beforeAll(async () => {
 
       //create employer user
@@ -1667,256 +1668,361 @@ describe("E2E App User tests", () => {
       expect(nonEmployeeUserDetails.statusCode).toBe(200)
     })
 
-    it("Should throw an error if user info id is missing", async () => {
-      const input = {
-        user_info_uuid: '',
-        item_uuid: randomUUID(),
-        balance: 1,
-        status: 'cancelled' as UserItemStatus,
-        business_info_uuid: randomUUID()
-      }
+    describe("E2E tests create user item by employer", () => {
+      it("Should throw an error if user info id is missing", async () => {
+        const input = {
+          user_info_uuid: '',
+          item_uuid: randomUUID(),
+          balance: 1,
+          status: 'cancelled' as UserItemStatus,
+          business_info_uuid: randomUUID()
+        }
 
-      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-      expect(result.statusCode).toBe(400)
-      expect(result.body.error).toBe("User Info id is required")
+        const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("User Info id is required")
+      })
+      it("Should throw an error if item id is missing", async () => {
+        const input = {
+          user_info_uuid: randomUUID(),
+          item_uuid: '',
+          balance: 1,
+          status: 'cancelled' as UserItemStatus,
+          business_info_uuid: randomUUID()
+        }
+
+        const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Item id is required")
+      })
+
+      it("Should throw an error if balance is negative", async () => {
+        const input = {
+          user_info_uuid: randomUUID(),
+          item_uuid: randomUUID(),
+          balance: -1,
+          status: 'cancelled' as UserItemStatus,
+          business_info_uuid: randomUUID()
+        }
+
+        const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Balance cannot be negative")
+      })
+
+      it("Should throw an error if balance is not a number", async () => {
+        const input = {
+          user_info_uuid: randomUUID(),
+          item_uuid: randomUUID(),
+          balance: '1',
+          status: 'cancelled' as UserItemStatus,
+          business_info_uuid: randomUUID()
+        }
+
+        const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Balance must be a valid number")
+      })
+
+      it("Should throw an error if status is invalid", async () => {
+        const input: any = {
+          user_info_uuid: randomUUID(),
+          item_uuid: randomUUID(),
+          balance: 1,
+          status: 'any status',
+          business_info_uuid: randomUUID()
+        }
+
+        const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Invalid status")
+      })
+
+      it("Should throw an error if status is cancelled", async () => {
+        const input: any = {
+          user_info_uuid: randomUUID(),
+          item_uuid: randomUUID(),
+          balance: 1,
+          status: 'cancelled',
+          business_info_uuid: randomUUID()
+        }
+
+        const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Invalid status")
+      })
+
+      it("Should throw an error if user is not found", async () => {
+        const input: any = {
+          user_info_uuid: randomUUID(),
+          item_uuid: randomUUID(),
+          balance: 1,
+          status: 'active',
+          business_info_uuid: randomUUID()
+        }
+
+        const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(404)
+        expect(result.body.error).toBe("App User not found")
+      })
+
+      it("Should throw an error if employer is trying to create a non employee user item", async () => {
+
+        const input: any = {
+          user_info_uuid: non_employee_user_info,
+          item_uuid: randomUUID(),
+          balance: 1,
+          status: 'active',
+        }
+
+        const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(403)
+        expect(result.body.error).toBe("Unauthorized access")
+      })
+      it("Should create a new item", async () => {
+
+        const input: any = {
+          user_info_uuid: employee_user_info,
+          item_uuid: benefit1_uuid,
+          balance: 1,
+          status: 'active',
+        }
+
+        const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        pre_paid_user_item_uuid = result.body.uuid
+        const searchUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query({ userItemId: pre_paid_user_item_uuid })
+
+        expect(searchUserItem.statusCode).toBe(200)
+        expect(searchUserItem.body.uuid).toBe(result.body.uuid)
+        expect(result.statusCode).toBe(201)
+        expect(result.body.uuid).toBeTruthy()
+        expect(result.body.user_info_uuid).toBe(input.user_info_uuid)
+        expect(result.body.item_name).toBe("Vale Alimentação")
+        expect(result.body.balance).toBe(1)
+        expect(result.body.status).toBe(input.status)
+        expect(result.body.business_info_uuid).toBe(employer_info_uuid)
+        expect(result.body.created_at).toBeTruthy()
+
+      })
+      it("Should throw an error if user already has this item", async () => {
+
+        const input: any = {
+          user_info_uuid: employee_user_info,
+          item_uuid: benefit1_uuid,
+          balance: 1,
+          status: 'active',
+        }
+
+        const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(409)
+        expect(result.body.error).toBe("User already has this item")
+      })
     })
-    it("Should throw an error if item id is missing", async () => {
-      const input = {
-        user_info_uuid: randomUUID(),
-        item_uuid: '',
-        balance: 1,
-        status: 'cancelled' as UserItemStatus,
-        business_info_uuid: randomUUID()
-      }
 
-      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-      expect(result.statusCode).toBe(400)
-      expect(result.body.error).toBe("Item id is required")
+    describe("E2E find user item by id by employer", () => {
+      it("Should throw an errir if user item id is missing", async () => {
+        const input = {
+          userItemId: ''
+        }
+        const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("User Item id is required")
+      })
+
+      it("Should throw an errir if user item is not found", async () => {
+        const input = {
+          userItemId: randomUUID()
+        }
+        const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+        expect(result.statusCode).toBe(404)
+        expect(result.body.error).toBe("User Item not found")
+      })
+
+      it("Should return user item", async () => {
+        const input = {
+          userItemId: pre_paid_user_item_uuid
+        }
+        const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.uuid).toBe(input.userItemId)
+        expect(result.body.item_name).toBe("Vale Alimentação")
+        expect(result.body.balance).toBe(1)
+        expect(result.body.status).toBe('active')
+
+      })
     })
 
-    it("Should throw an error if balance is negative", async () => {
-      const input = {
-        user_info_uuid: randomUUID(),
-        item_uuid: randomUUID(),
-        balance: -1,
-        status: 'cancelled' as UserItemStatus,
-        business_info_uuid: randomUUID()
-      }
+    describe("E2E Find all user items by employer", () => {
+      beforeAll(async () => {
+        //create 2 more user items
+        const userItem2: any = {
+          user_info_uuid: employee_user_info,
+          item_uuid: benefit2_uuid,
+          balance: 1,
+          status: 'active',
+        }
+        const userItem3: any = {
+          user_info_uuid: employee_user_info,
+          item_uuid: benefit3_uuid,
+          balance: 1,
+          status: 'active',
+        }
+        const createUserItem2 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem2)
+        const createUserItem3 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem3)
 
-      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-      expect(result.statusCode).toBe(400)
-      expect(result.body.error).toBe("Balance cannot be negative")
-    })
+        post_paid_user_item_uuid = createUserItem2.body.uuid
+        expect(createUserItem2.statusCode).toBe(201)
+        expect(createUserItem3.statusCode).toBe(201)
 
-    it("Should throw an error if balance is not a number", async () => {
-      const input = {
-        user_info_uuid: randomUUID(),
-        item_uuid: randomUUID(),
-        balance: '1',
-        status: 'cancelled' as UserItemStatus,
-        business_info_uuid: randomUUID()
-      }
+      })
+      it("Should throw an error if user info is missing", async () => {
+        const input: any = {
+          user_info_uuid: '',
+        }
 
-      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-      expect(result.statusCode).toBe(400)
-      expect(result.body.error).toBe("Balance must be a valid number")
-    })
+        const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("User Info id is required")
+      })
 
-    it("Should throw an error if status is invalid", async () => {
-      const input: any = {
-        user_info_uuid: randomUUID(),
-        item_uuid: randomUUID(),
-        balance: 1,
-        status: 'any status',
-        business_info_uuid: randomUUID()
-      }
+      it("Should throw an error if user is not found", async () => {
+        const input: any = {
+          userInfoUuid: randomUUID(),
+        }
 
-      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-      expect(result.statusCode).toBe(400)
-      expect(result.body.error).toBe("Invalid status")
-    })
+        const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+        expect(result.statusCode).toBe(404)
+        expect(result.body.error).toBe("User not found")
+      })
 
-    it("Should throw an error if status is cancelled", async () => {
-      const input: any = {
-        user_info_uuid: randomUUID(),
-        item_uuid: randomUUID(),
-        balance: 1,
-        status: 'cancelled',
-        business_info_uuid: randomUUID()
-      }
+      it("Should throw an error if user is not employee", async () => {
+        const input: any = {
+          userInfoUuid: non_employee_user_info,
+        }
 
-      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-      expect(result.statusCode).toBe(400)
-      expect(result.body.error).toBe("Invalid status")
-    })
+        const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+        expect(result.statusCode).toBe(403)
+        expect(result.body.error).toBe("Unauthorized access")
+      })
 
-    it("Should throw an error if user is not found", async () => {
-      const input: any = {
-        user_info_uuid: randomUUID(),
-        item_uuid: randomUUID(),
-        balance: 1,
-        status: 'active',
-        business_info_uuid: randomUUID()
-      }
+      it("Should return a list of user items", async () => {
+        const input: any = {
+          userInfoUuid: employee_user_info,
+        }
 
-      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-      expect(result.statusCode).toBe(404)
-      expect(result.body.error).toBe("App User not found")
-    })
+        const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.length).toBe(3)
 
-    it("Should throw an error if employer is trying to create a non employee user item", async () => {
-
-      const input: any = {
-        user_info_uuid: non_employee_user_info,
-        item_uuid: randomUUID(),
-        balance: 1,
-        status: 'active',
-      }
-
-      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-      expect(result.statusCode).toBe(403)
-      expect(result.body.error).toBe("Unauthorized access")
-    })
-    it("Should create a new item", async () => {
-
-      const input: any = {
-        user_info_uuid: employee_user_info,
-        item_uuid: benefit1_uuid,
-        balance: 1,
-        status: 'active',
-      }
-
-      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-      employeeUserItemUuid = result.body.uuid
-      const searchUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query({userItemId: employeeUserItemUuid})
-
-      expect(searchUserItem.statusCode).toBe(200)
-      expect(searchUserItem.body.uuid).toBe(result.body.uuid)
-      expect(result.statusCode).toBe(201)
-      expect(result.body.uuid).toBeTruthy()
-      expect(result.body.user_info_uuid).toBe(input.user_info_uuid)
-      expect(result.body.item_name).toBe("Vale Alimentação")
-      expect(result.body.balance).toBe(1)
-      expect(result.body.status).toBe(input.status)
-      expect(result.body.business_info_uuid).toBe(employer_info_uuid)
-      expect(result.body.created_at).toBeTruthy()
+        result.body.forEach((userItem: any) => {
+          expect(userItem.user_info_uuid).toBe(employee_user_info)
+        });
+      })
 
     })
-    it("Should throw an error if user already has this item", async () => {
+    describe("E2E Block or Cancel User item by employer", () => {
+      it("Should throw an error if item uuid is missing", async () => {
+        const input: any = {
+          user_item_uuid: '',
+          status: 'cancelled'
+        }
 
-      const input: any = {
-        user_info_uuid: employee_user_info,
-        item_uuid: benefit1_uuid,
-        balance: 1,
-        status: 'active',
-      }
+        const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe('User item uuid is required')
+      })
 
-      const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-      expect(result.statusCode).toBe(409)
-      expect(result.body.error).toBe("User already has this item")
+      it("Should throw an error if item uuid is not found", async () => {
+        const input: any = {
+          user_item_uuid: randomUUID(),
+          status: 'cancelled'
+        }
+
+        const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(404)
+        expect(result.body.error).toBe('User Item not found')
+      })
+
+      it("Should return a blocked user item", async () => {
+        const input: any = {
+          user_item_uuid: pre_paid_user_item_uuid,
+          status: 'blocked'
+        }
+
+        const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        const findInput = {
+          userItemId: pre_paid_user_item_uuid
+        }
+        const findUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(findInput)
+        expect(findUserItem.statusCode).toBe(200)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.status).toBe(input.status)
+        expect(findUserItem.body.status).toBe(input.status)
+      })
+
+      it("Should return a to be cancelled user item - post paid", async () => {
+        const input: any = {
+          user_item_uuid: post_paid_user_item_uuid,
+          status: 'cancelled'
+        }
+
+        const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        const findInput = {
+          userItemId: post_paid_user_item_uuid
+        }
+
+        const findUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(findInput)
+        expect(findUserItem.statusCode).toBe(200)
+        expect(result.statusCode).toBe(200)
+        expect(findUserItem.body.status).toBe('to_be_cancelled')
+        expect(findUserItem.body.grace_period_end_date).toBeTruthy()
+        expect(findUserItem.body.cancelling_request_at).toBeTruthy()
+        expect(findUserItem.body.updated_at).toBeTruthy()
+      })
+
+      it("Should return a cancelled user item - pre paid", async () => {
+        const input: any = {
+          user_item_uuid: pre_paid_user_item_uuid,
+          status: 'cancelled'
+        }
+
+        const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        const findInput = {
+          userItemId: pre_paid_user_item_uuid
+        }
+        const findUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(findInput)
+
+        expect(findUserItem.statusCode).toBe(200)
+        expect(result.statusCode).toBe(200)
+        expect(findUserItem.body.status).toBe('cancelled')
+        expect(findUserItem.body.cancelled_at).toBeTruthy()
+        expect(findUserItem.body.updated_at).toBeTruthy()
+      })
+
+      it("Should throw an error if trying to cancel an already cancelled user item", async () => {
+        const input: any = {
+          user_item_uuid: pre_paid_user_item_uuid,
+          status: 'cancelled'
+        }
+
+        const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("User item already cancelled")
+      })
+
+      it("Should throw an error if trying to cancel an user item that is to be cancelled", async () => {
+        const input: any = {
+          user_item_uuid: post_paid_user_item_uuid,
+          status: 'cancelled'
+        }
+
+        const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("User item already cancelled")
+      })
+
     })
   })
-
-  describe("E2E find user item by id by employer", () => {
-    it("Should throw an errir if user item id is missing", async () => {
-      const input = {
-        userItemId: ''
-      }
-      const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-      expect(result.statusCode).toBe(400)
-      expect(result.body.error).toBe("User Item id is required")
-    })
-
-    it("Should throw an errir if user item is not found", async () => {
-      const input = {
-        userItemId: randomUUID()
-      }
-      const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-      expect(result.statusCode).toBe(404)
-      expect(result.body.error).toBe("User Item not found")
-    })
-
-    it("Should return user item", async () => {
-      const input = {
-        userItemId: employeeUserItemUuid
-      }
-      const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-      expect(result.statusCode).toBe(200)
-      expect(result.body.uuid).toBe(input.userItemId)
-      expect(result.body.item_name).toBe("Vale Alimentação")
-      expect(result.body.balance).toBe(1)
-      expect(result.body.status).toBe('active')
-
-    })
-  })
-
-  describe("E2E Find all user items by employer", () => {
-    beforeAll(async () => {
-      //create 2 more user items
-      const userItem2: any = {
-        user_info_uuid: employee_user_info,
-        item_uuid: benefit2_uuid,
-        balance: 1,
-        status: 'active',
-      }
-      const userItem3: any = {
-        user_info_uuid: employee_user_info,
-        item_uuid: benefit3_uuid,
-        balance: 1,
-        status: 'active',
-      }
-      const createUserItem2 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem2)
-      const createUserItem3 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem3)
-
-      expect(createUserItem2.statusCode).toBe(201)
-      expect(createUserItem3.statusCode).toBe(201)
-
-    })
-    it("Should throw an error if user info is missing", async () => {
-      const input: any = {
-        user_info_uuid: '',
-      }
-
-      const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-      expect(result.statusCode).toBe(400)
-      expect(result.body.error).toBe("User Info id is required")
-    })
-
-    it("Should throw an error if user is not found", async () => {
-      const input: any = {
-        userInfoUuid: randomUUID(),
-      }
-
-      const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-      expect(result.statusCode).toBe(404)
-      expect(result.body.error).toBe("User not found")
-    })
-
-    it("Should throw an error if user is not employee", async () => {
-      const input: any = {
-        userInfoUuid: non_employee_user_info,
-      }
-
-      const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-      expect(result.statusCode).toBe(403)
-      expect(result.body.error).toBe("Unauthorized access")
-    })
-
-    it("Should return a list of user items", async () => {
-      const input: any = {
-        userInfoUuid: employee_user_info,
-      }
-
-      const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-      console.log(result.body)
-      expect(result.statusCode).toBe(200)
-      expect(result.body.length).toBe(3)
-
-      result.body.forEach((userItem: any) => {
-        expect(userItem.user_info_uuid).toBe(employee_user_info)
-      });
-    })
-
-  })
-
 })
