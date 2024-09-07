@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import { IAppUserItemRepository } from "../../../repositories/app-user-item-repository";
 import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repository";
 import { FindAllUserItemsByAppUserUsecase } from "./find-user-items-by-app-user.usecase";
-export class  FindAllUserItemsByEmployeryController {
+
+export class  FindAllUserItemsByAppUserController {
   constructor(
     private appUserItemRepository: IAppUserItemRepository,
     private appUserInfoRepository: IAppUserInfoRepository

@@ -2029,7 +2029,6 @@ describe("E2E App User tests", () => {
 
     describe("E2E tests User items by app user", () => {
       describe("E2E Tests Find user item by app user", () => {
-        //continuar testes aqui. É necessário validar se o user item vem o id correto
         it("Should return app user item", async () => {
           const input = {
             userItemId: pre_paid_user_item_uuid
@@ -2049,6 +2048,20 @@ describe("E2E App User tests", () => {
           expect(result.statusCode).toBe(403)
           expect(result.body.error).toBe('Unauthorized access for user')
 
+        })
+      })
+
+      describe("E2E Testes find all user items by user", () => {
+        it("Should return user items", async () => {
+          const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
+          expect(result.statusCode).toBe(200)
+          expect(result.body.length).toBe(3)
+        })
+        it("Should return empty array", async () => {
+          const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken2}`)
+          console.log(result.body)
+          expect(result.statusCode).toBe(200)
+          expect(result.body.length).toBe(0)
         })
       })
     })
