@@ -24,5 +24,6 @@ describe("E2E Correct admin test", () => {
         const result = await request(app).post('/login').send(authenticateAdmin)
 
         expect(result.status).toBe(200)
+
     })
 })

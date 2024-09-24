@@ -11,5 +11,7 @@ export type BusinessUserResponse = {
     function: string | null
     permissions: Permissions[]
     status: Status
-    
+    created_at: string
+    updated_at: string
+
 }

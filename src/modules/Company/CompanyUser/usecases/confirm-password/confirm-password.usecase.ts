@@ -12,7 +12,7 @@ export class ConfirmPasswordUsecase{
     async execute(user_id: string, password: string){
 
         if(!password) throw new CustomError("Incorrect credentials", 400)
-        
+
         //find user
         const findUser = await this.companyUserRepository.findByIdAuth(user_id)
         if(!findUser) throw new CustomError("User not found", 404)

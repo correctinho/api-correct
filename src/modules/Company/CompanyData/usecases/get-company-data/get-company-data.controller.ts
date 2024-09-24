@@ -11,18 +11,17 @@ export class GetCompanyDataController{
     async handle(req: Request, res: Response){
 
         try{
-            const business_id = req.query.business_info_uuid as string
+            const business_id = req.companyUser.businessInfoUuid
 
             const companyDataUsecase = new GetCompanyDataUsecase(
                 this.companyDataRepository
             )
-           
+
             const companyData = await companyDataUsecase.execute(business_id)
 
             return res.json(companyData)
 
         }catch(err: any){
-            logger.error(err.stack)
             return res.status(err.statusCode).json({
                 error: err.message
             })

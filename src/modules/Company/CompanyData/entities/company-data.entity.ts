@@ -7,7 +7,6 @@ type CompanyDataProps = {
     fantasy_name: string
     corporate_reason: string | null
     document: string
-    branch_info_uuid: string | null
     classification: string
     colaborators_number: number
     status: BusinessStatus
@@ -15,6 +14,9 @@ type CompanyDataProps = {
     phone_2: string | null
     business_type: BusinessTypeOptions
     email: string
+    employer_branch?:string
+    created_at?: string
+    updated_at?: string
 }
 
 export class CompanyDataEntity {
@@ -24,7 +26,6 @@ export class CompanyDataEntity {
     fantasy_name: string
     corporate_reason: string | null
     document: string
-    branch_info_uuid: string | null
     classification: string
     colaborators_number: number
     status: BusinessStatus
@@ -32,6 +33,10 @@ export class CompanyDataEntity {
     phone_2: string | null
     business_type: BusinessTypeOptions
     email: string
+    employer_branch?:string
+    created_at?: string
+    updated_at?: string
+
 
     private constructor(props: CompanyDataProps) {
 
@@ -46,7 +51,6 @@ export class CompanyDataEntity {
         this.fantasy_name = props.fantasy_name
         this.corporate_reason = props.corporate_reason
         this.document = props.document
-        this.branch_info_uuid = props.branch_info_uuid
         this.classification = props.classification
         this.colaborators_number = props.colaborators_number
         this.status = props.status
@@ -54,6 +58,9 @@ export class CompanyDataEntity {
         this.phone_2 = props.phone_2
         this.business_type = props.business_type
         this.email = props.email
+        this.employer_branch = props.employer_branch
+        this.created_at = newDate(new Date())
+        this.updated_at = newDate(new Date())
 
     }
 
@@ -61,4 +68,7 @@ export class CompanyDataEntity {
         const companyData = new CompanyDataEntity(data)
         return companyData
     }
+}
+function newDate(arg0: Date): string {
+  throw new Error('Function not implemented.');
 }

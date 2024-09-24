@@ -4,12 +4,12 @@ import { getBenefitByIDController } from '../../modules/benefits/usecases/get-be
 import { createBenefitController } from '../../modules/benefits/usecases/create-benefit';
 import { updateBenefitController } from '../../modules/benefits/usecases/update-benefit';
 import { getListsBenefitController } from '../../modules/benefits/usecases/get-list-benefits';
+import { createCustomBenefitController } from '../../modules/benefits/usecases/create-customized-benefit';
 
 export const benefitsRouter = Router();
 
 benefitsRouter.get(
     '/benefit/:uuid',
-    correctIsAuth,
     async (request, response) =>
         await getBenefitByIDController.handle(request, response)
 );
@@ -33,3 +33,11 @@ benefitsRouter.put(
     async (request, response) =>
         await updateBenefitController.handle(request, response)
 );
+
+//create custom benefit for business
+benefitsRouter.post(
+  '/benefit/custom',
+  correctIsAuth,
+  async (request, response) =>
+    await createCustomBenefitController.handle(request, response)
+)

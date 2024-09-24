@@ -10,7 +10,7 @@ export class EnsureValidAppUserController {
 
     async handle(req: Request, res: Response) {
         try {
-            const appUserId = req.appUserId
+            const appUserId = req.appUser.appUserId
 
             const validAppUserUsecase = new EnsureValidAppUserUsecase(
                 this.appUserAutRepository

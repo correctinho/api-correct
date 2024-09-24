@@ -11,9 +11,9 @@ export class ConfirmPasswordController{
     ){}
 
     async handle(req: Request, res: Response){
-        
-        try{    
-            const user_id = req.companyUserId
+
+        try{
+            const user_id = req.companyUser.companyUserId
             const password = req.body.password as string
 
             const confirmPasswordUsecase = new ConfirmPasswordUsecase(

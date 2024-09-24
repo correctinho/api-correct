@@ -14,13 +14,11 @@ export class UpdateBenefitController {
             );
             const data = req.body;
             data.uuid = new Uuid(req.params.uuid)
-           
             const resp = await updateBenefitUsecase.execute(data);
 
             return res.status(200).json(resp);
         } catch (err: any) {
-            console.log("update error: ", err)
-            logger.error(err.stack)
+          console.log({err})
             return res.status(err.statusCode).json({
                 error: err.message,
             });

@@ -13,17 +13,15 @@ export class UpdateBusinessInfoController {
     async handle(req: Request, res: Response){
         try{
             const data:CompanyDataEntity = req.body
-    
+
             data.uuid = req.query.business_info_uuid as string
-    
+
             const updateBusinessInfoUsecase = new UpdateBusinessInfoUsecase(this.businessInfoRepository)
-    
-            await updateBusinessInfoUsecase.execute(data)
-            
-            return res.json({message: "Info updated successfully"})
+
+            const result = await updateBusinessInfoUsecase.execute(data)
+            return res.json(result)
 
         }catch(err: any){
-            logger.error(err.stack)
             return res.status(err.statusCode).json({
                 error: err.message
             })

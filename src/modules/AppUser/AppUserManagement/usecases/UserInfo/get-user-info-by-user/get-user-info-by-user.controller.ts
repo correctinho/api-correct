@@ -13,10 +13,10 @@ export class GetUserInfoByUserController{
     async handle(req: Request, res: Response){
 
         try{
-            const document = req.body as InputFindUserByUserDTO
+            const userDocument = req.appUser.document
             const usecase = new GetUserInfoByUserUsecase(this.appUsersRepository, this.businessInfoRepository)
 
-            const result = await usecase.execute(document)
+            const result = await usecase.execute(userDocument)
             return res.json(result)
 
         }catch(err: any){

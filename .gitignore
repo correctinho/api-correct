@@ -5,3 +5,5 @@ node_modules
 src/tmp
 
 logs
+
+.rabbmitmq_data/*

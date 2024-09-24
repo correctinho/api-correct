@@ -9,11 +9,11 @@ export class GetListBenefitUsecase {
 
         const benefit = await this.benefitsRepository.findAll();
 
-        return OutoutMapper.toOutput(benefit);
+        return OutputMapper.toOutput(benefit);
     }
 }
 
-class OutoutMapper {
+class OutputMapper {
     static toOutput(benefit: BenefitsEntity[]): OutputListBenefitDTO{
         return{
             benefits: benefit.map((benefit) => ({

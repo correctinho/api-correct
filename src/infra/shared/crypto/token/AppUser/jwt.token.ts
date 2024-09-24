@@ -22,6 +22,7 @@ export class AppUserJWToken implements IAppUserToken{
             expiresIn: '1D'
         })
 
+
         return token
     }
     validate(token: string): TokenAppUser | null {

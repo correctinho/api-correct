@@ -19,7 +19,7 @@ export class UpdateAppUserAddressController {
         try{
             const data = req.body
 
-            data.user_uuid = new Uuid(req.appUserId)
+            data.user_uuid = new Uuid(req.appUser.appUserId)
 
             const updateAddressUsecase = new UpdateAppUserAddressUsecase(this.addressRepository, this.userInfoRepository, this.userAuthRepository)
 

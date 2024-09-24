@@ -14,48 +14,49 @@ import { confirmPasswordController } from "../../modules/Company/CompanyUser/use
 
 export const companyUserRouter = Router()
 
-// //Create Company admin by correct
+ //Create Company admin by correct - TESTED
 companyUserRouter.post('/business/admin/correct', correctIsAuth, async (request, response) => {
     await companyUserController.handle(request, response)
 })
 
-
+//authenticate business user - TESTED
 companyUserRouter.post('/business/admin/login', async (request, response) => {
     await authCompanyUserController.handle(request, response)
 })
 
-//get user details
+//get user details - TESTED
 companyUserRouter.get('/business/admin/details', companyIsAuth, async (request, response) => {
     await companyUserDetailsController.handle(request, response)
 })
 
-//create company user by company admin
+//update company user by company admin - TESTED
+companyUserRouter.patch("/company-user", companyIsAuth, async (request, response) => {
+  await updateUserController.handle(request, response)
+})
+
+//create company user by company admin - TESTED
 companyUserRouter.post('/business/admin/register/user', companyIsAuth, async (request, response) => {
     await companyUserByAdminController.handle(request, response)
 })
 
-//get single User
-companyUserRouter.get("/business/admin/details/user", async (request, response) => {
+
+//get single User by authenticated admin - //TESTED
+companyUserRouter.get("/business/admin/details/user", companyIsAuth, async (request, response) => {
     await getSingleUserController.handle(request, response)
 })
 
-//get users by authenticated admin
+//get users by authenticated admin - //TESTED
 companyUserRouter.get('/company-users', companyIsAuth, async (request, response) => {
     await getUsersController.handle(request, response)
 })
 
 
-//update company user by company admin
-companyUserRouter.patch("/company-user", companyIsAuth, async (request, response) => {
-    await updateUserController.handle(request, response)
-})
-
-//Delete User By company Admin
-companyUserRouter.delete("/company-user", companyIsAuth, async (request, response) => {
+//Delete User By company Admin - //TESTED
+companyUserRouter.patch("/company-user/delete", companyIsAuth, async (request, response) => {
     await deleteUserController.handle(request, response)
 })
 
-//Password confirmation
+//Password confirmation - //TESTED
 companyUserRouter.post("/confirm-password", companyIsAuth, async (request, response) => {
     await confirmPasswordController.handle(request, response)
 })

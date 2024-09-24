@@ -6,8 +6,7 @@ export const companyAddressRouter = Router()
 
 
 
-//update company Data and Address by company admin
-companyAddressRouter.patch('/company-data', companyIsAuth, async (request, response) => {
+//updateAddress by company admin TESTED
+companyAddressRouter.put('/company-address', companyIsAuth, async (request, response) => {
     await updateAddressController.handle(request, response)
 })
-
