@@ -42,7 +42,6 @@ export class CreateBusinessRegisterUsecase {
           fantasy_name: register.fantasy_name,
           document: register.document,
           corporate_reason: register.corporate_reason,
-          branch_info_uuid: register.branch_info_uuid,
           classification: register.classification,
           colaborators_number: register.colaborators_number,
           status: register.status,
