@@ -7,6 +7,7 @@ export type AppUserItemProps = {
   uuid?: Uuid
   user_info_uuid: Uuid
   item_uuid: Uuid
+  img_url: string
   item_name?: string
   balance: number
   status: UserItemStatus
@@ -23,6 +24,7 @@ export type AppUserItemProps = {
 export type AppUserItemCreateCommand = {
   user_info_uuid: Uuid
   item_uuid: Uuid
+  img_url: string
   item_name?: string
   balance: number
   status: UserItemStatus
@@ -39,6 +41,7 @@ export class AppUserItemEntity {
   private _uuid?: Uuid
   private _user_info_uuid: Uuid
   private _item_uuid: Uuid
+  private _img_url: string
   private _item_name?: string
   private _balance: number
   private _status: UserItemStatus
@@ -55,6 +58,7 @@ export class AppUserItemEntity {
     this._uuid = props.uuid ?? new Uuid()
     this._user_info_uuid = props.user_info_uuid
     this._item_uuid = props.item_uuid
+    this._img_url = props.img_url
     this._item_name = props.item_name
     this._balance = props.balance
     this._status = props.status
@@ -79,6 +83,10 @@ export class AppUserItemEntity {
 
   get item_uuid(): Uuid {
     return this._item_uuid
+  }
+
+  get img_url(): string {
+    return this._img_url
   }
 
   get item_name(): string {
@@ -123,6 +131,11 @@ export class AppUserItemEntity {
 
   get updated_at(): string | undefined {
     return this._updated_at
+  }
+
+  changeImgUrl(img_url: string) {
+    this._img_url = img_url
+    this.validate()
   }
 
   changeBalance(balance: number) {

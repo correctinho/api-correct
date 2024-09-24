@@ -2059,7 +2059,6 @@ describe("E2E App User tests", () => {
         })
         it("Should return empty array", async () => {
           const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken2}`)
-          console.log(result.body)
           expect(result.statusCode).toBe(200)
           expect(result.body.length).toBe(0)
         })

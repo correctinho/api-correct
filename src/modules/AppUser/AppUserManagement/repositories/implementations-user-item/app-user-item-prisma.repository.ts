@@ -11,6 +11,13 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
       where:{
         item_uuid: itemId,
         user_info_uuid: userInfoId
+      },
+      include:{
+        Item:{
+          select:{
+            img_url: true
+          }
+        }
       }
     })
 
@@ -19,6 +26,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
       uuid: new Uuid(userItem.uuid),
       user_info_uuid: new Uuid(userItem.user_info_uuid),
       item_uuid: new Uuid(userItem.item_uuid),
+      img_url: userItem.Item.img_url,
       item_name: userItem.item_name,
       balance: userItem.balance,
       status: userItem.status,
@@ -72,10 +80,17 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
       }
     })
   }
-  async find(id: Uuid): Promise<AppUserItemEntity> {
+  async find(id: Uuid): Promise<AppUserItemEntity | null> {
     const userItem = await prismaClient.userItem.findUnique({
       where:{
         uuid: id.uuid,
+      },
+      include:{
+        Item:{
+          select:{
+            img_url: true
+          }
+        }
       }
     })
 
@@ -84,6 +99,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
       uuid: new Uuid(userItem.uuid),
       user_info_uuid: new Uuid(userItem.user_info_uuid),
       item_uuid: new Uuid(userItem.item_uuid),
+      img_url: userItem.Item.img_url,
       item_name: userItem.item_name,
       balance: userItem.balance,
       status: userItem.status,
