@@ -6,7 +6,7 @@ import { OutputFindEmployerItemDetailsDTO } from "./dto/find-employer-item.dto";
 export class FindEmployerItemDetailsUsecase {
   constructor(private itemDetailsRepository: IBusinessItemDetailsRepository) { }
 
-  async execute(id: string): Promise<OutputFindEmployerItemDetailsDTO> {
+  async execute(id: string){
     if (!id) throw new CustomError("Id is required", 400)
     const itemDetails = await this.itemDetailsRepository.find(new Uuid(id))
     if (!itemDetails) throw new CustomError("Item details not found", 404);
@@ -18,7 +18,8 @@ export class FindEmployerItemDetailsUsecase {
       cycle_start_day: itemDetails.cycle_start_day,
       cycle_end_day: itemDetails.cycle_end_day,
       created_at: itemDetails.created_at,
-      updated_at: itemDetails.updated_at
+      updated_at: itemDetails.updated_at,
+
     }
 
   }

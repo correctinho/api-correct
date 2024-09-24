@@ -17,6 +17,7 @@ export class CreateAppUserItemByEmployerUsecase {
     const userItemEntityData:AppUserItemCreateCommand = {
       user_info_uuid: data.user_info_uuid ? new Uuid(data.user_info_uuid) : null,
       item_uuid: data.item_uuid ? new Uuid(data.item_uuid) : null,
+      img_url: null,
       item_name: data.item_name,
       balance: data.balance,
       status: data.status,

@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { IBenefitsRepository } from "../../../../benefits/repositories/benefit.repository";
-import { ICompanyDataRepository } from "../../../CompanyData/repositories/company-data.repository";
-import { IBusinessItemDetailsRepository } from "../../repositories/business-item-details.repository";
 import { CreateEmployerItemByCorrectUsecase } from "./create-employer-item-by-correct.usecase";
+import { IBusinessItemDetailsRepository } from "../../../repositories/business-item-details.repository";
+import { IBenefitsRepository } from "../../../../../benefits/repositories/benefit.repository";
+import { ICompanyDataRepository } from "../../../../CompanyData/repositories/company-data.repository";
 
 export class CreateEmployerItemByCorrectController {
   constructor(
