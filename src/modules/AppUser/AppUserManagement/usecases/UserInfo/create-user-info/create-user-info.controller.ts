@@ -30,6 +30,7 @@ export class CreateUserInfoController{
 
             return res.status(201).json({sucess: "User info registered successfully"})
         }catch(err: any){
+            console.log({err})
             return res.status(err.statusCode).json({
                 error: err.message,
             });
