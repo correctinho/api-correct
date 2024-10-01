@@ -428,29 +428,28 @@ describe("E2E App User tests", () => {
     describe("Create App User Info", () => {
       it("Should create a new user info", async () => {
 
-        const input: InputCreateUserInfoDTO = {
+        const input: any = {
           business_info_uuid: null,
           address_uuid: null,
           document: null,
-          document2: null,
-          document3: null,
+          document2: '24875492',
+          document3: '56121561258',
           full_name: "User Full Name",
           display_name: null,
-          internal_company_code: null,
-          gender: 'Male',
+          internal_company_code: '54891218',
+          gender: 'Masculino',
           date_of_birth: '15/08/1998',
-          salary: null,
-          phone: null,
+          salary: 2000,
+          phone: '679654874520',
           email: null,
           company_owner: false,
           status: null,
           function: null,
-          recommendation_code: null,
+          recommendation_code: '514554156',
           is_authenticated: false,
-          marital_status: null,
+          marital_status: 'casado',
           dependents_quantity: 1,
           user_document_validation_uuid: null,
-          user_id: null
         }
 
 
@@ -459,9 +458,22 @@ describe("E2E App User tests", () => {
           .get("/app-user")
           .set('Authorization', `Bearer ${userToken1}`)
 
+        //get user info to confirm
+        const getUserInfo = await request(app).get("/app-user/info").set('Authorization', `Bearer ${userToken1}`)
+        expect(getUserInfo.statusCode).toBe(200)
+
+
         expect(result.statusCode).toBe(201)
         expect(result.body.sucess).toEqual("User info registered successfully")
         expect(userDetails.body.UserInfo).toBeTruthy()
+        expect(getUserInfo.body.document).toEqual('87548876076')
+        expect(getUserInfo.body.document2).toEqual('24875492')
+        expect(getUserInfo.body.document3).toEqual('56121561258')
+        expect(getUserInfo.body.full_name).toEqual("User Full Name")
+        expect(getUserInfo.body.gender).toEqual("Masculino")
+        expect(getUserInfo.body.date_of_birth).toEqual("15/08/1998")
+        expect(getUserInfo.body.phone).toEqual("679654874520")
+
       })
       it("Should throw an error if user info is already registered and tables are already synchronized", async () => {
 

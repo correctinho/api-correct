@@ -31,7 +31,7 @@ export class CreateAppUserInfoUsecase {
 
         await this.appUserInfoRepository.create(userInfoEntity)
 
-        return {}
+        return { }
 
 
     }

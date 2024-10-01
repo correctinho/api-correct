@@ -22,6 +22,8 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
                     business_info_uuid: data.business_info_uuid ? data.business_info_uuid.uuid : null,
                     document: data.document,
                     document2: data.document2,
+                    document3: data.document3,
+                    phone: data.phone,
                     full_name: data.full_name,
                     email: data.email,
                     internal_company_code: data.internal_company_code,
