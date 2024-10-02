@@ -1,5 +1,3 @@
-import { CustomError } from "../../../../../../errors/custom.error";
-import { OutputCompanyUserDTO } from "../../../../../../infra/shared/middlewares/CompanyAdmin/ensure-valid-company-admin.usecase.middlware";
 import { ICompanyUserRepository } from "../../../../../Company/CompanyUser/repositories/company-user.repository";
 import { AppUserInfoEntity } from "../../../entities/app-user-info.entity";
 import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repository";
@@ -12,18 +10,16 @@ export class GetUsersByBusinessAdminUsecase{
 
     ){}
 
-    async execute(businessInfoUuid: string): Promise<OutputGetEmployeesByBusinessDTO[] | []>{
+    async execute(businessInfoUuid: string){
 
         //find employees
         const employees = await this.appUsersRepository.findManyByBusiness(businessInfoUuid)
-
         if(employees.length === 0) return []
-
-        return employees.map((employee: AppUserInfoEntity) => {
+        return employees.map((employee: OutputGetEmployeesByBusinessDTO) => {
           return {
-            uuid: employee.uuid.uuid,
-            business_info_uuid: employee.business_info_uuid.uuid,
-            address_uuid: employee.address_uuid ? employee.address_uuid.uuid : null,
+            uuid: employee.uuid,
+            business_info_uuid: employee.business_info_uuid,
+            address_uuid: employee.address_uuid ? employee.address_uuid : null,
             document: employee.document,
             document2: employee.document2,
             document3: employee.document3,
@@ -40,9 +36,20 @@ export class GetUsersByBusinessAdminUsecase{
             is_authenticated: employee.is_authenticated,
             marital_status: employee.marital_status,
             dependents_quantity: employee.dependents_quantity,
-            user_document_validation_uuid: employee.user_document_validation_uuid ? employee.user_document_validation_uuid.uuid : null,
+            user_document_validation_uuid: employee.user_document_validation_uuid ? employee.user_document_validation_uuid : null,
             created_at: employee.created_at,
-            updated_at: employee.updated_at
+            updated_at: employee.updated_at,
+            Address: employee.address_uuid ? {
+              uuid: employee.Address.uuid,
+              line1: employee.Address.line1,
+              line2: employee.Address.line2,
+              line3: employee.Address.line3,
+              neighborhood: employee.Address.neighborhood,
+              postal_code: employee.Address.postal_code,
+              city: employee.Address.city,
+              state: employee.Address.state,
+              country: employee.Address.country
+            } : null
           }
         })
     }

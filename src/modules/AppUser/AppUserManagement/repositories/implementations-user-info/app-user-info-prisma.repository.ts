@@ -4,6 +4,7 @@ import { prismaClient } from "../../../../../infra/databases/prisma.config";
 import { newDateF } from "../../../../../utils/date";
 import { AppUserInfoEntity } from "../../entities/app-user-info.entity";
 import { IAppUserInfoRepository } from "../app-user-info.repository";
+import { OutputGetEmployeesByBusinessDTO } from "../../usecases/UserInfo/get-users-by-business-admin/dto/get-user-by-business.dto";
 
 export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
     // async findManyByBusiness(business_info_uuid: string): Promise<AppUserInfoEntity[] | []> {
@@ -95,10 +96,13 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
 
         } as AppUserInfoEntity
     }
-    async findManyByBusiness(business_info_uuid: string): Promise<AppUserInfoEntity[] | []> {
+    async findManyByBusiness(business_info_uuid: string): Promise<OutputGetEmployeesByBusinessDTO[] | []> {
        const user = await prismaClient.userInfo.findMany({
             where:{
                 business_info_uuid
+            },
+            include:{
+              Address: true
             }
             // },
             // include: {
@@ -123,8 +127,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
 
             // }
         })
-
-        return user as AppUserInfoEntity[] | []
+        return user as OutputGetEmployeesByBusinessDTO[] | []
 
     }
     async saveOrUpdateByCSV(data: AppUserInfoEntity): Promise<string> {

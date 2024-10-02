@@ -2142,7 +2142,6 @@ describe("E2E App User tests", () => {
 
       it("Should return employee details", async () => {
         const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).query({ employeeId: employee_user_info})
-        console.log("employee: ", result.body)
         expect(result.statusCode).toBe(200)
         expect(result.body.uuid).toBe(employee_user_info)
         expect(result.body.business_info_uuid).toBe(employer_info_uuid)

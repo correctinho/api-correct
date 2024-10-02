@@ -17,7 +17,6 @@ export class GetUsersByBusinessAdminController{
            const usecase = new GetUsersByBusinessAdminUsecase(this.appUsersRepository, this.businessUserRepository)
 
             const result = await usecase.execute(businessInfoUuid)
-
             return res.json(result)
 
         }catch(err: any){
