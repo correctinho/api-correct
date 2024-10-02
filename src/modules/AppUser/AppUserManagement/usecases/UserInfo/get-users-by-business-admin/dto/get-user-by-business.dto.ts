@@ -25,4 +25,15 @@ export type OutputGetEmployeesByBusinessDTO = {
   user_document_validation_uuid: string
   created_at: string
   updated_at: string
+  Address: {
+    uuid: string
+    line1: string | null
+    line2: string | null
+    line3: string | null
+    neighborhood: string | null
+    postal_code: string
+    city: string | null
+    state: string | null
+    country: string | null
+  } | null
 }

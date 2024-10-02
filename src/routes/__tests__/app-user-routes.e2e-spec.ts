@@ -2142,11 +2142,26 @@ describe("E2E App User tests", () => {
 
       it("Should return employee details", async () => {
         const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).query({ employeeId: employee_user_info})
-        console.log("employee: ", result.body)
         expect(result.statusCode).toBe(200)
         expect(result.body.uuid).toBe(employee_user_info)
         expect(result.body.business_info_uuid).toBe(employer_info_uuid)
         expect(result.body.document).toBe('35070767054')
+      })
+    })
+
+    describe("Register single employee by employer", () => {
+      it("Should throw an erro if document is missing", async () => {
+        const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Document is required")
+      })
+
+      it("Should throw an erro if document is missing", async () => {
+        const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Document is required")
       })
     })
   })
