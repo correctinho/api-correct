@@ -17,6 +17,7 @@ import { getSingleUserByAdmin } from "../../modules/AppUser/AppUserManagement/us
 import { getUserInfobyUser } from "../../modules/AppUser/AppUserManagement/usecases/UserInfo/get-user-info-by-user";
 import { getUserAddressController } from "../../modules/AppUser/AppUserManagement/usecases/UserAddress/get-app-user-address";
 import { updateUserAddressController } from "../../modules/AppUser/AppUserManagement/usecases/UserAddress/update-app-user-address";
+import { createUserInfoByEmployerController } from "../../modules/AppUser/AppUserManagement/usecases/UserInfo/create-user-info-by-employer";
 
 const appUserRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -74,6 +75,10 @@ appUserRouter.get("/app-user/business-admin", companyIsAuth, async (request, res
     await getSingleUserByAdmin.handle(request, response)
 })
 
+//Register single employee by company admin
+appUserRouter.post("/app-user/business-admin", companyIsAuth, async (request, response) => {
+  await createUserInfoByEmployerController.handle(request, response)
+})
 
 //**********User Address*********** */
 

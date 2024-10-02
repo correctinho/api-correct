@@ -2148,5 +2148,21 @@ describe("E2E App User tests", () => {
         expect(result.body.document).toBe('35070767054')
       })
     })
+
+    describe("Register single employee by employer", () => {
+      it("Should throw an erro if document is missing", async () => {
+        const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Document is required")
+      })
+
+      it("Should throw an erro if document is missing", async () => {
+        const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Document is required")
+      })
+    })
   })
 })
