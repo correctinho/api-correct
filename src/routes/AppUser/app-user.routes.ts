@@ -42,24 +42,24 @@ appUserRouter.get("/app-user", appUserIsAuth, async (request, response) => {
 
 //**********User Info*********** */
 
-//user Details by document
+//user Details by document - TESTED
 appUserRouter.get("/app-user/document/:document", async (request, response) => {
     await getByDocumentController.handle(request, response)
 })
 
-//register user info by authenticated user
+//register user info by authenticated user - TESTED
 appUserRouter.post("/app-user/info", appUserIsAuth, async (request, response) => {
     await createUserInfoController.handle(request, response)
 })
 
 
-//get user info by user
+//get user info by user - TESTED
 appUserRouter.get("/app-user/info", appUserIsAuth, async (request, response) => {
     await getUserInfobyUser.handle(request, response)
 })
 
 
-//Register app users by Correct
+//Register app users by Correct - TESTED
 appUserRouter.post("/app-users-by-correct", correctIsAuth, upload.single('file'), async (request, response) => {
     await createAppUserByCorrectController.handle(request, response)
 })
@@ -69,7 +69,7 @@ appUserRouter.get("/business-admin/app-users", companyIsAuth, async (request, re
     await getUsersByAdmin.handle(request, response)
 })
 
-//Get user details by business admin - NOT TESTED
+//Get user details by business admin - TESTED
 appUserRouter.get("/app-user/business-admin", companyIsAuth, async (request, response) => {
     await getSingleUserByAdmin.handle(request, response)
 })
@@ -93,7 +93,6 @@ appUserRouter.put("/app-user/address", appUserIsAuth, async (request, response) 
 })
 
 //**********Document Validation*********** */
-
 
 //create documents for validation
 appUserRouter.post("/app-user/document-validation", appUserIsAuth, async (request, response) => {

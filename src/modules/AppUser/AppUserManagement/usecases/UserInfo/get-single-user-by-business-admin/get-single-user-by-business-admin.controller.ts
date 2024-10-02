@@ -13,10 +13,11 @@ export class GetSingleUserByBusinessAdminController{
 
         try{
             const employee_uuid = req.query.employeeId as string
+            const business_info_uuid = req.companyUser.businessInfoUuid
 
             const usecase = new GetSingleUserByBusinessAdminUsecase(this.appUsersRepository, this.businessUserRepository)
 
-            const result = await usecase.execute(employee_uuid)
+            const result = await usecase.execute(employee_uuid, business_info_uuid)
 
             return res.json(result)
 

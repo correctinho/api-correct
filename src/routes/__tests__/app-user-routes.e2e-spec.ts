@@ -2120,5 +2120,34 @@ describe("E2E App User tests", () => {
         expect(result.body.length).toBe(0)
       })
     })
+
+    describe("Get single employee by employer", () => {
+      it("Should throw an error if employee uuid is missing", async () => {
+        const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`)
+        expect(result.body.error).toBe("Employee uuid is required")
+        expect(result.statusCode).toBe(400)
+      })
+
+      it("Should throw an error if employee is not found", async () => {
+        const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).query({ employeeId: randomUUID()})
+        expect(result.body.error).toBe("Employee not found")
+        expect(result.statusCode).toBe(404)
+      })
+
+      it("Should throw an error if user is not an employee", async () => {
+        const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token2}`).query({ employeeId: employee_user_info})
+        expect(result.body.error).toBe("Unauthorized access")
+        expect(result.statusCode).toBe(401)
+      })
+
+      it("Should return employee details", async () => {
+        const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).query({ employeeId: employee_user_info})
+        console.log("employee: ", result.body)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.uuid).toBe(employee_user_info)
+        expect(result.body.business_info_uuid).toBe(employer_info_uuid)
+        expect(result.body.document).toBe('35070767054')
+      })
+    })
   })
 })
