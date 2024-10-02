@@ -1,7 +1,6 @@
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { prismaClient } from "../../../../../infra/databases/prisma.config";
 import { AppUserItemEntity } from "../../entities/app-user-item.entity";
-import { OutputFindAllAppUserItemsDTO } from "../../usecases/UserItem/find-all-by-employer/dto/find-user-item.dto";
 import { IAppUserItemRepository } from "../app-user-item-repository";
 
 export class AppUserItemPrismaRepository implements IAppUserItemRepository{
