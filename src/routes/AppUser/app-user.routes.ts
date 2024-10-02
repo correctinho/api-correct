@@ -64,12 +64,12 @@ appUserRouter.post("/app-users-by-correct", correctIsAuth, upload.single('file')
     await createAppUserByCorrectController.handle(request, response)
 })
 
-//Get app users by business admin
+//Get app users by business admin - TESTED
 appUserRouter.get("/business-admin/app-users", companyIsAuth, async (request, response) => {
     await getUsersByAdmin.handle(request, response)
 })
 
-//Get user details by business admin
+//Get user details by business admin - NOT TESTED
 appUserRouter.get("/app-user/business-admin", companyIsAuth, async (request, response) => {
     await getSingleUserByAdmin.handle(request, response)
 })

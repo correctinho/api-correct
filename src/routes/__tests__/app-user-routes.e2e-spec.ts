@@ -31,6 +31,7 @@ let employer_user_uuid: string
 let employer_user_uuid2: string
 
 let employer_user_token: string
+let employer_user_token2: string
 
 let business_user_token: string
 let business_admin_uuid: string
@@ -577,6 +578,8 @@ describe("E2E App User tests", () => {
 
       })
     })
+
+
   })
   describe("E2E tests User Address", () => {
     describe("Create app user address", () => {
@@ -1535,7 +1538,7 @@ describe("E2E App User tests", () => {
         .set('Authorization', `Bearer ${correctAdminToken}`)
         .attach('file', csvFilePath)
 
-        //user details
+      //user details
       const onlyUserAuthDetails = await request(app)
         .get("/app-user")
         .set('Authorization', `Bearer ${employeeAuthToken}`)
@@ -2074,6 +2077,47 @@ describe("E2E App User tests", () => {
           expect(result.statusCode).toBe(200)
           expect(result.body.length).toBe(0)
         })
+      })
+    })
+  })
+  describe("Employee By Employer", () => {
+    beforeAll(async () => {
+      //Creating an employer with no employees registered
+
+      //create employer user
+      const inputEmployer = {
+        password: "123456",
+        business_info_uuid: employer_info_uuid2,
+        email: "empregador2@empregador.com"
+      }
+      const createEmployer = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputEmployer)
+
+      employer_user_uuid = createEmployer.body.uuid
+      expect(createEmployer.statusCode).toBe(201)
+
+      //authenticate employer
+      const authInput = {
+        business_document: "empregador2",
+        password: "123456",
+        email: "empregador2@empregador.com"
+      }
+
+      const auth = await request(app).post("/business/admin/login").send(authInput)
+      expect(auth.statusCode).toBe(200)
+      employer_user_token2 = auth.body.token
+
+    })
+    describe("Get All employees by employer", () => {
+
+      it("Should return a list of employees by employer", async () => {
+
+        const result = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token}`)
+        expect(result.body.length).toBeGreaterThan(0)
+      })
+      it("Should return a empty list of employees by employer", async () => {
+
+        const result = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token2}`)
+        expect(result.body.length).toBe(0)
       })
     })
   })

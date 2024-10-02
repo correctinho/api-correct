@@ -6,9 +6,13 @@ import { AppUserInfoEntity } from "../../entities/app-user-info.entity";
 import { IAppUserInfoRepository } from "../app-user-info.repository";
 
 export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
-    findManyByBusiness(business_info_uuid: string): Promise<AppUserInfoEntity[] | []> {
-        throw new Error("Method not implemented.");
-    }
+    // async findManyByBusiness(business_info_uuid: string): Promise<AppUserInfoEntity[] | []> {
+    //     const employees = await prismaClient.userInfo.findMany({
+    //       where:{
+    //         business_info_uuid: business_info_uuid
+    //       }
+    //     })
+    // }
     findByDocument2UserInfo(document2: string | null): Promise<AppUserInfoEntity> {
         throw new Error("Method not implemented.");
     }
@@ -91,38 +95,38 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
 
         } as AppUserInfoEntity
     }
-    // async findManyByBusiness(business_info_uuid: string): Promise<AppUserInfoEntity[] | []> {
-    //    const user = await prismaClient.userInfo.findMany({
-    //         where:{
-    //             business_info_uuid
-    //         },
-    //         include: {
-    //             BusinessInfo: {
-    //                 select: {
-    //                     fantasy_name: true
-    //                 }
-    //             },
-    //             Address: true,
-    //             UserValidation: {
-    //                 select: {
-    //                     uuid: true,
-    //                     document_front_status: true,
-    //                     document_back_status: true,
-    //                     selfie_status: true,
-    //                     document_selfie_status: true,
-    //                     created_at: true,
-    //                     updated_at: true
-    //                 }
-    //             },
+    async findManyByBusiness(business_info_uuid: string): Promise<AppUserInfoEntity[] | []> {
+       const user = await prismaClient.userInfo.findMany({
+            where:{
+                business_info_uuid
+            }
+            // },
+            // include: {
+            //     BusinessInfo: {
+            //         select: {
+            //             fantasy_name: true
+            //         }
+            //     },
+            //     Address: true,
+            //     UserValidation: {
+            //         select: {
+            //             uuid: true,
+            //             document_front_status: true,
+            //             document_back_status: true,
+            //             selfie_status: true,
+            //             document_selfie_status: true,
+            //             created_at: true,
+            //             updated_at: true
+            //         }
+            //     },
 
 
-    //         }
-    //     })
+            // }
+        })
 
-    //     if(user.length > 0) return user as UserInfoResponse[]
+        return user as AppUserInfoEntity[] | []
 
-    //     return []
-    // }
+    }
     async saveOrUpdateByCSV(data: AppUserInfoEntity): Promise<string> {
 
         await prismaClient.userInfo.upsert({
