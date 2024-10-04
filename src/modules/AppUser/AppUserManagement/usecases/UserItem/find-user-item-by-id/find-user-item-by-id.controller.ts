@@ -2,10 +2,11 @@ import { Request, Response } from "express";
 import { IAppUserItemRepository } from "../../../repositories/app-user-item-repository";
 import { FindUserItemByIdUsecase } from './find-user-item-by-id.usecase'
 import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repository";
+import { ICompanyDataRepository } from "../../../../../Company/CompanyData/repositories/company-data.repository";
 export class FindUserItemByIdByController {
   constructor(
     private appUserItemRepository: IAppUserItemRepository,
-    private appUserInfoRepository: IAppUserInfoRepository
+    private appUserInfoRepository: IAppUserInfoRepository,
   ) { }
 
   async handle(req: Request, res: Response) {

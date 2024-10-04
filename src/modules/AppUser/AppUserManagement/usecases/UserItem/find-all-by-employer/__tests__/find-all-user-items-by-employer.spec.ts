@@ -13,17 +13,16 @@ const AppUserItemMockRepository = () => {
 
 const AppUserInfoMockRepository = () => {
   return {
-      create: jest.fn(),
-      update: jest.fn(),
-      find: jest.fn(),
-      findAll: jest.fn(),
-      saveOrUpdateByCSV: jest.fn(),
-      findByDocumentUserInfo: jest.fn(),
-      save: jest.fn(),
-      findByDocument2UserInfo: jest.fn(),
-      findManyByBusiness: jest.fn(),
-      createUserInfoandUpdateUserAuthByCSV: jest.fn()
-
+    create: jest.fn(),
+    update: jest.fn(),
+    find: jest.fn(),
+    findAll: jest.fn(),
+    saveOrUpdateByCSV: jest.fn(),
+    findByDocumentUserInfo: jest.fn(),
+    findByDocument2UserInfo: jest.fn(),
+    findManyByBusiness: jest.fn(),
+    createUserInfoandUpdateUserAuthByCSV: jest.fn(),
+    createOrUpdateUserInfoByEmployer: jest.fn()
   };
 };
 describe("Unity tests Find All User Item by Employer", () => {
@@ -53,7 +52,7 @@ describe("Unity tests Find All User Item by Employer", () => {
     await expect(usecase.execute(input.user_info_uuid, input.business_info_uuid)).rejects.toThrow("User not found")
   })
 
-  it("Should throw an error if business info uuid is null", async () => {
+  it("Should throw an error if user is not an employee", async () => {
     const appUserItemRepository = AppUserItemMockRepository()
     const appUserInfoMockRepository = AppUserInfoMockRepository();
 
@@ -63,44 +62,26 @@ describe("Unity tests Find All User Item by Employer", () => {
     }
 
     appUserInfoMockRepository.find.mockResolvedValueOnce({
-      business_info_uuid: null
+      business_info_uuids: [randomUUID(), randomUUID()]
     })
 
     const usecase = new FindAllUserItemsByEmployerUsecase(appUserItemRepository, appUserInfoMockRepository)
-
     await expect(usecase.execute(input.user_info_uuid, input.business_info_uuid)).rejects.toThrow("Unauthorized access")
   })
 
-  it("Should throw an error if business info uuid does not match", async () => {
-    const appUserItemRepository = AppUserItemMockRepository()
-    const appUserInfoMockRepository = AppUserInfoMockRepository();
-
-    const input: any = {
-      user_info_uuid: randomUUID(),
-      business_info_uuid: randomUUID()
-    }
-
-    appUserInfoMockRepository.find.mockResolvedValueOnce({
-      business_info_uuid: randomUUID()
-    })
-
-    const usecase = new FindAllUserItemsByEmployerUsecase(appUserItemRepository, appUserInfoMockRepository)
-
-    await expect(usecase.execute(input.user_info_uuid, input.business_info_uuid)).rejects.toThrow("Unauthorized access")
-  })
 
   it("Should return an empty array", async () => {
     const appUserItemRepository = AppUserItemMockRepository();
     const appUserInfoMockRepository = AppUserInfoMockRepository();
 
     const input: any = {
-        user_info_uuid: randomUUID(),
-        business_info_uuid: randomUUID()
+      user_info_uuid: randomUUID(),
+      business_info_uuid: randomUUID()
     };
 
     appUserInfoMockRepository.find.mockResolvedValueOnce({
-      business_info_uuid: { uuid: input.business_info_uuid } // Certifique-se de que a estrutura corresponda
-  });
+      business_info_uuids: [randomUUID(), input.business_info_uuid]
+    });
 
     appUserItemRepository.findAllUserItems.mockResolvedValueOnce([]);
 
@@ -108,45 +89,51 @@ describe("Unity tests Find All User Item by Employer", () => {
 
     const result = await usecase.execute(input.user_info_uuid, input.business_info_uuid);
     expect(result).toEqual([]);
-});
+  });
 
   it("Should return user items", async () => {
-    const appUserItemRepository = AppUserItemMockRepository()
+    const appUserItemRepository = AppUserItemMockRepository();
     const appUserInfoMockRepository = AppUserInfoMockRepository();
 
     const input: any = {
       user_info_uuid: randomUUID(),
       business_info_uuid: randomUUID()
-    }
+    };
 
     appUserInfoMockRepository.find.mockResolvedValueOnce({
-      business_info_uuid: { uuid: input.business_info_uuid } // Certifique-se de que a estrutura corresponda
-  });
+      business_info_uuids: [randomUUID(), input.business_info_uuid]
+    });
 
-  appUserItemRepository.findAllUserItems.mockResolvedValueOnce([
-    {
-        uuid: randomUUID(),
-        user_info_uuid: input.user_info_uuid,
-        item_uuid: randomUUID(),
+    appUserItemRepository.findAllUserItems.mockResolvedValueOnce([
+      {
+        uuid: { uuid: randomUUID() }, // Ajuste aqui
+        user_info_uuid: { uuid: input.user_info_uuid }, // Ajuste aqui
+        item_uuid: { uuid: randomUUID() }, // Ajuste aqui
+        business_info_uuid: { uuid: input.business_info_uuid }, // Ajuste aqui
+        img_url: "http://example.com/item1.jpg",
         item_name: "Item 1",
         balance: 100,
         status: "active",
-        created_at: new Date()
-    },
-    {
-        uuid: randomUUID(),
-        user_info_uuid: input.user_info_uuid,
-        item_uuid: randomUUID(),
+        created_at: new Date(),
+        fantasy_name: "Provider 1"
+      },
+      {
+        uuid: { uuid: randomUUID() }, // Ajuste aqui
+        user_info_uuid: { uuid: input.user_info_uuid }, // Ajuste aqui
+        item_uuid: { uuid: randomUUID() }, // Ajuste aqui
+        business_info_uuid: { uuid: input.business_info_uuid }, // Ajuste aqui
+        img_url: "http://example.com/item2.jpg",
         item_name: "Item 2",
         balance: 200,
         status: "inactive",
-        created_at: new Date()
-    }
-]);
+        created_at: new Date(),
+        fantasy_name: "Provider 2"
+      }
+    ]);
 
-    const usecase = new FindAllUserItemsByEmployerUsecase(appUserItemRepository, appUserInfoMockRepository)
+    const usecase = new FindAllUserItemsByEmployerUsecase(appUserItemRepository, appUserInfoMockRepository);
 
-    const result = await usecase.execute(input.user_info_uuid, input.business_info_uuid)
-    expect(result.length).toBe(2)
-  })
+    const result = await usecase.execute(input.user_info_uuid, input.business_info_uuid);
+    expect(result.length).toBe(2);
+  });
 })

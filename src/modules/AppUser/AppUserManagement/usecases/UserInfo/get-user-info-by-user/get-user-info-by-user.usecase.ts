@@ -1,29 +1,32 @@
 import { CustomError } from "../../../../../../errors/custom.error";
 import { ICompanyDataRepository } from "../../../../../Company/CompanyData/repositories/company-data.repository";
 import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repository";
-import { InputFindUserByUserDTO, OutputFindUserByUserDTO } from "./dto/get-user-by-user.dto";
+import { OutputFindUserByUserDTO } from "./dto/get-user-by-user.dto";
 
 export class GetUserInfoByUserUsecase {
   constructor(
     private appUsersRepository: IAppUserInfoRepository,
-    private businessInfoRepository: ICompanyDataRepository,
-
-  ) { }
+    private businessInfoRepository: ICompanyDataRepository
+  ) {}
 
   async execute(userdocument: string): Promise<OutputFindUserByUserDTO> {
-    const userInfo = await this.appUsersRepository.findByDocumentUserInfo(userdocument)
-    if (!userInfo) throw new CustomError("User info not found", 404)
+    // Buscar informações do usuário pelo documento processado
+    const userInfo = await this.appUsersRepository.findByDocumentUserInfo(userdocument);
+    if (!userInfo) throw new CustomError("User info not found", 404);
 
-    let businessInfo = null;
+    // Buscar informações dos negócios associados ao usuário
+    const businessInfoList = userInfo.business_info_uuids
+      ? await Promise.all(
+          userInfo.business_info_uuids.map(async (uuid) => {
+            return await this.businessInfoRepository.findById(uuid);
+          })
+        )
+      : [];
 
-    if (userInfo.business_info_uuid) {
-      businessInfo = await this.businessInfoRepository.findById(userInfo.business_info_uuid.uuid)
-    }
-
+    // Retornar as informações do usuário e dos negócios, se disponíveis
     return {
-      uuid: userInfo.uuid,
-      business_info_uuid: userInfo.business_info_uuid || null,
-      address_uuid: userInfo.address_uuid || null,
+      uuid: userInfo.uuid.uuid,
+      address_uuid: userInfo.address_uuid?.uuid || null,
       document: userInfo.document,
       document2: userInfo.document2 || null,
       document3: userInfo.document3 || null,
@@ -43,14 +46,13 @@ export class GetUserInfoByUserUsecase {
       dependents_quantity: userInfo.dependents_quantity,
       created_at: userInfo.created_at || null,
       updated_at: userInfo.updated_at || null,
-      BusinessInfo: businessInfo ? {
-        fantasy_name: businessInfo.fantasy_name
-      } : null,
+      BusinessInfoList: businessInfoList.length > 0
+        ? businessInfoList.map(businessInfo => ({
+            uuid: businessInfo.uuid,
+            fantasy_name: businessInfo.fantasy_name
+          }))
+        : [],
     };
   }
 
-  private processDocument(document: string) {
-    const onlyNumbers = document.replace(/\D/g, '');
-    return onlyNumbers
-  }
 }

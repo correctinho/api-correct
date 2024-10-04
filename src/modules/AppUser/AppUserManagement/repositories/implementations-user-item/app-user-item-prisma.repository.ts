@@ -1,6 +1,7 @@
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { prismaClient } from "../../../../../infra/databases/prisma.config";
 import { AppUserItemEntity } from "../../entities/app-user-item.entity";
+import { OutputFindAllAppUserItemsDTO } from "../../usecases/UserItem/find-all-by-employer/dto/find-user-item.dto";
 import { IAppUserItemRepository } from "../app-user-item-repository";
 
 export class AppUserItemPrismaRepository implements IAppUserItemRepository{
@@ -44,6 +45,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
       data:{
         uuid: entity.uuid.uuid,
         user_info_uuid: entity.user_info_uuid.uuid,
+        business_info_uuid: entity.business_info_uuid.uuid,
         item_uuid: entity.item_uuid.uuid,
         item_name: entity.item_name,
         balance: entity.balance,
@@ -89,13 +91,15 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
           select:{
             img_url: true
           }
-        }
+        },
+
       }
     })
 
     if(!userItem) return null
     return {
       uuid: new Uuid(userItem.uuid),
+      business_info_uuid: new Uuid(userItem.business_info_uuid),
       user_info_uuid: new Uuid(userItem.user_info_uuid),
       item_uuid: new Uuid(userItem.item_uuid),
       img_url: userItem.Item.img_url,
@@ -116,14 +120,48 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
     throw new Error("Method not implemented.");
   }
 
-  async findAllUserItems(userInfoId: string): Promise<AppUserItemEntity[]> {
+  async findAllUserItems(userInfoId: string): Promise<AppUserItemEntity[] | []> {
     const userItems = await prismaClient.userItem.findMany({
       where:{
         user_info_uuid: userInfoId
+      },
+      include:{
+        Item:{
+          select:{
+            img_url: true
+          }
+        },
+        Business:{
+          select:{
+            uuid: true,
+            fantasy_name: true
+          }
+        }
+
       }
     })
 
-    return userItems as AppUserItemEntity[] | []
+    return userItems.map((userItem) => {
+      return {
+        uuid: new Uuid(userItem.uuid),
+        business_info_uuid: new Uuid(userItem.Business.uuid),
+        fantasy_name: userItem.Business.fantasy_name,
+        user_info_uuid: new Uuid(userItem.user_info_uuid),
+        item_uuid: new Uuid(userItem.item_uuid),
+        img_url: userItem.Item.img_url,
+        item_name: userItem.item_name,
+        balance: userItem.balance,
+        status: userItem.status,
+        blocked_at: userItem.blocked_at,
+        cancelled_at: userItem.cancelled_at,
+        block_reason: userItem.block_reason,
+        cancel_reason: userItem.cancel_reason,
+        cancelling_request_at: userItem.cancelling_request_at,
+        grace_period_end_date: userItem.grace_period_end_date,
+        created_at: userItem.created_at,
+        updated_at: userItem.updated_at
+      }
+    })as AppUserItemEntity[] | []
 
   }
 

@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { FindAllUserItemsByAppUserUsecase } from '../find-user-items-by-app-user.usecase'
+import { Uuid } from '../../../../../../../@shared/ValueObjects/uuid.vo';
 
 const AppUserItemMockRepository = () => {
   return {
@@ -20,11 +21,10 @@ const AppUserInfoMockRepository = () => {
       findAll: jest.fn(),
       saveOrUpdateByCSV: jest.fn(),
       findByDocumentUserInfo: jest.fn(),
-      save: jest.fn(),
       findByDocument2UserInfo: jest.fn(),
       findManyByBusiness: jest.fn(),
-      createUserInfoandUpdateUserAuthByCSV: jest.fn()
-
+      createUserInfoandUpdateUserAuthByCSV: jest.fn(),
+      createOrUpdateUserInfoByEmployer: jest.fn()
   };
 };
 describe("Unity tests Find All User Item by Employer", () => {
@@ -72,42 +72,47 @@ describe("Unity tests Find All User Item by Employer", () => {
     expect(result).toEqual([]);
 });
 
-  it("Should return user items", async () => {
-    const appUserItemRepository = AppUserItemMockRepository()
-    const appUserInfoMockRepository = AppUserInfoMockRepository();
+it("Should return user items", async () => {
+  const appUserItemRepository = AppUserItemMockRepository();
+  const appUserInfoMockRepository = AppUserInfoMockRepository();
 
-    const input: any = {
-      user_info_uuid: randomUUID(),
-    }
+  const input: any = {
+    user_info_uuid: randomUUID(),
+  };
 
-    appUserInfoMockRepository.find.mockResolvedValueOnce({
-      business_info_uuid: { uuid: input.business_info_uuid } // Certifique-se de que a estrutura corresponda
+  // Ajuste a estrutura do objeto retornado pelo mock para corresponder à estrutura esperada
+  appUserInfoMockRepository.find.mockResolvedValueOnce({
+    business_info_uuids: [randomUUID()] // Supondo que seja um array de UUIDs
   });
 
   appUserItemRepository.findAllUserItems.mockResolvedValueOnce([
     {
-        uuid: randomUUID(),
-        user_info_uuid: input.user_info_uuid,
-        item_uuid: randomUUID(),
-        item_name: "Item 1",
-        balance: 100,
-        status: "active",
-        created_at: new Date()
+      uuid: new Uuid(randomUUID()),
+      user_info_uuid: new Uuid(input.user_info_uuid),
+      item_uuid: new Uuid(randomUUID()),
+      business_info_uuid: new Uuid(randomUUID()), // Certifique-se de que isso seja um Uuid
+      item_name: "Item 1",
+      balance: 100,
+      status: "active",
+      created_at: new Date(),
+      fantasy_name: "Company A"
     },
     {
-        uuid: randomUUID(),
-        user_info_uuid: input.user_info_uuid,
-        item_uuid: randomUUID(),
-        item_name: "Item 2",
-        balance: 200,
-        status: "inactive",
-        created_at: new Date()
+      uuid: new Uuid(randomUUID()),
+      user_info_uuid: new Uuid(input.user_info_uuid),
+      item_uuid: new Uuid(randomUUID()),
+      business_info_uuid: new Uuid(randomUUID()), // Certifique-se de que isso seja um Uuid
+      item_name: "Item 2",
+      balance: 200,
+      status: "inactive",
+      created_at: new Date(),
+      fantasy_name: "Company B"
     }
-]);
+  ]);
 
-    const usecase = new FindAllUserItemsByAppUserUsecase(appUserItemRepository, appUserInfoMockRepository)
+  const usecase = new FindAllUserItemsByAppUserUsecase(appUserItemRepository, appUserInfoMockRepository);
+  const result = await usecase.execute(input.user_info_uuid);
 
-    const result = await usecase.execute(input.user_info_uuid)
-    expect(result.length).toBe(2)
-  })
+  expect(result.length).toBe(2);
+});
 })

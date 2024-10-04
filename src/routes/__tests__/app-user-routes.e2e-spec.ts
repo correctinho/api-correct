@@ -20,6 +20,7 @@ let business_address_uuid: string
 
 let employer_info_uuid: string
 let employer_info_uuid2: string
+let employer_info_uuid3: string
 
 let employee_user_info: string
 let employeeAuthToken: string
@@ -29,9 +30,11 @@ let non_employee_user_info: string
 
 let employer_user_uuid: string
 let employer_user_uuid2: string
+let employer_user_uuid3: string
 
 let employer_user_token: string
 let employer_user_token2: string
+let employer_user_token3: string
 
 let business_user_token: string
 let business_admin_uuid: string
@@ -122,6 +125,7 @@ describe("E2E App User tests", () => {
       item_category: 'pre_pago',
     }
 
+
     const benefit2: InputCreateBenefitDto = {
       name: "Adiantamento Salarial",
       description: "Descrição do vale",
@@ -209,7 +213,7 @@ describe("E2E App User tests", () => {
     branch4_uuid = branches.body[3].uuid
     branch5_uuid = branches.body[4].uuid
 
-    //create businiss info 1
+    //create business info 1
     const input = {
       line1: "Rua",
       line2: "72B",
@@ -232,8 +236,9 @@ describe("E2E App User tests", () => {
     }
 
     const businessInfo = await request(app).post("/business/register").send(input)
+    employer_info_uuid = businessInfo.body.business_info_uuid
 
-    //create businiss info 1
+    //create business info 2
     const input2 = {
       line1: "Rua",
       line2: "72B",
@@ -257,8 +262,34 @@ describe("E2E App User tests", () => {
 
     const businessInfo2 = await request(app).post("/business/register").send(input2)
 
-    employer_info_uuid = businessInfo.body.business_info_uuid
     employer_info_uuid2 = businessInfo2.body.business_info_uuid
+
+    //create business info 3
+    const input3 = {
+      line1: "Rua",
+      line2: "72B",
+      line3: "",
+      neighborhood: "Bairro Teste",
+      postal_code: "5484248423",
+      city: "Cidade teste",
+      state: "Estado teste",
+      country: "País teste",
+      fantasy_name: "Empresa teste",
+      document: "empregador3",
+      classification: "Classificação",
+      colaborators_number: 5,
+      email: "empregador3@empregador.com",
+      phone_1: "215745158",
+      phone_2: "124588965",
+      business_type: "empregador",
+      employer_branch: "Frigoríficio",
+      items_uuid: [benefit1_uuid, benefit3_uuid, benefit2_uuid]
+    }
+
+    const businessInfo3 = await request(app).post("/business/register").send(input3)
+
+    employer_info_uuid3 = businessInfo3.body.business_info_uuid
+
 
 
   })
@@ -425,8 +456,8 @@ describe("E2E App User tests", () => {
     })
   })
 
-  describe("E2E tests App User Info", () => {
-    describe("Create App User Info", () => {
+  describe("E2E tests App User Info by user", () => {
+    describe("Create App User Info by user", () => {
       it("Should create a new user info", async () => {
 
         const input: any = {
@@ -885,8 +916,8 @@ describe("E2E App User tests", () => {
           document: documentUser1,
         }
 
-        const userInfo = await request(app).get("/app-user/info").set('Authorization', `Bearer ${userToken1}`).send(inputUserInfo)
 
+        const userInfo = await request(app).get("/app-user/info").set('Authorization', `Bearer ${userToken1}`).send(inputUserInfo)
         expect(result.statusCode).toBe(201);
         expect(result.body.line1).toEqual(input.line1)
         expect(result.body.line2).toEqual(input.line2)
@@ -1425,6 +1456,89 @@ describe("E2E App User tests", () => {
 
   describe("E2E tests Upload csv to register users by correct", () => {
 
+    beforeAll(async () => {
+      //create employee 1
+      const onlyUserAuth: InputCreateAppUserDTO = {
+        user_info_uuid: null,
+        document: '350.707.670-54',
+        email: 'only_auth@email.com',
+        password: 'senha123',
+        is_active: true
+      }
+      await request(app).post("/app-user").send(onlyUserAuth)
+      const input = {
+        document: onlyUserAuth.document,
+        password: onlyUserAuth.password
+      }
+
+      const userAuthResponse = await request(app).post("/login-app-user").send(input)
+      employeeAuthToken = userAuthResponse.body.token
+
+
+      //activate business 1
+      const inputToActivate = {
+        address_uuid: business_address_uuid,
+        fantasy_name: "Empresa novo nome",
+        document: "empregador",
+        classification: "Classificação",
+        colaborators_number: 5,
+        email: "empregador@empregador.com",
+        phone_1: "215745158",
+        phone_2: "124588965",
+        business_type: "empregador",
+        status: "active"
+      }
+      const query = {
+        business_info_uuid: employer_info_uuid
+      }
+      const activateBusiness1 = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToActivate)
+      expect(activateBusiness1.statusCode).toBe(200)
+
+      //create employer user 1
+      const inputEmployer = {
+        password: "123456",
+        business_info_uuid: employer_info_uuid,
+        email: "empregador@empregador.com"
+      }
+      const createEmployer = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputEmployer)
+      employer_user_uuid = createEmployer.body.uuid
+      expect(createEmployer.statusCode).toBe(201)
+
+
+      //authenticate employer user 1
+      const authInput = {
+        business_document: "empregador",
+        password: "123456",
+        email: "empregador@empregador.com"
+      }
+
+      const auth = await request(app).post("/business/admin/login").send(authInput)
+      expect(auth.statusCode).toBe(200)
+      employer_user_token = auth.body.token
+
+
+
+      const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
+      const result = await request(app)
+        .post('/app-users-by-correct')
+        .query(query)
+        .set('Authorization', `Bearer ${correctAdminToken}`)
+        .attach('file', csvFilePath)
+
+      //user details
+      const onlyUserAuthDetails = await request(app)
+        .get("/app-user")
+        .set('Authorization', `Bearer ${employeeAuthToken}`)
+
+      const findUser = await request(app).get("/app-user/info").set('Authorization', `Bearer ${employeeAuthToken}`)
+
+      employee_user_info = findUser.body.uuid
+      expect(onlyUserAuthDetails.body.UserAuthDetails.user_info_uuid).toBe(findUser.body.uuid)
+      expect(result.statusCode).toBe(200);
+      expect(result.body.usersRegistered.length).toBe(15)
+      expect(result.body.errorUser.length).toBe(0)
+    });
+
     it("Should throw an error if business id is missing", async () => {
       const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
 
@@ -1465,7 +1579,7 @@ describe("E2E App User tests", () => {
       const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
 
       const query = {
-        business_info_uuid: employer_info_uuid
+        business_info_uuid: employer_info_uuid2
       }
 
       const result = await request(app)
@@ -1495,69 +1609,34 @@ describe("E2E App User tests", () => {
 
     });
     it("Should register users from csv", async () => {
-      //create employee 1
-      const onlyUserAuth: InputCreateAppUserDTO = {
-        user_info_uuid: null,
-        document: '350.707.670-54',
-        email: 'only_auth@email.com',
-        password: 'senha123',
-        is_active: true
-      }
-      await request(app).post("/app-user").send(onlyUserAuth)
-      const input = {
-        document: onlyUserAuth.document,
-        password: onlyUserAuth.password
-      }
 
-      const userAuthResponse = await request(app).post("/login-app-user").send(input)
-      employeeAuthToken = userAuthResponse.body.token
+      const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
 
-
-      //activate business
-      const inputToActivate = {
-        address_uuid: business_address_uuid,
-        fantasy_name: "Empresa novo nome",
-        document: "empregador",
-        classification: "Classificação",
-        colaborators_number: 5,
-        email: "empregador@empregador.com",
-        phone_1: "215745158",
-        phone_2: "124588965",
-        business_type: "empregador",
-        status: "active"
-      }
       const query = {
         business_info_uuid: employer_info_uuid
       }
-      await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToActivate)
 
-      const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
       const result = await request(app)
         .post('/app-users-by-correct')
         .query(query)
         .set('Authorization', `Bearer ${correctAdminToken}`)
-        .attach('file', csvFilePath)
+        .attach('file', csvFilePath) //
 
-      //user details
-      const onlyUserAuthDetails = await request(app)
-        .get("/app-user")
-        .set('Authorization', `Bearer ${employeeAuthToken}`)
+      //get list of employees to confifm
+      const employeesList = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token}`)
 
 
-      const findUser = await request(app).get("/app-user/info").set('Authorization', `Bearer ${employeeAuthToken}`)
-
-      employee_user_info = findUser.body.uuid.uuid
-      expect(onlyUserAuthDetails.body.UserAuthDetails.user_info_uuid).toBe(findUser.body.uuid.uuid)
+      expect(result.statusCode).toBe(200)
       expect(result.statusCode).toBe(200);
       expect(result.body.usersRegistered.length).toBe(15)
-      expect(result.body.errorUser.length).toBe(0)
+      expect(employeesList.body.length).toBe(15)
     });
-    it("Should find only users already associated", async () => {
 
-      //activate business 2
+    it("Should register associated users from csv", async () => {
+      //activate employer 2
       const inputToActivate = {
         address_uuid: business_address_uuid,
-        fantasy_name: "Empresa novo nome",
+        fantasy_name: "Empresa novo nome 2",
         document: "empregador2",
         classification: "Classificação",
         colaborators_number: 5,
@@ -1567,12 +1646,42 @@ describe("E2E App User tests", () => {
         business_type: "empregador",
         status: "active"
       }
+      const queryActivate = {
+        business_info_uuid: employer_info_uuid2
+      }
+      const activateEmployerr2 = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(queryActivate).send(inputToActivate)
+      expect(activateEmployerr2.statusCode).toBe(200)
+
+
+      //create employer user 2
+      const inputEmployer2 = {
+        password: "123456",
+        business_info_uuid: employer_info_uuid2,
+        email: "empregador2@empregador.com"
+      }
+      const createEmployer2 = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputEmployer2)
+      employer_user_uuid2 = createEmployer2.body.uuid
+      expect(createEmployer2.statusCode).toBe(201)
+
+
+      //authenticate employer user 2
+      const authInput2 = {
+        business_document: "empregador2",
+        password: "123456",
+        email: "empregador2@empregador.com"
+      }
+
+      const auth = await request(app).post("/business/admin/login").send(authInput2)
+      expect(auth.statusCode).toBe(200)
+      employer_user_token2 = auth.body.token
+
+
+      //Start test here
+      const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
+
       const query = {
         business_info_uuid: employer_info_uuid2
       }
-      await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToActivate)
-
-      const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
 
       const result = await request(app)
         .post('/app-users-by-correct')
@@ -1580,9 +1689,17 @@ describe("E2E App User tests", () => {
         .set('Authorization', `Bearer ${correctAdminToken}`)
         .attach('file', csvFilePath) //
 
+      //get list of employees to confifm
+      const employeesList2 = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token2}`)
+      const employeesList = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token}`)
+
+
+      expect(result.statusCode).toBe(200)
       expect(result.statusCode).toBe(200);
+      expect(employeesList.body).toEqual(employeesList2.body)
       expect(result.body.associatedUsers.length).toBe(15)
-    });
+
+    })
 
   })
 
@@ -1612,10 +1729,195 @@ describe("E2E App User tests", () => {
       //get userInfo
       const userInfoDetails = await request(app).get("/app-user/info").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
       expect(userAuthDetails.body.status).toBeFalsy()
-      expect(userAuthDetails.body.UserAuthDetails.user_info_uuid).toBe(userInfoDetails.body.uuid.uuid)
+      expect(userAuthDetails.body.UserAuthDetails.user_info_uuid).toBe(userInfoDetails.body.uuid)
       expect(userAuthDetails.body.UserInfo).toBeTruthy()
       expect(userAuthDetails.body.UserAddress).toBeFalsy()
       expect(userAuthDetails.body.UserValidation).toBeFalsy()
+
+    })
+  })
+  describe("Employee By Employer", () => {
+    beforeAll(async () => {
+      //activate business 3
+      const inputToActivate3 = {
+        address_uuid: business_address_uuid,
+        fantasy_name: "Empresa novo nome 3",
+        document: "empregador3",
+        classification: "Classificação",
+        colaborators_number: 5,
+        email: "empregador3@empregador.com",
+        phone_1: "215745158",
+        phone_2: "124588965",
+        business_type: "empregador",
+        status: "active"
+      }
+      const query = {
+        business_info_uuid: employer_info_uuid3
+      }
+      const activateBusiness3 = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToActivate3)
+      expect(activateBusiness3.statusCode).toBe(200)
+
+      //create employer user 3
+      const inputEmployer3 = {
+        password: "123456",
+        business_info_uuid: employer_info_uuid,
+        email: "empregador3@empregador.com"
+      }
+      const createEmployer3 = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputEmployer3)
+      employer_user_uuid3 = createEmployer3.body.uuid
+      expect(createEmployer3.statusCode).toBe(201)
+
+
+      //authenticate employer user 3
+      const authInput2 = {
+        business_document: "empregador3",
+        password: "123456",
+        email: "empregador3@empregador.com"
+      }
+
+      const auth3 = await request(app).post("/business/admin/login").send(authInput2)
+      expect(auth3.statusCode).toBe(200)
+      employer_user_token3 = auth3.body.token
+
+    })
+    describe("Get All employees by employer", () => {
+      beforeAll(async () => {
+
+        //create non employee user auth
+        const inputNonEmployee: any = {
+          user_info_uuid: null,
+          document: '000.458.150-46',
+          email: 'non_employee@email.com',
+          password: 'senha123'
+        }
+        const non_employee = await request(app).post("/app-user").send(inputNonEmployee)
+        expect(non_employee.statusCode).toBe(201)
+
+        const authNonEmployeeInput = {
+          document: inputNonEmployee.document,
+          password: inputNonEmployee.password
+        }
+
+        //authenticate non employee user
+        const auth_non_employe = await request(app).post("/login-app-user").send(authNonEmployeeInput)
+        expect(auth_non_employe.statusCode).toBe(200)
+        const non_employee_token = auth_non_employe.body.token
+
+        const nonEmployeeUserInput: any = {
+          full_name: "User Full Name",
+          gender: 'Male',
+          date_of_birth: '15/08/1998',
+          dependents_quantity: 1
+        }
+
+        const userInfoNonEmployee = await request(app).post("/app-user/info").set('Authorization', `Bearer ${non_employee_token}`).send(nonEmployeeUserInput)
+        expect(userInfoNonEmployee.statusCode).toBe(201)
+
+        const nonEmployeeUserDetails = await request(app)
+          .get("/app-user")
+          .set('Authorization', `Bearer ${non_employee_token}`)
+
+        non_employee_user_info = nonEmployeeUserDetails.body.UserAuthDetails.user_info_uuid
+
+        expect(nonEmployeeUserDetails.statusCode).toBe(200)
+      })
+
+      it("Should return a list of employees by employer", async () => {
+
+        const result = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token2}`)
+        expect(result.body.length).toEqual(15)
+      })
+      it("Should return a empty list of employees by employer", async () => {
+
+        const result = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token3}`)
+        expect(result.body.length).toBe(0)
+      })
+    })
+
+    describe("Get single employee by employer", () => {
+      it("Should throw an error if employee uuid is missing", async () => {
+        const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`)
+        expect(result.body.error).toBe("Employee uuid is required")
+        expect(result.statusCode).toBe(400)
+      })
+
+      it("Should throw an error if employee is not found", async () => {
+        const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).query({ employeeId: randomUUID() })
+        expect(result.body.error).toBe("Employee not found")
+        expect(result.statusCode).toBe(404)
+      })
+
+      it("Should throw an error if user is not an employee", async () => {
+        const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token2}`).query({ employeeId: non_employee_user_info })
+
+        expect(result.body.error).toBe("Unauthorized access")
+        expect(result.statusCode).toBe(401)
+      })
+
+      it("Should return employee details", async () => {
+        const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).query({ employeeId: employee_user_info })
+
+        expect(result.statusCode).toBe(200)
+        expect(result.body.uuid).toBe(employee_user_info)
+        expect(result.body.business_info_uuid).toBe(employer_info_uuid)
+        expect(result.body.document).toBe('35070767054')
+      })
+    })
+
+    describe("Register single employee by employer", () => {
+      it("Should throw an error if document is missing", async () => {
+        const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Document is required")
+      })
+
+      it("Should register a new employee", async () => {
+        const input = {
+          document: '868.228.050-79',
+          full_name: 'João Alves da Silva',
+          internal_company_code: '51591348',
+          gender:"Masculino",
+          function: "Corretor",
+          date_of_birth: '14/02/84',
+          dependents_quantity: 0
+        }
+
+
+        const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(201)
+      })
+
+      it("Should register the same employee by a another employer", async () => {
+        const input = {
+          document: '868.228.050-79',
+          full_name: 'João Alves da Silva',
+          internal_company_code: '51591348',
+          gender:"Masculino",
+          function: "Corretor",
+          date_of_birth: '14/02/84',
+          dependents_quantity: 0
+        }
+
+
+        const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
+        expect(result.statusCode).toBe(201)
+      })
+
+      it("Should throw an error if user is already an employee", async () => {
+        const input = {
+          document: '868.228.050-79',
+          full_name: 'João Alves da Silva',
+          internal_company_code: '51591348',
+          gender:"Masculino",
+          function: "Corretor",
+          date_of_birth: '14/02/84',
+          dependents_quantity: 0
+        }
+        const result = await  request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
+        expect(result.statusCode).toBe(409)
+        expect(result.body.error).toBe("User with this document already exists for the provided business")
+      })
 
     })
   })
@@ -1623,68 +1925,7 @@ describe("E2E App User tests", () => {
   let post_paid_user_item_uuid: string
 
   describe("E2E Tests User Items", () => {
-    beforeAll(async () => {
 
-      //create employer user
-      const inputEmployer = {
-        password: "123456",
-        business_info_uuid: employer_info_uuid,
-        email: "empregador@empregador.com"
-      }
-      const createEmployer = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputEmployer)
-
-      employer_user_uuid = createEmployer.body.uuid
-      expect(createEmployer.statusCode).toBe(201)
-
-      //authenticate employer
-      const authInput = {
-        business_document: "empregador",
-        password: "123456",
-        email: "empregador@empregador.com"
-      }
-
-      const auth = await request(app).post("/business/admin/login").send(authInput)
-      expect(auth.statusCode).toBe(200)
-      employer_user_token = auth.body.token
-
-      //create non employee user auth
-      const inputNonEmployee: any = {
-        user_info_uuid: null,
-        document: '000.458.150-46',
-        email: 'non_employee@email.com',
-        password: 'senha123'
-      }
-      const non_employee = await request(app).post("/app-user").send(inputNonEmployee)
-      expect(non_employee.statusCode).toBe(201)
-
-      const authNonEmployeeInput = {
-        document: inputNonEmployee.document,
-        password: inputNonEmployee.password
-      }
-
-      //authenticate non employee user
-      const auth_non_employe = await request(app).post("/login-app-user").send(authNonEmployeeInput)
-      expect(auth_non_employe.statusCode).toBe(200)
-      const non_employee_token = auth_non_employe.body.token
-
-      const nonEmployeeUserInput: any = {
-        full_name: "User Full Name",
-        gender: 'Male',
-        date_of_birth: '15/08/1998',
-        dependents_quantity: 1
-      }
-
-      const userInfoNonEmployee = await request(app).post("/app-user/info").set('Authorization', `Bearer ${non_employee_token}`).send(nonEmployeeUserInput)
-      expect(userInfoNonEmployee.statusCode).toBe(201)
-
-      const nonEmployeeUserDetails = await request(app)
-        .get("/app-user")
-        .set('Authorization', `Bearer ${non_employee_token}`)
-
-      non_employee_user_info = nonEmployeeUserDetails.body.UserAuthDetails.user_info_uuid
-
-      expect(nonEmployeeUserDetails.statusCode).toBe(200)
-    })
     describe("E2E test User items by Employer", () => {
       describe("E2E tests create user item by employer", () => {
         it("Should throw an error if user info id is missing", async () => {
@@ -1797,10 +2038,11 @@ describe("E2E App User tests", () => {
           expect(result.statusCode).toBe(403)
           expect(result.body.error).toBe("Unauthorized access")
         })
-        it("Should create a new item", async () => {
+        it("Should create a new item be employer 1", async () => {
 
           const input: any = {
             user_info_uuid: employee_user_info,
+            business_info_uuid: employer_info_uuid,
             item_uuid: benefit1_uuid,
             balance: 1,
             status: 'active',
@@ -1822,19 +2064,33 @@ describe("E2E App User tests", () => {
           expect(result.body.created_at).toBeTruthy()
 
         })
-        it("Should throw an error if user already has this item", async () => {
+        it("Should create a new item for the same user be employer 2", async () => {
 
           const input: any = {
             user_info_uuid: employee_user_info,
+            business_info_uuid: employer_info_uuid2,
             item_uuid: benefit1_uuid,
             balance: 1,
             status: 'active',
           }
 
-          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-          expect(result.statusCode).toBe(409)
-          expect(result.body.error).toBe("User already has this item")
+          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
+          pre_paid_user_item_uuid = result.body.uuid
+          const searchUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).query({ userItemId: pre_paid_user_item_uuid })
+
+          expect(searchUserItem.statusCode).toBe(200)
+          expect(searchUserItem.body.uuid).toBe(result.body.uuid)
+          expect(result.statusCode).toBe(201)
+          expect(result.body.uuid).toBeTruthy()
+          expect(result.body.user_info_uuid).toBe(input.user_info_uuid)
+          expect(result.body.item_name).toBe("Vale Alimentação")
+          expect(result.body.balance).toBe(1)
+          expect(result.body.status).toBe(input.status)
+          expect(result.body.business_info_uuid).toBe(employer_info_uuid2)
+          expect(result.body.created_at).toBeTruthy()
+
         })
+
       })
       describe("E2E find user item by id by employer", () => {
         it("Should throw an errir if user item id is missing", async () => {
@@ -1921,7 +2177,7 @@ describe("E2E App User tests", () => {
           expect(result.body.error).toBe("Unauthorized access")
         })
 
-        it("Should return a list of user items", async () => {
+        it("Should return a list of user items by employer 1", async () => {
           const input: any = {
             userInfoUuid: employee_user_info,
           }
@@ -1929,12 +2185,25 @@ describe("E2E App User tests", () => {
           const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
           expect(result.statusCode).toBe(200)
           expect(result.body.length).toBe(3)
+          result.body.forEach((userItem: any) => {
+            expect(userItem.user_info_uuid).toBe(employee_user_info)
+            expect(userItem.Provider.business_info_uuid).toBe(employer_info_uuid)
+          });
+        })
+        it("Should return a list of user items by employer 2", async () => {
+          const input: any = {
+            userInfoUuid: employee_user_info,
+          }
+
+          const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token2}`).query(input)
+          expect(result.statusCode).toBe(200)
+          expect(result.body.length).toBe(1)
 
           result.body.forEach((userItem: any) => {
             expect(userItem.user_info_uuid).toBe(employee_user_info)
+            expect(userItem.Provider.business_info_uuid).toBe(employer_info_uuid2)
           });
         })
-
       })
       describe("E2E Block or Cancel User item by employer", () => {
         it("Should throw an error if item uuid is missing", async () => {
@@ -2070,7 +2339,7 @@ describe("E2E App User tests", () => {
         it("Should return user items", async () => {
           const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
           expect(result.statusCode).toBe(200)
-          expect(result.body.length).toBe(3)
+          expect(result.body.length).toBe(4)
         })
         it("Should return empty array", async () => {
           const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken2}`)
@@ -2080,89 +2349,5 @@ describe("E2E App User tests", () => {
       })
     })
   })
-  describe("Employee By Employer", () => {
-    beforeAll(async () => {
-      //Creating an employer with no employees registered
 
-      //create employer user
-      const inputEmployer = {
-        password: "123456",
-        business_info_uuid: employer_info_uuid2,
-        email: "empregador2@empregador.com"
-      }
-      const createEmployer = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputEmployer)
-
-      employer_user_uuid = createEmployer.body.uuid
-      expect(createEmployer.statusCode).toBe(201)
-
-      //authenticate employer
-      const authInput = {
-        business_document: "empregador2",
-        password: "123456",
-        email: "empregador2@empregador.com"
-      }
-
-      const auth = await request(app).post("/business/admin/login").send(authInput)
-      expect(auth.statusCode).toBe(200)
-      employer_user_token2 = auth.body.token
-
-    })
-    describe("Get All employees by employer", () => {
-
-      it("Should return a list of employees by employer", async () => {
-
-        const result = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token}`)
-        expect(result.body.length).toBeGreaterThan(0)
-      })
-      it("Should return a empty list of employees by employer", async () => {
-
-        const result = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token2}`)
-        expect(result.body.length).toBe(0)
-      })
-    })
-
-    describe("Get single employee by employer", () => {
-      it("Should throw an error if employee uuid is missing", async () => {
-        const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`)
-        expect(result.body.error).toBe("Employee uuid is required")
-        expect(result.statusCode).toBe(400)
-      })
-
-      it("Should throw an error if employee is not found", async () => {
-        const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).query({ employeeId: randomUUID()})
-        expect(result.body.error).toBe("Employee not found")
-        expect(result.statusCode).toBe(404)
-      })
-
-      it("Should throw an error if user is not an employee", async () => {
-        const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token2}`).query({ employeeId: employee_user_info})
-        expect(result.body.error).toBe("Unauthorized access")
-        expect(result.statusCode).toBe(401)
-      })
-
-      it("Should return employee details", async () => {
-        const result = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).query({ employeeId: employee_user_info})
-        expect(result.statusCode).toBe(200)
-        expect(result.body.uuid).toBe(employee_user_info)
-        expect(result.body.business_info_uuid).toBe(employer_info_uuid)
-        expect(result.body.document).toBe('35070767054')
-      })
-    })
-
-    describe("Register single employee by employer", () => {
-      it("Should throw an erro if document is missing", async () => {
-        const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`)
-
-        expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe("Document is required")
-      })
-
-      it("Should throw an erro if document is missing", async () => {
-        const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`)
-
-        expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe("Document is required")
-      })
-    })
-  })
 })

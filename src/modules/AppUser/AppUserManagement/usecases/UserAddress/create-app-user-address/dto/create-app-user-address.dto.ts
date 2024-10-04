@@ -15,7 +15,7 @@ export interface InputCreateUserAddressDTO {
 }
 
 export interface OutputCreateUserAddressDTO {
-    uuid: Uuid
+    uuid: string
     line1: string | null;
     line2: string | null;
     line3: string | null;
@@ -26,5 +26,5 @@ export interface OutputCreateUserAddressDTO {
     country: string | null;
     created_at?: string;
     updated_at?: string;
-    user_uuid: Uuid
+    user_uuid: string
 }
