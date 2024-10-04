@@ -5,6 +5,8 @@ import { CustomError } from "../../../../errors/custom.error";
 
 export type AppUserItemProps = {
   uuid?: Uuid
+  business_info_uuid?: Uuid
+  fantasy_name?: string
   user_info_uuid: Uuid
   item_uuid: Uuid
   img_url: string
@@ -22,6 +24,8 @@ export type AppUserItemProps = {
 }
 
 export type AppUserItemCreateCommand = {
+  business_info_uuid?: Uuid
+  fantasy_name?: string
   user_info_uuid: Uuid
   item_uuid: Uuid
   img_url: string
@@ -39,6 +43,8 @@ export type AppUserItemCreateCommand = {
 
 export class AppUserItemEntity {
   private _uuid?: Uuid
+  private _business_info_uuid: Uuid
+  private _fantasy_name: string
   private _user_info_uuid: Uuid
   private _item_uuid: Uuid
   private _img_url: string
@@ -56,6 +62,8 @@ export class AppUserItemEntity {
 
   constructor(props: AppUserItemProps) {
     this._uuid = props.uuid ?? new Uuid()
+    this._business_info_uuid = props.business_info_uuid
+    this._fantasy_name = props.fantasy_name
     this._user_info_uuid = props.user_info_uuid
     this._item_uuid = props.item_uuid
     this._img_url = props.img_url
@@ -75,6 +83,14 @@ export class AppUserItemEntity {
 
   get uuid(): Uuid {
     return this._uuid
+  }
+
+  get business_info_uuid(): Uuid {
+    return this._business_info_uuid
+  }
+
+  get fantasy_name(): string {
+    return this._fantasy_name
   }
 
   get user_info_uuid(): Uuid {

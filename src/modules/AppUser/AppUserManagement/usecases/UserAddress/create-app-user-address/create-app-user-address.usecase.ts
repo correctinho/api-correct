@@ -18,18 +18,18 @@ export class CreateAppUserAddressUsecase{
         const userAuth = await this.userAuthRepository.find(data.user_uuid)
 
         if(!userAuth) throw new CustomError("User not found", 401)
-        
+
         //find user info
         const userInfo = await this.userInfoRepository.findByDocumentUserInfo(userAuth.document)
         if(!userInfo) throw new CustomError("User info must be completed first", 404)
-        
-                
+
+
         const userAddress = await AddressEntity.create(data)
 
         await this.addressRepository.createAddress(userAddress, userAuth.document)
 
         return {
-            uuid: userAddress.uuid,
+            uuid: userAddress.uuid.uuid,
             line1: userAddress.line1,
             line2: userAddress.line2,
             line3: userAddress.line3,
@@ -40,7 +40,7 @@ export class CreateAppUserAddressUsecase{
             country: userAddress.country,
             created_at: userAddress.created_at,
             updated_at: userAddress.updated_at,
-            user_uuid: data.user_uuid
+            user_uuid: data.user_uuid.uuid
         }
 
     }

@@ -10,4 +10,8 @@ export type OutputFindAllAppUserItemsDTO = {
   balance: number
   status: UserItemStatus,
   created_at: string,
+  Provider: {
+    business_info_uuid: string
+    fantasy_name: string
+  }
 }

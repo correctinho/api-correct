@@ -14,12 +14,13 @@ export class CreateAppUserInfoByEmployerUsecase {
 
   async execute(data: InputCreateUserInfoDTO): Promise<OutputCreateUserInfoDTO> {
     if (!data.document) throw new CustomError("Document is required", 400)
-
-    //check if document is already registered
-    const findBydocument = await this.appUserInfoRepository.findByDocumentUserInfo(data.document)
-
-    if(findBydocument.business_info_uuid.uuid !== data.business_info_uuid.uuid) throw new CustomError("")
     const userInfoEntity = await AppUserInfoEntity.create(data)
+    //check if document is already registered
+    const findBydocument = await this.appUserInfoRepository.findByDocumentUserInfo(userInfoEntity.document)
+
+    if (findBydocument && findBydocument.business_info_uuids.some(uuid => uuid === data.business_info_uuid.uuid)) {
+      throw new CustomError("User with this document already exists for the provided business", 409);
+    }
 
     await this.appUserInfoRepository.createOrUpdateUserInfoByEmployer(userInfoEntity)
 
