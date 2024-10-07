@@ -3,6 +3,7 @@ import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repo
 import { IAppUserAuthRepository } from "../../../repositories/app-use-auth-repository";
 import { InputCreateUserInfoDTO } from "../create-user-info/dto/create-user-info.dto";
 import { CreateAppUserInfoByEmployerUsecase } from "./create-user-info-by-employer.usecase";
+import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 
 export class CreateUserInfoByEmployerController{
     constructor(
@@ -14,8 +15,9 @@ export class CreateUserInfoByEmployerController{
     async handle(req: Request, res: Response){
 
         try{
-
             const data = req.body
+
+            data.business_info_uuid = new Uuid(req.companyUser.businessInfoUuid)
 
             const userInfoUsecase = new CreateAppUserInfoByEmployerUsecase(this.appUserInfoRepository, this.appUserAuthRepository)
 

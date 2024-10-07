@@ -6,9 +6,8 @@ export interface InputFindUserByUserDTO {
 }
 
 export interface OutputFindUserByUserDTO {
-    uuid: Uuid
-    business_info_uuid: Uuid | null
-    address_uuid: Uuid | null
+    uuid: string
+    address_uuid: string | null
     document: string
     document2: string | null
     document3: string | null
@@ -28,9 +27,10 @@ export interface OutputFindUserByUserDTO {
     dependents_quantity: number
     created_at: string | null
     updated_at: string | null
-    BusinessInfo: {
+    BusinessInfoList: {
+        uuid: string,
         fantasy_name: string
-    } | null
-   
+    }[] | []
+
 
 }

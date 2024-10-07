@@ -61,7 +61,7 @@ export type AppUserInfoCreateCommand = {
 
 export class AppUserInfoEntity {
   private _uuid: Uuid;
-  private _business_info_uuid: Uuid | null;
+  private _business_info_uuids: string[];
   private _address_uuid: Uuid | null;
   private _document: string;
   private _document2: string | null;
@@ -72,10 +72,10 @@ export class AppUserInfoEntity {
   private _gender: string | null;
   private _date_of_birth: string;
   private _phone: string | null;
-  private _email: string
+  private _email: string;
   private _salary: number | null;
   private _company_owner: boolean;
-  private _status: Status
+  private _status: Status;
   private _function: string | null;
   private _recommendation_code: string | null;
   private _is_authenticated: boolean;
@@ -83,11 +83,11 @@ export class AppUserInfoEntity {
   private _dependents_quantity: number;
   private _user_document_validation_uuid: Uuid | null;
   private _created_at?: string;
-  private _updated_at?: string
+  private _updated_at?: string;
 
   constructor(props: AppUserInfoProps) {
     this._uuid = props.uuid ?? new Uuid();
-    this._business_info_uuid = props.business_info_uuid;
+    this._business_info_uuids = props.business_info_uuid ? [props.business_info_uuid.uuid] : [];
     this._address_uuid = props.address_uuid;
     this._document = props.document;
     this._document2 = props.document2;
@@ -98,27 +98,27 @@ export class AppUserInfoEntity {
     this._gender = props.gender;
     this._date_of_birth = props.date_of_birth;
     this._phone = props.phone;
-    this._email = props.email
+    this._email = props.email;
     this._salary = props.salary;
-    this._company_owner = props.company_owner ?? false
-    this._status = props.status ?? Status.pending
+    this._company_owner = props.company_owner ?? false;
+    this._status = props.status ?? Status.pending;
     this._function = props.function;
     this._recommendation_code = props.recommendation_code;
-    this._is_authenticated = props.is_authenticated ?? false
+    this._is_authenticated = props.is_authenticated ?? false;
     this._marital_status = props.marital_status;
     this._dependents_quantity = props.dependents_quantity;
     this._user_document_validation_uuid = props.user_document_validation_uuid;
-    this._created_at = newDateF(new Date())
-    this._updated_at = newDateF(new Date())
-    this.validate()
+    this._created_at = newDateF(new Date());
+    this._updated_at = newDateF(new Date());
+    this.validate();
   }
 
   get uuid(): Uuid {
     return this._uuid;
   }
 
-  get business_info_uuid(): Uuid | null {
-    return this._business_info_uuid;
+  get business_info_uuids(): string[] {
+    return this._business_info_uuids;
   }
 
   get address_uuid(): Uuid | null {
@@ -209,8 +209,15 @@ export class AppUserInfoEntity {
     return this._updated_at
   }
 
-  changeBusinessInfoUuid(business_info_uuid: Uuid) {
-    this._business_info_uuid = business_info_uuid;
+  addBusinessInfoUuid(business_info_uuid: Uuid) {
+    if (!this._business_info_uuids.includes(business_info_uuid.uuid)) {
+      this._business_info_uuids.push(business_info_uuid.uuid);
+      this.validate();
+    }
+  }
+
+  removeBusinessInfoUuid(business_info_uuid: Uuid) {
+    this._business_info_uuids = this._business_info_uuids.filter(uuid => uuid !== business_info_uuid.uuid);
     this.validate();
   }
 
@@ -324,8 +331,11 @@ export class AppUserInfoEntity {
     if (!this.gender) throw new CustomError("Gender is required", 400);
 
     //types validation
-    if (this.business_info_uuid && !(this.business_info_uuid instanceof Uuid))
-      throw new CustomError("Business info UUID must be a string", 400);
+    // this._business_info_uuids.forEach(uuid => {
+    //   if (!(uuid instanceof Uuid)) {
+    //     throw new CustomError("Each business info UUID must be an instance of Uuid", 400);
+    //   }
+    // });
 
     if (this.address_uuid && !(this.address_uuid instanceof Uuid))
       throw new CustomError("Address UUID must be instanceof Uuid", 400);

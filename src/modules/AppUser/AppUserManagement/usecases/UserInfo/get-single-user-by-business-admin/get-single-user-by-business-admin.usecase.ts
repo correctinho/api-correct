@@ -16,14 +16,14 @@ export class GetSingleUserByBusinessAdminUsecase {
     if (!employee_uuid) throw new CustomError("Employee uuid is required", 400)
 
     const employee = await this.appUsersRepository.find(new Uuid(employee_uuid))
-
     if (!employee) throw new CustomError("Employee not found", 404)
 
-    if (business_info_uuid !== employee.business_info_uuid.uuid) throw new CustomError("Unauthorized access", 401)
+    const isRelatedToBusiness = employee.business_info_uuids.some(business => business === business_info_uuid);
+    if (!isRelatedToBusiness) throw new CustomError("Unauthorized access", 401);
 
     return {
       uuid: employee.uuid.uuid,
-      business_info_uuid: employee.business_info_uuid.uuid,
+      business_info_uuid: business_info_uuid,
       address_uuid: employee.address_uuid ? employee.address_uuid.uuid : null,
       document: employee.document,
       document2: employee.document2,

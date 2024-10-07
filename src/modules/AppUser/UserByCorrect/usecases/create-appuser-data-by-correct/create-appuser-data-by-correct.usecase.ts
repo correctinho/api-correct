@@ -20,7 +20,7 @@ export class CreateAppUserByCorrectUsecaseTest {
     let validatedUser: AppUserInfoEntity[] = [];
     let errorUser: string[] = [];
     let usersRegistered: string[] = [];
-    let associatedUsers: string[] = []; //Users in this array will not be registered, because they are already associated with another company
+    let associatedUsers: string[] = []; // Users in this array will not be registered, because they are already associated with another company
 
     if (!business_info_uuid) throw new CustomError("Business Id is required", 400);
 
@@ -129,28 +129,57 @@ export class CreateAppUserByCorrectUsecaseTest {
     for (const user of users) {
       const existingUserInfo = await this.appUserInfoRepository.findByDocumentUserInfo(user.document);
       const findUserAuth = await this.appUserAuthRepository.findByDocument(user.document);
-      if (existingUserInfo && (existingUserInfo?.business_info_uuid && existingUserInfo?.business_info_uuid?.uuid !== business_info_uuid)) {
 
-        associatedUsers.push(existingUserInfo?.document);
+      const userInfoProps: AppUserInfoProps = {
+        business_info_uuid: new Uuid(business_info_uuid),
+        address_uuid: user.address_uuid,
+        document: user.document,
+        document2: user.document2,
+        document3: user.document3,
+        full_name: user.full_name,
+        display_name: user.display_name,
+        internal_company_code: user.internal_company_code,
+        gender: user.gender,
+        date_of_birth: user.date_of_birth,
+        phone: user.phone,
+        email: user.email,
+        salary: user.salary,
+        company_owner: user.company_owner,
+        status: user.status,
+        function: user.function,
+        recommendation_code: user.recommendation_code,
+        is_authenticated: user.is_authenticated,
+        marital_status: user.marital_status,
+        dependents_quantity: user.dependents_quantity,
+        user_document_validation_uuid: user.user_document_validation_uuid,
+      };
 
-      }else if (!existingUserInfo && !findUserAuth) {
+      if (existingUserInfo) {
+        const isAssociatedWithOtherBusiness = existingUserInfo.business_info_uuids.some(business => business !== business_info_uuid);
+
+        if (isAssociatedWithOtherBusiness) {
+          associatedUsers.push(existingUserInfo.document);
+          const userInfoEntity = new AppUserInfoEntity(userInfoProps);
+          await this.appUserInfoRepository.saveOrUpdateByCSV(userInfoEntity);
+
+        }
+      }
 
 
-        const userInfoentity = new AppUserInfoEntity(user);
-        await this.appUserInfoRepository.saveOrUpdateByCSV(userInfoentity);
-        usersRegistered.push(userInfoentity.document);
+      if (!existingUserInfo && !findUserAuth) {
+
+        const userInfoEntity = new AppUserInfoEntity(userInfoProps);
+        await this.appUserInfoRepository.saveOrUpdateByCSV(userInfoEntity);
+        usersRegistered.push(userInfoEntity.document);
 
       } else if (findUserAuth && !existingUserInfo) {
-
-
         await this.appUserInfoRepository.createUserInfoandUpdateUserAuthByCSV(user);
         usersRegistered.push(user.document);
-
       } else if (existingUserInfo) {
-        const userInfoentity = new AppUserInfoEntity(user);
-        userInfoentity.changeBusinessInfoUuid(new Uuid(business_info_uuid));
+        const userInfoEntity = new AppUserInfoEntity(userInfoProps);
+        userInfoEntity.addBusinessInfoUuid(new Uuid(business_info_uuid));
 
-        await this.appUserInfoRepository.saveOrUpdateByCSV(user);
+        await this.appUserInfoRepository.saveOrUpdateByCSV(userInfoEntity);
         usersRegistered.push(user.document);
 
         if (findUserAuth) {

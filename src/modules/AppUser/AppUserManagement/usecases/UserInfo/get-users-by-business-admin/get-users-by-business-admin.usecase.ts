@@ -11,7 +11,6 @@ export class GetUsersByBusinessAdminUsecase{
     ){}
 
     async execute(businessInfoUuid: string){
-
         //find employees
         const employees = await this.appUsersRepository.findManyByBusiness(businessInfoUuid)
         if(employees.length === 0) return []
