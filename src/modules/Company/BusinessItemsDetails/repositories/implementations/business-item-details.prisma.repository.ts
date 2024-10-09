@@ -5,6 +5,35 @@ import { OutputFindEmployerItemDetailsDTO } from "../../usecases/CorrectAdmin/fi
 import { IBusinessItemDetailsRepository } from "../business-item-details.repository";
 
 export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetailsRepository {
+  async findByIdWithItems(id: Uuid): Promise<OutputFindEmployerItemDetailsDTO | null> {
+    const result = await prismaClient.employerItemDetails.findUnique({
+      where: {
+        uuid: id.uuid
+      },
+      select: {
+        uuid: true,
+        item_uuid: true,
+        business_info_uuid: true,
+        cycle_start_day: true,
+        cycle_end_day: true,
+        created_at: true,
+        updated_at: true,
+        Item: {
+          select:{
+            uuid: true,
+            name: true,
+            item_type: true,
+            item_category: true,
+            parent_uuid: true,
+            business_info_uuid: true
+          }
+        }
+      }
+    })
+    if (!result) return null
+
+    return result as OutputFindEmployerItemDetailsDTO
+  }
 
   async findByItemUuidAndBusinessInfo(businessInfoId: string, itemId: string): Promise<OutputFindEmployerItemDetailsDTO | null> {
     const result = await prismaClient.employerItemDetails.findFirst({
