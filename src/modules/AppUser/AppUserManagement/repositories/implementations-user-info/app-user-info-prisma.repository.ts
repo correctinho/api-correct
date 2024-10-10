@@ -133,7 +133,8 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
         }
       },
       include: {
-        Address: true
+        Address: true,
+        UserItem: true
       }
 
     })

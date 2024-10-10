@@ -70,7 +70,7 @@ export class BenefitGroupsPrismaRepository implements IBenefitGroupsRepository {
         value: data.value,
         user_info_uuid: data.user_info_uuids,
         business_info_uuid: data.business_info_uuid.uuid,
-        //updated_at: data.updated_at
+        updated_at: data.updated_at
       }
     })
 
@@ -81,7 +81,8 @@ export class BenefitGroupsPrismaRepository implements IBenefitGroupsRepository {
       value: group.value,
       user_info_uuids: group.user_info_uuid,
       business_info_uuid: new Uuid(group.business_info_uuid),
-      created_at: group.created_at
+      created_at: group.created_at,
+      updated_at: group.created_at
     } as BenefitGroupsEntity
   }
 
