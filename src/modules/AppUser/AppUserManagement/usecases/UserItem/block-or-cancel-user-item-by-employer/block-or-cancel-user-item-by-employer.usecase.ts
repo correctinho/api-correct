@@ -20,6 +20,8 @@ export class BlockOrCanceluserItemByEmployerUsecase {
     const userItem = await this.appUserItemRepository.find(new Uuid(input.user_item_uuid))
     if (!userItem) throw new CustomError("User Item not found", 404)
 
+    if(userItem.business_info_uuid.uuid !== input.business_info_uuid) throw new CustomError("Unauthorized acess", 403);
+
 
     if (userItem.status === 'cancelled' || userItem.status === 'to_be_cancelled') throw new CustomError("User item already cancelled", 400)
 

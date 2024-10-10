@@ -4,7 +4,6 @@ import { IBenefitGroupsRepository } from "../../repositories/benefit-groups.repo
 import { IAppUserInfoRepository } from "../../../../AppUser/AppUserManagement/repositories/app-user-info.repository";
 import { IBusinessItemDetailsRepository } from "../../../BusinessItemsDetails/repositories/business-item-details.repository";
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
-import { InputCreateBenefitGroupsDTO } from "./dto/create-benefit-groups.dto";
 
 export class CreateBenefitGroupController {
   constructor(
@@ -32,7 +31,6 @@ export class CreateBenefitGroupController {
       return res.status(201).json(result)
 
     } catch (err: any) {
-      console.log({err})
       return res.status(err.statusCode).json({
         error: err.message
       })

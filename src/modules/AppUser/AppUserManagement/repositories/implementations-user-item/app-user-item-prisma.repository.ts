@@ -10,7 +10,43 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository{
     const userItem = await prismaClient.userItem.findFirst({
       where:{
         item_uuid: itemId,
-        user_info_uuid: userInfoId
+        user_info_uuid: userInfoId,
+      },
+      include:{
+        Item:{
+          select:{
+            img_url: true
+          }
+        }
+      }
+    })
+
+    if(!userItem) return null
+    return {
+      uuid: new Uuid(userItem.uuid),
+      user_info_uuid: new Uuid(userItem.user_info_uuid),
+      item_uuid: new Uuid(userItem.item_uuid),
+      img_url: userItem.Item.img_url,
+      item_name: userItem.item_name,
+      balance: userItem.balance,
+      status: userItem.status,
+      blocked_at: userItem.blocked_at,
+      cancelled_at: userItem.cancelled_at,
+      block_reason: userItem.block_reason,
+      cancel_reason: userItem.cancel_reason,
+      cancelling_request_at: userItem.cancelling_request_at,
+      grace_period_end_date: userItem.grace_period_end_date,
+      created_at: userItem.created_at,
+      updated_at: userItem.updated_at
+    } as AppUserItemEntity
+  }
+
+  async findItemByEmployeeAndBusiness(userInfoId: string, business_info_uuid: string, itemId: string): Promise<AppUserItemEntity | null> {
+    const userItem = await prismaClient.userItem.findFirst({
+      where:{
+        business_info_uuid: business_info_uuid,
+        user_info_uuid: userInfoId,
+        item_uuid: itemId
       },
       include:{
         Item:{

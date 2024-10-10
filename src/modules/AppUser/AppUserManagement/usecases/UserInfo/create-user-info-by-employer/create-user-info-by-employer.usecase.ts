@@ -15,14 +15,29 @@ export class CreateAppUserInfoByEmployerUsecase {
   async execute(data: InputCreateUserInfoDTO): Promise<OutputCreateUserInfoDTO> {
     if (!data.document) throw new CustomError("Document is required", 400)
     const userInfoEntity = await AppUserInfoEntity.create(data)
+
     //check if document is already registered
     const findBydocument = await this.appUserInfoRepository.findByDocumentUserInfo(userInfoEntity.document)
+    const findUserAuth = await this.appUserAuthRepository.findByDocument(userInfoEntity.document);
 
-    if (findBydocument && findBydocument.business_info_uuids.some(uuid => uuid === data.business_info_uuid.uuid)) {
-      throw new CustomError("User with this document already exists for the provided business", 409);
+    const isEmployee = findBydocument?.Employee.find(business => business.business_info_uuid === data.business_info_uuid.uuid)
+
+    if (findBydocument && isEmployee) throw new CustomError("User with this document already exists for the provided business", 409);
+
+    if (findBydocument && !isEmployee) {
+      userInfoEntity.changeUuid(new Uuid(findBydocument.uuid))
+
+      //create only employee data
+      await this.appUserInfoRepository.createEmployee(userInfoEntity)
     }
 
-    await this.appUserInfoRepository.createOrUpdateUserInfoByEmployer(userInfoEntity)
+    if(!findBydocument && !findUserAuth){
+      await this.appUserInfoRepository.createUserInfoAndEmployee(userInfoEntity);
+    }
+
+    if(findUserAuth && !findBydocument) await this.appUserInfoRepository.createUserInfoandUpdateUserAuthByCSV(userInfoEntity);
+
+    // await this.appUserInfoRepository.createOrUpdateUserInfoByEmployer(userInfoEntity)
 
     return {}
 

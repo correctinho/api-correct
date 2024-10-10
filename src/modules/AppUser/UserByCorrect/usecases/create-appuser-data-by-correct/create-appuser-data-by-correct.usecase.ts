@@ -20,7 +20,6 @@ export class CreateAppUserByCorrectUsecaseTest {
     let validatedUser: AppUserInfoEntity[] = [];
     let errorUser: string[] = [];
     let usersRegistered: string[] = [];
-    let associatedUsers: string[] = []; // Users in this array will not be registered, because they are already associated with another company
 
     if (!business_info_uuid) throw new CustomError("Business Id is required", 400);
 
@@ -30,9 +29,9 @@ export class CreateAppUserByCorrectUsecaseTest {
 
     const users = await this.readCSV(fileBuffer);
     await this.validateUser(users, business_info_uuid, validatedUser, errorUser);
-    await this.processUsers(validatedUser, business_info_uuid, usersRegistered, associatedUsers);
+    await this.processUsers(validatedUser, business_info_uuid, usersRegistered);
 
-    return { usersRegistered, errorUser, associatedUsers };
+    return { usersRegistered, errorUser };
   }
 
   private async readCSV(fileBuffer: Buffer): Promise<AppUserInfoRequest[]> {
@@ -125,7 +124,7 @@ export class CreateAppUserByCorrectUsecaseTest {
     }
   }
 
-  private async processUsers(users: AppUserInfoEntity[], business_info_uuid: string, usersRegistered: string[], associatedUsers: string[]) {
+  private async processUsers(users: AppUserInfoEntity[], business_info_uuid: string, usersRegistered: string[]) {
     for (const user of users) {
       const existingUserInfo = await this.appUserInfoRepository.findByDocumentUserInfo(user.document);
       const findUserAuth = await this.appUserAuthRepository.findByDocument(user.document);
@@ -155,39 +154,55 @@ export class CreateAppUserByCorrectUsecaseTest {
       };
 
       if (existingUserInfo) {
-        const isAssociatedWithOtherBusiness = existingUserInfo.business_info_uuids.some(business => business !== business_info_uuid);
+        const isAlreadyAnEmployee = existingUserInfo.Employee.find(business => business.business_info_uuid === business_info_uuid);
 
-        if (isAssociatedWithOtherBusiness) {
-          associatedUsers.push(existingUserInfo.document);
-          const userInfoEntity = new AppUserInfoEntity(userInfoProps);
-          await this.appUserInfoRepository.saveOrUpdateByCSV(userInfoEntity);
+        const userInfoEntity = new AppUserInfoEntity(userInfoProps);
+        userInfoEntity.changeUuid(new Uuid(existingUserInfo.uuid))
 
+        if (isAlreadyAnEmployee) {
+          //In this situation, user already exists and is already an employee. So we must update employee info
+
+          await this.appUserInfoRepository.updateEmployee(userInfoEntity, isAlreadyAnEmployee.uuid);
+        } else {
+          //Here we need to create an employee
+          await this.appUserInfoRepository.createEmployee(userInfoEntity)
         }
+
+        usersRegistered.push(userInfoEntity.document);
       }
 
 
       if (!existingUserInfo && !findUserAuth) {
+        //Here, user does not exist in any of the registers, so we are going to create a new userinfo and employee
 
         const userInfoEntity = new AppUserInfoEntity(userInfoProps);
-        await this.appUserInfoRepository.saveOrUpdateByCSV(userInfoEntity);
+        await this.appUserInfoRepository.createUserInfoAndEmployee(userInfoEntity);
         usersRegistered.push(userInfoEntity.document);
 
       } else if (findUserAuth && !existingUserInfo) {
+        //Here, we must create userInfo and connect to existing user auth and create an employee
+
         await this.appUserInfoRepository.createUserInfoandUpdateUserAuthByCSV(user);
         usersRegistered.push(user.document);
-      } else if (existingUserInfo) {
-        const userInfoEntity = new AppUserInfoEntity(userInfoProps);
-        userInfoEntity.addBusinessInfoUuid(new Uuid(business_info_uuid));
 
-        await this.appUserInfoRepository.saveOrUpdateByCSV(userInfoEntity);
-        usersRegistered.push(user.document);
-
-        if (findUserAuth) {
-          const userAuthEntity = new AppUserAuthSignUpEntity(findUserAuth);
-          userAuthEntity.changeUserInfo(existingUserInfo.uuid);
-          await this.appUserAuthRepository.update(userAuthEntity);
-        }
       }
+      // else if (existingUserInfo) {
+      //   console.log("5 ****************")
+
+      //   const userInfoEntity = new AppUserInfoEntity(userInfoProps);
+      //   userInfoEntity.changeUuid(new Uuid(existingUserInfo.uuid))
+      //   userInfoEntity.addBusinessInfoUuid(new Uuid(business_info_uuid));
+      //   await this.appUserInfoRepository.createUserInfoAndEmployee(userInfoEntity);
+      //   usersRegistered.push(user.document);
+
+      //   if (findUserAuth) {
+      //     console.log("6 ****************")
+
+      //     const userAuthEntity = new AppUserAuthSignUpEntity(findUserAuth);
+      //     userAuthEntity.changeUserInfo(new Uuid(existingUserInfo.uuid));
+      //     await this.appUserAuthRepository.update(userAuthEntity);
+      //   }
+      // }
     }
   }
 }

@@ -5,5 +5,7 @@ import { OutputFindAllAppUserItemsDTO } from "../usecases/UserItem/find-all-by-e
 export interface IAppUserItemRepository extends RepositoryInterface<AppUserItemEntity>{
   findByItemUuidAndUserInfo(userInfoId: string, itemId: string):Promise<AppUserItemEntity | null>
   findAllUserItems(userInfoId: string): Promise<AppUserItemEntity[] | []>
+  findItemByEmployeeAndBusiness(userInfoId: string, business_info_uuid: string, itemId: string):Promise<AppUserItemEntity | null>
+
 
 }

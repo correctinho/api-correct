@@ -69,7 +69,7 @@ export class AppUserItemEntity {
     this._img_url = props.img_url
     this._item_name = props.item_name
     this._balance = props.balance
-    this._status = props.status
+    this._status = props.status ?? 'active'
     this._blocked_at = props.blocked_at
     this._cancelled_at = props.cancel_reason
     this._cancelling_request_at = props.cancelling_request_at

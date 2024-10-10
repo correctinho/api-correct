@@ -29,6 +29,7 @@ export type AppUserInfoProps = {
   marital_status: string | null;
   dependents_quantity: number;
   user_document_validation_uuid: Uuid | null;
+  is_employee?: boolean
   created_at?: string
   updated_at?: string
 };
@@ -55,6 +56,7 @@ export type AppUserInfoCreateCommand = {
   marital_status: string | null;
   dependents_quantity: number;
   user_document_validation_uuid: Uuid | null;
+  is_employee?: boolean
   created_at?: string
   updated_at?: string
 }
@@ -62,6 +64,7 @@ export type AppUserInfoCreateCommand = {
 export class AppUserInfoEntity {
   private _uuid: Uuid;
   private _business_info_uuids: string[];
+  private _business_info_uuid: Uuid
   private _address_uuid: Uuid | null;
   private _document: string;
   private _document2: string | null;
@@ -82,12 +85,14 @@ export class AppUserInfoEntity {
   private _marital_status: string | null;
   private _dependents_quantity: number;
   private _user_document_validation_uuid: Uuid | null;
+  private _is_employee: boolean
   private _created_at?: string;
   private _updated_at?: string;
 
   constructor(props: AppUserInfoProps) {
     this._uuid = props.uuid ?? new Uuid();
     this._business_info_uuids = props.business_info_uuid ? [props.business_info_uuid.uuid] : [];
+    this._business_info_uuid = props.business_info_uuid
     this._address_uuid = props.address_uuid;
     this._document = props.document;
     this._document2 = props.document2;
@@ -108,6 +113,7 @@ export class AppUserInfoEntity {
     this._marital_status = props.marital_status;
     this._dependents_quantity = props.dependents_quantity;
     this._user_document_validation_uuid = props.user_document_validation_uuid;
+    this._is_employee = props.is_employee ?? false
     this._created_at = newDateF(new Date());
     this._updated_at = newDateF(new Date());
     this.validate();
@@ -119,6 +125,9 @@ export class AppUserInfoEntity {
 
   get business_info_uuids(): string[] {
     return this._business_info_uuids;
+  }
+  get business_info_uuid(): Uuid {
+    return this._business_info_uuid;
   }
 
   get address_uuid(): Uuid | null {
@@ -201,12 +210,21 @@ export class AppUserInfoEntity {
     return this._user_document_validation_uuid;
   }
 
+  get is_employee(): boolean {
+    return this._is_employee
+  }
+
   get created_at(): string | undefined {
     return this._created_at;
   }
 
   get updated_at(): string | undefined {
     return this._updated_at
+  }
+
+  changeUuid(uuid: Uuid){
+    this._uuid = uuid
+    this.validate()
   }
 
   addBusinessInfoUuid(business_info_uuid: Uuid) {

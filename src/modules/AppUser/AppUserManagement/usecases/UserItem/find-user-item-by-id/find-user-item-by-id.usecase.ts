@@ -18,19 +18,11 @@ export class FindUserItemByIdUsecase {
     const userItem = await this.appUserItemRepository.find(new Uuid(user_item_uuid))
     if (!userItem) throw new CustomError("User Item not found", 404)
 
-
-
     if (user_info_uuid && userItem.user_info_uuid?.uuid !== user_info_uuid) throw new CustomError("Unauthorized access for user", 403)
 
     if (business_user_business_info_uuid) {
-      const userInfo = await this.appUserInfoRepository.find(userItem.user_info_uuid)
-
-      if (!userInfo) throw new CustomError("User not found", 404)
-      if (!userInfo.business_info_uuids.some(uuid => uuid === business_user_business_info_uuid)) {
-        throw new CustomError("Unauthorized Acess for business admin", 403)
-      }
+      if(userItem.business_info_uuid.uuid !== business_user_business_info_uuid) throw new CustomError("Unauthorized Acess for business admin", 403)
     }
-
 
     return {
       uuid: userItem.uuid.uuid,

@@ -3,6 +3,7 @@ import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repo
 import { AppUserAuthSignUpEntity } from "../../../entities/app-user-auth.entity";
 import { IAppUserAuthRepository } from "../../../repositories/app-use-auth-repository";
 import { InputCreateAppUserDTO, OutputCreateappUserDTO } from "../../../../app-user-dto/app-user.dto";
+import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 
 export class AppUserAuthSignUpUsecase {
     constructor(
@@ -27,7 +28,7 @@ export class AppUserAuthSignUpUsecase {
         //check if user was already registered by Correct
         const findUser = await this.appUserInfoRepository.findByDocumentUserInfo(authEntity.document)
         if (findUser) {
-            authEntity.changeUserInfo(findUser.uuid)
+            authEntity.changeUserInfo(new Uuid(findUser.uuid))
         }
 
 
