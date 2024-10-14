@@ -4,6 +4,7 @@ import { CustomError } from "../../../../errors/custom.error";
 export type OutputCompanyUserDTO = {
   uuid: string,
   businessInfoUuid: string,
+  password: string
   isAdmin: boolean,
   document: string | null,
   name: string | null,
@@ -30,8 +31,9 @@ export class EnsureValidCompanyUserUsecase {
         // if (User.client_User === false) throw new CustomError("User is not allowed to access", 401)
 
         return {
-          uuid: user.uuid,
-          businessInfoUuid: user.business_info_uuid,
+          uuid: user.uuid.uuid,
+          businessInfoUuid: user.business_info_uuid.uuid,
+          password: user.password,
           isAdmin: user.is_admin,
           document: user.document,
           name: user.name,

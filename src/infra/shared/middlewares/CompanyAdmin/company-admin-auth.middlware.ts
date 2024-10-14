@@ -25,6 +25,7 @@ export const companyIsAuth = async (req: Request, res: Response, next: NextFunct
     req.companyUser = {
       companyUserId: verifyToken.sub,
       businessInfoUuid: '',
+      password: '',
       isAdmin: false,
       document: '',
       name: '',
@@ -44,6 +45,7 @@ export const companyIsAuth = async (req: Request, res: Response, next: NextFunct
     req.companyUser = {
       companyUserId: user.uuid,
       businessInfoUuid: user.businessInfoUuid,
+      password: user.password,
       isAdmin: user.isAdmin,
       document: user.document,
       name: user.name,

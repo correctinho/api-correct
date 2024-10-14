@@ -1,8 +1,8 @@
 import { PasswordBcrypt } from "../../../../../crypto/password.bcrypt";
 import { CompanyUserPrismaRepository } from "../../repositories/implementations/company-user.prisma.repository";
-import { UpdateUserbyAdminController } from "./update-user-by-admin.controller";
+import { UpdateAdminByAdminController } from "../update-admin-by-admin/update-admin-by-admin.controller";
 
 const companyUserRepository = new CompanyUserPrismaRepository()
 const passwordCrypto = new PasswordBcrypt()
-const updateUserController = new UpdateUserbyAdminController(companyUserRepository, passwordCrypto)
-export { updateUserController }
+const updateAdminController = new UpdateAdminByAdminController(companyUserRepository, passwordCrypto)
+export { updateAdminController }

@@ -3,6 +3,7 @@ import { ICompanyUserRepository } from "../../repositories/company-user.reposito
 import { CreateCompanyAdminUseCase } from "./create-company-admin.usecase";
 import { CompanyUserProps } from "../../entities/company-user.entity";
 import { ICompanyDataRepository } from "../../../CompanyData/repositories/company-data.repository";
+import { InputCreateCompanyAdminDTO } from "./dto/create-company-admin.dto";
 
 export class CreateCompanyUserByCorrectController {
   constructor(
@@ -13,8 +14,7 @@ export class CreateCompanyUserByCorrectController {
 
   async handle(req: Request, res: Response) {
     try {
-      const data: CompanyUserProps = req.body
-
+      const data: InputCreateCompanyAdminDTO = req.body
       const companyUserUsecase = new CreateCompanyAdminUseCase(
         this.companyUserRepository,
         this.companyDataRepository

@@ -3,6 +3,7 @@ import { app } from '../../app'
 import { InputCreateBenefitDto, ItemCategory, ItemType } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo'
 import { randomUUID } from 'crypto'
+import { get } from 'lodash'
 
 let correctAdminToken: string
 let partner_info_uuid: string
@@ -10,8 +11,11 @@ let business_address_uuid: string
 
 let employer_info_uuid: string
 
-let partner_user_token: string
-let partner_user_uuid: string
+let partner_admin_token: string
+let partner_admin_uuid: string
+
+let partner_finances_user_uuid: string
+let partner_finances_user_token: string
 
 let employer_user_token: string
 let employer_user_uuid: string
@@ -799,7 +803,7 @@ describe("E2E Business tests", () => {
       it("Should throw an error if password is missing", async () => {
         const input = {
           password: "",
-          partner_info_uuid,
+          business_info_uuid: partner_info_uuid,
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
 
@@ -807,7 +811,8 @@ describe("E2E Business tests", () => {
         expect(result.body.error).toBe("Password is required")
       })
 
-      it("Should throw an error if business info is missing", async () => {
+      it("Should throw an error if business info id is missing", async () => {
+
         const input = {
           password: "123456",
           business_info_uuid: ""
@@ -815,13 +820,25 @@ describe("E2E Business tests", () => {
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
 
         expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe("Business info is required")
+        expect(result.body.error).toBe("Business Info Id is required")
+      })
+
+      it("Should throw an error if name is missing", async () => {
+        const input = {
+          password: "123456",
+          business_info_uuid: partner_info_uuid,
+        }
+        const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Name is required")
       })
 
       it("Should throw an error if email is missing", async () => {
         const input = {
           password: "123456",
-          business_info_uuid: partner_info_uuid
+          business_info_uuid: partner_info_uuid,
+          name: "Nome do admin"
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
 
@@ -829,11 +846,27 @@ describe("E2E Business tests", () => {
         expect(result.body.error).toBe("Email is required")
       })
 
-      it("Should throw an error if email is not found in company registeres", async () => {
+      it("Should throw an error if email is invalid", async () => {
         const input = {
           password: "123456",
           business_info_uuid: partner_info_uuid,
-          email: "differentemail@email.com"
+          email: "differentema",
+          name: "Nome do admin"
+
+        }
+        const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
+
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Invalid email format")
+      })
+
+      it("Should throw an error if email is not found in company registers", async () => {
+        const input = {
+          password: "123456",
+          business_info_uuid: partner_info_uuid,
+          email: "differentemail@email.com",
+          name: "Nome do admin"
+
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
 
@@ -845,7 +878,9 @@ describe("E2E Business tests", () => {
         const input = {
           password: "123456",
           business_info_uuid: partner_info_uuid,
-          email: "comercio@comercio.com"
+          email: "comercio@comercio.com",
+          name: "Nome do admin"
+
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
 
@@ -875,7 +910,9 @@ describe("E2E Business tests", () => {
         const input = {
           password: "123456",
           business_info_uuid: partner_info_uuid,
-          email: "comercio@comercio.com"
+          email: "comercio@comercio.com",
+          name: "Nome do admin"
+
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
 
@@ -883,7 +920,7 @@ describe("E2E Business tests", () => {
         expect(result.body.error).toBe("Business has inactive status")
       })
 
-      it("Should create business user", async () => {
+      it("Should create business admin", async () => {
         //activate business
         const inputToActivate = {
           address_uuid: business_address_uuid,
@@ -905,10 +942,13 @@ describe("E2E Business tests", () => {
         const input = {
           password: "123456",
           business_info_uuid: partner_info_uuid,
-          email: "comercio@comercio.com"
+          email: "comercio@comercio.com",
+          name: "Nome do admin"
+
         }
+
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
-        partner_user_uuid = result.body.uuid
+        partner_admin_uuid = result.body.uuid
         expect(result.statusCode).toBe(201)
         expect(result.body.uuid).toBeTruthy()
         expect(result.body.business_info_uuid).toBe(partner_info_uuid)
@@ -926,7 +966,9 @@ describe("E2E Business tests", () => {
         const input = {
           password: "123456",
           business_info_uuid: partner_info_uuid,
-          email: "comercio@comercio.com"
+          email: "comercio@comercio.com",
+          name: "Nome do admin"
+
         }
         const result = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
 
@@ -994,6 +1036,7 @@ describe("E2E Business tests", () => {
       })
 
       it("Should login user", async () => {
+
         const input = {
           business_document: "comercio",
           password: "123456",
@@ -1001,7 +1044,7 @@ describe("E2E Business tests", () => {
         }
 
         const result = await request(app).post("/business/admin/login").send(input)
-        partner_user_token = result.body.token
+        partner_admin_token = result.body.token
         expect(result.statusCode).toBe(200)
         expect(result.body.token).toBeTruthy()
       })
@@ -1033,95 +1076,128 @@ describe("E2E Business tests", () => {
 
     })
 
-    describe("E2E Update Business admin/user by business admin ", () => {
-      it("Should throw an error if id is missing", async () => {
-        const input = {
+    describe("E2E Business Admin/user details", () => {
 
-        }
-
-        const query = {
-          business_info_uuid: ""
-        }
-
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
-        expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe('User ID is required')
-      })
-
-      it("Should throw an error if id does not exist", async () => {
-        const input = {
-
-        }
-
-        const query = {
-          user_id: "1"
-        }
-
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
-        expect(result.statusCode).toBe(404)
-        expect(result.body.error).toBe('User not found')
+      it("Should return user details", async () => {
+        const result = await request(app).get("/business/admin/details").set('Authorization', `Bearer ${partner_admin_token}`)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.uuid).toBe(partner_admin_uuid)
+        expect(result.body.business_info_uuid).toEqual(partner_info_uuid)
+        expect(result.body.created_at).toBeTruthy()
 
       })
+    })
 
-      it("Should throw an error trying to do something with old password", async () => {
-        const input = {
-          user_name: "123456"
-        }
+    describe("E2E Update Business admin by business admin ", () => {
+      let partnerAdminDetails = {
+        business_info_uuid: '',
+        email: '',
+        document: '',
+        name: '',
+        is_admin: '',
+        permissions: '',
+        user_name: '',
+        function: '',
+        status: '',
+        created_at: ''
 
-        const query = {
-          user_id: partner_user_uuid
-        }
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
+      }
 
-        expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe('Password must be updated')
+      beforeAll(async () => {
+        const getPartnerAdminDetails = await request(app).get("/business/admin/details").set('Authorization', `Bearer ${partner_admin_token}`)
+        expect(getPartnerAdminDetails.statusCode).toBe(200)
 
-      })
-
-      it("Should throw an error if business admin does not have document", async () => {
-        const input = {
-          password: "123456"
-        }
-
-        const query = {
-          user_id: partner_user_uuid
-        }
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
-
-        expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe('Document is required')
+        partnerAdminDetails.business_info_uuid = getPartnerAdminDetails.body.business_info_uuid,
+          partnerAdminDetails.is_admin = getPartnerAdminDetails.body.is_admin
+        partnerAdminDetails.document = getPartnerAdminDetails.body.document
+        partnerAdminDetails.name = getPartnerAdminDetails.body.name
+        partnerAdminDetails.email = getPartnerAdminDetails.body.email
+        partnerAdminDetails.user_name = getPartnerAdminDetails.body.user_name
+        partnerAdminDetails.function = getPartnerAdminDetails.body.function
+        partnerAdminDetails.permissions = getPartnerAdminDetails.body.permissions
+        partnerAdminDetails.status = getPartnerAdminDetails.body.status
+        partnerAdminDetails.created_at = getPartnerAdminDetails.body.created_at
 
       })
 
-      it("Should throw an error new password is same as old one", async () => {
+      it("Should throw an error if password is the same from last one", async () => {
         const input = {
-          password: "123456",
-          document: '1365498489'
+          name: "Fernando de Oliviera",
+          permissions: '',
+          user_name: 'fernando',
+          password: '123456', //this password is taken from previous test when admin was created
+          function: '',
+          status: ''
         }
 
-        const query = {
-          user_id: partner_user_uuid
-        }
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
+        const result = await request(app).put("/company-admin").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
         expect(result.statusCode).toBe(409)
         expect(result.body.error).toBe('Password must not be the same')
-
       })
+      it("Should update only admin name", async () => {
 
-      it("Should update business admin", async () => {
         const input = {
-          document: "123456",
-          password: "12398754"
+          name: "Fernando"
         }
 
-        const query = {
-          user_id: partner_user_uuid
-        }
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
 
+        const result = await request(app).put("/company-admin").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
+
+        //test if password has not changed
+        const inputAuthenticate = {
+          business_document: "comercio",
+          password: "123456",
+          email: "comercio@comercio.com"
+        }
+
+        const authenticatePartnerUser = await request(app).post("/business/admin/login").send(inputAuthenticate)
+        expect(authenticatePartnerUser.statusCode).toBe(200)
         expect(result.statusCode).toBe(200)
+        expect(result.body.is_admin).toBeTruthy()
+        expect(result.body.document).toBe(partnerAdminDetails.document)
+        expect(result.body.name).toBe(input.name)
+        expect(result.body.email).toBe(partnerAdminDetails.email)
+        expect(result.body.user_name).toBe(partnerAdminDetails.user_name)
+        expect(result.body.function).toBe(partnerAdminDetails.function)
+        expect(result.body.status).toBe(partnerAdminDetails.status)
+        expect(result.body.permissions).toEqual(partnerAdminDetails.permissions)
+        expect(result.body.updated_at).toBeTruthy()
+        expect(result.body.password).toBeUndefined()
 
       })
+      it("Should update document, password, and username", async () => {
+        const input = {
+          name: "Fernando Oliveira",
+          document: "036.760.591-07",
+          password: "new-password"
+        }
+
+
+        const result = await request(app).put("/company-admin").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
+
+        //test if password has not changed
+        const inputAuthenticate = {
+          business_document: "comercio",
+          password: "new-password",
+          email: "comercio@comercio.com"
+        }
+
+        const authenticatePartnerUser = await request(app).post("/business/admin/login").send(inputAuthenticate)
+        expect(authenticatePartnerUser.statusCode).toBe(200)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.is_admin).toBeTruthy()
+        expect(result.body.document).toBe('03676059107')
+        expect(result.body.name).toBe(input.name)
+        expect(result.body.email).toBe(partnerAdminDetails.email)
+        expect(result.body.user_name).toBe(partnerAdminDetails.user_name)
+        expect(result.body.function).toBe(partnerAdminDetails.function)
+        expect(result.body.status).toBe('active')
+        expect(result.body.permissions).toEqual(partnerAdminDetails.permissions)
+        expect(result.body.updated_at).toBeTruthy()
+        expect(result.body.password).toBeUndefined()
+
+      })
+
     })
 
     describe("E2E Create business user by business admin", () => {
@@ -1130,10 +1206,9 @@ describe("E2E Business tests", () => {
       it("Should throw an error if user name is missing", async () => {
         const input = {
           password: "1345687",
-          partner_info_uuid,
           user_name: ""
         }
-        const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_user_token}`).send(input)
+        const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe('User name is required')
       })
@@ -1145,8 +1220,20 @@ describe("E2E Business tests", () => {
           user_name: 'user_name',
           permissions: ['finances']
         }
-        const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_user_token}`).send(input)
-        partner_user_uuid = result.body.uuid
+        const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
+        partner_finances_user_uuid = result.body.uuid
+
+        //authenticate new user
+        const authInput = {
+          business_document: "comercio",
+          user_name: "user_name",
+          password: input.password,
+        }
+
+
+        const auth = await request(app).post("/business/admin/login").send(authInput)
+        expect(auth.statusCode).toBe(200)
+
         expect(result.statusCode).toBe(201)
         expect(result.body.uuid).toBeTruthy()
         expect(result.body.business_info_uuid).toBe(input.partner_info_uuid)
@@ -1167,31 +1254,101 @@ describe("E2E Business tests", () => {
           user_name: 'user_name',
           permissions: ['finances']
         }
-        const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_user_token}`).send(input)
+        const result = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
         expect(result.statusCode).toBe(409)
         expect(result.body.error).toBe('User name already registered')
+      })
+    })
+    describe("E2E Update business user by business admin", () => {
+      it("Should update only user name", async () => {
+
+        const input = {
+          user_name: "Fernando Finanças"
+        }
+
+        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_admin_token}`).send(input).query({ user_id: partner_finances_user_uuid})
+        //test if password has not changed
+        const inputAuthenticate = {
+          business_document: "comercio",
+          password: "1345687",
+          user_name: input.user_name
+        }
+
+        const authenticatePartnerUser = await request(app).post("/business/admin/login").send(inputAuthenticate)
+        expect(authenticatePartnerUser.statusCode).toBe(200)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.is_admin).toBeFalsy()
+        expect(result.body.document).toBeFalsy()
+        expect(result.body.user_name).toBe(input.user_name)
+
+      })
+      it("Should update only password", async () => {
+
+        const input = {
+          password: "new-password123"
+        }
+
+        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_admin_token}`).send(input).query({ user_id: partner_finances_user_uuid})
+        //test if password has not changed
+        const inputAuthenticate = {
+          business_document: "comercio",
+          password: input.password,
+          user_name: "Fernando Finanças"
+        }
+
+        const authenticatePartnerUser = await request(app).post("/business/admin/login").send(inputAuthenticate)
+        expect(authenticatePartnerUser.statusCode).toBe(200)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.is_admin).toBeFalsy()
+        expect(result.body.document).toBeFalsy()
+        expect(result.body.user_name).toBe("Fernando Finanças")
+
+      })
+
+      it("Should update only password and username", async () => {
+
+        const input = {
+          user_name: "Fernando Ferreira",
+          password: "another-new-password123"
+        }
+
+        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_admin_token}`).send(input).query({ user_id: partner_finances_user_uuid})
+        //test if password has not changed
+        const inputAuthenticate = {
+          business_document: "comercio",
+          password: input.password,
+          user_name: input.user_name
+        }
+
+        const authenticatePartnerUser = await request(app).post("/business/admin/login").send(inputAuthenticate)
+        expect(authenticatePartnerUser.statusCode).toBe(200)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.is_admin).toBeFalsy()
+        expect(result.body.document).toBeFalsy()
+        expect(result.body.user_name).toBe(input.user_name)
+
       })
     })
 
     describe("E2E Get single user by admin", () => {
       it("Should throw an error if id is missing", async () => {
-        const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${partner_user_token}`).query({ user_uuid: '' })
+        const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${partner_admin_token}`).query({ user_uuid: '' })
 
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe("Id is required")
       })
 
       it("Should throw an error if user cannot be found", async () => {
-        const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${partner_user_token}`).query({ user_uuid: '1' })
+        const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${partner_admin_token}`).query({ user_uuid: '1' })
 
         expect(result.statusCode).toBe(404)
         expect(result.body.error).toBe("User not found")
       })
 
       it("Should return user details", async () => {
-        const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${partner_user_token}`).query({ user_uuid: partner_user_uuid })
+        const result = await request(app).get("/business/admin/details/user").set('Authorization', `Bearer ${partner_admin_token}`).query({ user_uuid: partner_finances_user_uuid })
         expect(result.statusCode).toBe(200)
-        expect(result.body.uuid).toEqual(partner_user_uuid)
+        expect(result.body.uuid).toEqual(partner_finances_user_uuid)
         expect(result.body.business_info_uuid).toEqual(partner_info_uuid)
       })
     })
@@ -1210,12 +1367,14 @@ describe("E2E Business tests", () => {
           user_name: 'user_name3',
           permissions: ['finances']
         }
-        await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_user_token}`).send(input1)
-        await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_user_token}`).send(input2)
+        const partner_finances_user_uuid2 = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_admin_token}`).send(input1)
+        const partner_finances_user_uuid3 = await request(app).post("/business/admin/register/user").set('Authorization', `Bearer ${partner_admin_token}`).send(input2)
+        expect(partner_finances_user_uuid2.statusCode).toBe(201)
+        expect(partner_finances_user_uuid3.statusCode).toBe(201)
       })
 
       it("Should return users", async () => {
-        const result = await request(app).get("/company-users").set('Authorization', `Bearer ${partner_user_token}`)
+        const result = await request(app).get("/company-users").set('Authorization', `Bearer ${partner_admin_token}`)
         expect(result.statusCode).toBe(200)
         expect(result.body.length).toBe(3)
       })
@@ -1223,14 +1382,14 @@ describe("E2E Business tests", () => {
 
     describe("E2E Delete user by admin", () => {
       it("Should throw an error if user id is missing", async () => {
-        const result = await request(app).patch("/company-user/delete").set('Authorization', `Bearer ${partner_user_token}`).query({ user_id: '' })
+        const result = await request(app).patch("/company-user/delete").set('Authorization', `Bearer ${partner_admin_token}`).query({ user_id: '' })
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe("User id is required")
 
       })
 
       it("Should throw an error if user is not found", async () => {
-        const result = await request(app).patch("/company-user/delete").set('Authorization', `Bearer ${partner_user_token}`).query({ user_id: '12345' })
+        const result = await request(app).patch("/company-user/delete").set('Authorization', `Bearer ${partner_admin_token}`).query({ user_id: '12345' })
         expect(result.statusCode).toBe(404)
         expect(result.body.error).toBe("User not found")
 
@@ -1238,7 +1397,7 @@ describe("E2E Business tests", () => {
 
 
       it("Should delete an user", async () => {
-        const result = await request(app).patch("/company-user/delete").set('Authorization', `Bearer ${partner_user_token}`).query({ user_id: partner_user_uuid })
+        const result = await request(app).patch("/company-user/delete").set('Authorization', `Bearer ${partner_admin_token}`).query({ user_id: partner_admin_uuid })
         expect(result.statusCode).toBe(200)
         expect(result.body.message).toBe("Usuário excluído com sucesso")
 
@@ -1251,10 +1410,10 @@ describe("E2E Business tests", () => {
         const input = {
           password: ''
         }
-        const result = await request(app).post("/confirm-password").set('Authorization', `Bearer ${partner_user_token}`).send(input)
+        const result = await request(app).post("/confirm-password").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
 
         expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe("Incorrect credentials")
+        expect(result.body.error).toBe("Password is required")
       })
 
       it("Should throw an error if password is incorrect", async () => {
@@ -1262,7 +1421,7 @@ describe("E2E Business tests", () => {
         const input = {
           password: '16548'
         }
-        const result = await request(app).post("/confirm-password").set('Authorization', `Bearer ${partner_user_token}`).send(input)
+        const result = await request(app).post("/confirm-password").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
 
         expect(result.statusCode).toBe(403)
         expect(result.body.error).toBe("Incorrect credentials")
@@ -1271,9 +1430,9 @@ describe("E2E Business tests", () => {
       it("Should confirm password", async () => {
 
         const input = {
-          password: '12398754'
+          password: 'new-password' //make sure this password is correct after updates tests
         }
-        const result = await request(app).post("/confirm-password").set('Authorization', `Bearer ${partner_user_token}`).send(input)
+        const result = await request(app).post("/confirm-password").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
 
         expect(result.statusCode).toBe(200)
         expect(result.body.message).toBe("Password matches")
@@ -1284,7 +1443,7 @@ describe("E2E Business tests", () => {
   describe("Business Data by Business admin", () => {
     describe("E2E Get Business data by business admin", () => {
       it("Should return business data", async () => {
-        const result = await request(app).get("/business/info").set('Authorization', `Bearer ${partner_user_token}`)
+        const result = await request(app).get("/business/info").set('Authorization', `Bearer ${partner_admin_token}`)
         partner_info_uuid = result.body.uuid
         expect(result.statusCode).toBe(200)
       })
@@ -1306,7 +1465,7 @@ describe("E2E Business tests", () => {
         const query = {
           business_info_uuid: ''
         }
-        const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
+        const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${partner_admin_token}`).query(query).send(input)
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe("Business info Id is required")
       })
@@ -1326,7 +1485,7 @@ describe("E2E Business tests", () => {
         const query = {
           business_info_uuid: '123'
         }
-        const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
+        const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${partner_admin_token}`).query(query).send(input)
         expect(result.statusCode).toBe(404)
         expect(result.body.error).toBe("Business info not found")
       })
@@ -1346,7 +1505,7 @@ describe("E2E Business tests", () => {
         const query = {
           business_info_uuid: partner_info_uuid
         }
-        const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
+        const result = await request(app).put("/business/info/company").set('Authorization', `Bearer ${partner_admin_token}`).query(query).send(input)
         expect(result.statusCode).toBe(200)
       })
     })
@@ -1369,7 +1528,7 @@ describe("E2E Business tests", () => {
         const query = {
           address_uuid: ''
         }
-        const result = await request(app).put("/company-address").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
+        const result = await request(app).put("/company-address").set('Authorization', `Bearer ${partner_admin_token}`).query(query).send(input)
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe('Address Id is required')
 
@@ -1390,7 +1549,7 @@ describe("E2E Business tests", () => {
         const query = {
           address_uuid: '1'
         }
-        const result = await request(app).put("/company-address").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
+        const result = await request(app).put("/company-address").set('Authorization', `Bearer ${partner_admin_token}`).query(query).send(input)
         expect(result.statusCode).toBe(400)
         expect(result.body.error).toBe('Address not found')
 
@@ -1410,8 +1569,8 @@ describe("E2E Business tests", () => {
         const query = {
           address_uuid: business_address_uuid
         }
-        const result = await request(app).put("/company-address").set('Authorization', `Bearer ${partner_user_token}`).query(query).send(input)
-        const data = await request(app).get("/business/info").set('Authorization', `Bearer ${partner_user_token}`)
+        const result = await request(app).put("/company-address").set('Authorization', `Bearer ${partner_admin_token}`).query(query).send(input)
+        const data = await request(app).get("/business/info").set('Authorization', `Bearer ${partner_admin_token}`)
 
         expect(result.statusCode).toBe(200)
         expect(data.body.Address.line1).toBe('Rua nova')
@@ -1661,11 +1820,14 @@ describe("E2E Business tests", () => {
       const input = {
         password: "123456",
         business_info_uuid: employer_info_uuid,
-        email: "empregador@empregador.com"
+        email: "empregador@empregador.com",
+        name: "Nome do admin employer"
+
       }
       const create = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(input)
       employer_user_uuid = create.body.uuid
       expect(create.statusCode).toBe(201)
+
 
       //authenticate employer
       const authInput = {

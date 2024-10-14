@@ -78,7 +78,6 @@ export class AuthenticateCompanyUserUsecase {
     if (!comparePasswordHash) throw new CustomError("Incorrect credentials", 401)
 
     const tokenGenerated = this.token.create(findUser)
-    console.log({tokenGenerated})
     return {
       token: tokenGenerated
     }

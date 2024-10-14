@@ -24,8 +24,9 @@ export class FindAllUserItemsByAppUserUsecase {
     const userItems = await this.appUserItemRepository.findAllUserItems(user_info_uuid);
     if (userItems.length === 0) return [];
 
+    const filterItems = userItems.filter(item => item.status === 'active' || item.status === 'blocked' || item.status === "to_be_cancelled")
 
-    return userItems.map((userItem: AppUserItemEntity) => {
+    return filterItems.map((userItem: AppUserItemEntity) => {
       return {
         uuid: userItem.uuid.uuid,
         user_info_uuid: userItem.user_info_uuid.uuid,

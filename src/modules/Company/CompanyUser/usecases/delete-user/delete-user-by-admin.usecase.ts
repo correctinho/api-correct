@@ -12,7 +12,7 @@ export class DeleteUserByAdminUsecase {
     const findUser = await this.companyUserRepository.findById(user_id)
     if (!findUser) throw new CustomError("User not found", 404)
 
-    if (findUser.business_info_uuid !== business_info_uuid) throw new CustomError("Unauthorized", 403);
+    if (findUser.business_info_uuid.uuid !== business_info_uuid) throw new CustomError("Unauthorized", 403);
 
     const deleteUser = await this.companyUserRepository.inactivateByAdminById(user_id)
 

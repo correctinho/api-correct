@@ -14,7 +14,7 @@ export class GetUsersByBusinessAdminUsecase{
         //find employees
         const employees = await this.appUsersRepository.findManyByBusiness(businessInfoUuid)
         if(employees.length === 0) return []
-        return employees.map((employee: OutputGetEmployeesByBusinessDTO) => {
+        return employees.map((employee: any) => {
           return {
             uuid: employee.uuid,
             user_info_uuid: employee.UserInfo.uuid,
@@ -24,7 +24,7 @@ export class GetUsersByBusinessAdminUsecase{
             document2: employee.UserInfo.document2,
             document3: employee.UserInfo.document3,
             full_name: employee.UserInfo.full_name,
-            internal_company_code: employee.internal_company_code,
+            internal_company_code:  employee.company_internal_code ? employee.company_internal_code : null,
             gender: employee.UserInfo.gender,
             email: employee.UserInfo.email,
             date_of_birth: employee.UserInfo.date_of_birth,
@@ -32,7 +32,7 @@ export class GetUsersByBusinessAdminUsecase{
             salary: employee.salary,
             company_owner: employee.company_owner,
             status: employee.UserInfo.status,
-            function: employee.function,
+            function: employee.job_title,
             marital_status: employee.UserInfo.marital_status,
             dependents_quantity: employee.dependents_quantity,
             user_document_validation_uuid: employee.UserInfo.user_document_validation_uuid ? employee.UserInfo.user_document_validation_uuid : null,

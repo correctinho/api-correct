@@ -7,7 +7,7 @@ export type OutputGetEmployeesByBusinessDTO = {
   user_info_uuid: string,
   business_info_uuid: string
   salary: string,
-  internal_company_code: string,
+  company_internal_code: string,
   function: string,
   company_owner: boolean,
   dependents_quantity: number
