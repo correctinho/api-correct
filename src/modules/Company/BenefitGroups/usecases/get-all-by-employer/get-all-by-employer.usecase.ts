@@ -15,11 +15,12 @@ export class GetAllBenefitGroupsByEmployerUsecase {
       return {
         uuid: item.uuid.uuid,
         group_name: item.group_name,
-        employerItemDetails_uuids:item.employerItemDetails_uuids,
+        employer_item_details_uuid:item.employer_item_details_uuid.uuid,
         value: item.value / 100,
-        user_info_uuids: item.user_info_uuids,
         business_info_uuid: item.business_info_uuid.uuid,
-        created_at: item.created_at
+        is_default: item.is_default,
+        created_at: item.created_at,
+        updated_at: item.updated_at
       }
     })
   }

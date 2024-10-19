@@ -2350,7 +2350,7 @@ describe("E2E App User tests", () => {
             }
 
             const userItems = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query({ userInfoUuid: uuid })
-            for(const employeeItem of userItems.body){
+            for (const employeeItem of userItems.body) {
 
               expect(employeeItem.status).toBe('active')
             }
@@ -2448,8 +2448,8 @@ describe("E2E App User tests", () => {
           }
           const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
 
-          pre_paid_user_item_uuid = result.body.find( (item: any) => item.item_category === "pre_pago").uuid
-          post_paid_user_item_uuid = result.body.find( (item: any) => item.item_category === "pos_pago").uuid
+          pre_paid_user_item_uuid = result.body.find((item: any) => item.item_category === "pre_pago").uuid
+          post_paid_user_item_uuid = result.body.find((item: any) => item.item_category === "pos_pago").uuid
 
 
         })
@@ -2660,7 +2660,6 @@ describe("E2E App User tests", () => {
       describe("E2E Testes find all user items by user", () => {
         it("Should return user items", async () => {
           const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
-          console.log(result.body)
           expect(result.statusCode).toBe(200)
         })
 
@@ -2668,139 +2667,127 @@ describe("E2E App User tests", () => {
     })
   })
 
-  // describe("E2E tests Groups", () => {
-  //   let employeesListUuids: string[] = []
-  //   let employerItems1: string[] = []
-  //   let group1_uuid: string
-  //   describe("E2E Create groups", () => {
+  describe("E2E tests Groups", () => {
+    let employeesListUuids: string[] = []
+    let employerItems1: string[] = []
+    let group1_uuid: string
+    describe("E2E Create groups", () => {
 
-  //     beforeAll(async () => {
-  //       //First get employees
-  //       const employeesList = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token}`)
-  //       expect(employeesList.statusCode).toBe(200)
-  //       employeesList.body.map((employee: any) => {
-  //         employeesListUuids.push(employee.user_info_uuid)
-  //       })
+      beforeAll(async () => {
 
-  //       //Second get employer items
-  //       const employerItems = await request(app).get(`/business/item/details`).set('Authorization', `Bearer ${employer_user_token}`)
-  //       expect(employerItems.statusCode).toBe(200)
-  //       employerItems.body.map((employerItems: any) => {
-  //         employerItems1.push(employerItems.uuid)
-  //       })
+        //Get employer items
+        const employerItems = await request(app).get(`/business/item/details`).set('Authorization', `Bearer ${employer_user_token}`)
+        expect(employerItems.statusCode).toBe(200)
+        employerItems.body.map((employerItems: any) => {
+          employerItems1.push(employerItems.uuid)
+        })
 
-  //     })
-  //     it("Should create an group", async () => {
+      })
+      it("Should create an group", async () => {
+        const input: any = {
+          group_name: "Grupo 1",
+          employer_item_details_uuid:employerItems1[0],
+          value: 50000,
+        }
+        const result = await request(app).post("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        group1_uuid = result.body.uuid
+        expect(result.statusCode).toBe(201)
+        expect(result.body.group_name).toBe(input.group_name)
+        expect(result.body.employerItemDetails_uuid).toBe(input.employer_item_details_uuid)
+        expect(result.body.is_default).toBe(false)
 
-  //       let user_info_uuids: string[] = [employeesListUuids[0], employeesListUuids[1], employeesListUuids[2]]
-  //       const input: any = {
-  //         group_name: "Grupo 1",
-  //         employerItemDetails_uuids: employerItems1,
-  //         value: 50000,
-  //         user_info_uuids: user_info_uuids,
-  //       }
-  //       const result = await request(app).post("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-  //       group1_uuid = result.body.uuid
-  //       expect(result.statusCode).toBe(201)
-  //       expect(result.body).toHaveProperty('uuid')
-  //       expect(result.body.group_name).toEqual(input.group_name)
-  //       expect(result.body.employerItemDetails_uuids.length).toEqual(employerItems1.length)
-  //       expect(result.body.value).toEqual(input.value)
-  //       expect(result.body.user_info_uuids.length).toBe(user_info_uuids.length)
-  //       expect(result.body.user_info_uuids).toEqual(user_info_uuids)
-  //       expect(result.body.employerItemDetails_uuids).toEqual(input.employerItemDetails_uuids)
+      })
+    })
 
-  //     })
-  //   })
+    describe("E2E Update Groups", () => {
+      it("Should throw an error if group id is missing", async () => {
+        const input: any = {
+          group_name: "Grupo 1 Editado",
+          employer_item_details_uuid:employerItems1[0],
+          value: 58400,
+        }
+        const result = await request(app).put("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
 
-  //   describe("E2E Update Groups", () => {
-  //     it("Should update an group", async () => {
-  //       let user_info_uuids: string[] = [employeesListUuids[0], employeesListUuids[1], employeesListUuids[2]]
-  //       const input: any = {
-  //         uuid: group1_uuid,
-  //         group_name: "Grupo 1 Editado",
-  //         employerItemDetails_uuids: employerItems1,
-  //         value: 58400,
-  //         user_info_uuids: user_info_uuids,
-  //       }
-  //       const result = await request(app).post("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-  //       expect(result.statusCode).toBe(201)
-  //       expect(result.body).toHaveProperty('uuid')
-  //       expect(result.body.group_name).toEqual(input.group_name)
-  //       expect(result.body.employerItemDetails_uuids.length).toEqual(employerItems1.length)
-  //       expect(result.body.value).toEqual(input.value)
-  //       expect(result.body.user_info_uuids.length).toBe(user_info_uuids.length)
-  //       expect(result.body.user_info_uuids).toEqual(user_info_uuids)
-  //       expect(result.body.employerItemDetails_uuids).toEqual(input.employerItemDetails_uuids)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Group uuid is required")
+      })
+      it("Should update an group", async () => {
+        const input: any = {
+          uuid: group1_uuid,
+          group_name: "Grupo 1 Editado",
+          employer_item_details_uuid:employerItems1[0],
+          value: 58400,
+        }
+        const result = await request(app).put("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(200)
+        expect(result.body).toHaveProperty('uuid')
+        expect(result.body.group_name).toEqual(input.group_name)
+        expect(result.body.employerItemDetails_uuid).toEqual(input.employer_item_details_uuid)
+        expect(result.body.value).toEqual(input.value)
 
-  //     })
-  //   })
+      })
+    })
 
-  //   describe("E2E Get All Groups  By Business", () => {
-  //     beforeAll(async () => {
-  //       //create one more group by employer 1
-  //       let user_info_uuids: string[] = [employeesListUuids[5], employeesListUuids[8], employeesListUuids[11]]
+    describe("E2E Get All Groups  By Business", () => {
+      beforeAll(async () => {
+        //create one more group by employer 1
+        const input: any = {
+          group_name: "Grupo 1",
+          employer_item_details_uuid:employerItems1[1],
+          value: 35000,
+        }
+        const result = await request(app).post("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(201)
+      })
+      it("Should return a list of groups", async () => {
+        const result = await request(app).get("/business-admin/groups").set('Authorization', `Bearer ${employer_user_token}`)
 
-  //       const input: any = {
-  //         group_name: "Grupo 2",
-  //         employerItemDetails_uuids: employerItems1,
-  //         value: 50000,
-  //         user_info_uuids: user_info_uuids,
-  //       }
-  //       const result = await request(app).post("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-  //       expect(result.statusCode).toBe(201)
-  //     })
-  //     it("Should return a list of groups", async () => {
-  //       const result = await request(app).get("/business-admin/groups").set('Authorization', `Bearer ${employer_user_token}`)
-  //       expect(result.body.length).toBe(2)
-  //       expect(result.body[1].group_name).toBe("Grupo 2")
-  //       expect(result.body[1].value).toBe(500)
+      })
+    })
 
-  //     })
-  //   })
+    describe("E2E Get one group By Business", () => {
 
-  //   describe("E2E Get one group By Business", () => {
+      it("Should throw an error if group id is missing", async () => {
+        const input = {
+          uuid: ''
+        }
+        const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Uuid is required")
+      })
 
-  //     it("Should throw an error if group id is missing", async () => {
-  //       const input = {
-  //         uuid: ''
-  //       }
-  //       const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-  //       expect(result.statusCode).toBe(400)
-  //       expect(result.body.error).toBe("Uuid is required")
-  //     })
+      it("Should throw an error if group does not exist", async () => {
+        const input = {
+          uuid: randomUUID()
+        }
+        const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+        expect(result.statusCode).toBe(404)
+        expect(result.body.error).toBe("Group not found")
+      })
 
-  //     it("Should throw an error if id does not exist", async () => {
-  //       const input = {
-  //         uuid: randomUUID()
-  //       }
-  //       const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-  //       expect(result.statusCode).toBe(404)
-  //       expect(result.body.error).toBe("Group not found")
-  //     })
+      it("Should throw an error if employer cannot access the group", async () => {
+        const input = {
+          uuid: group1_uuid
+        }
+        const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token2}`).query(input)
+        expect(result.statusCode).toBe(403)
+        expect(result.body.error).toBe("Unauthorized access")
+      })
 
-  //     it("Should throw an error if employer cannot access the group", async () => {
-  //       const input = {
-  //         uuid: group1_uuid
-  //       }
-  //       const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token2}`).query(input)
-  //       expect(result.statusCode).toBe(403)
-  //       expect(result.body.error).toBe("Unauthorized access")
-  //     })
+      it("Should return a group", async () => {
+        const input = {
+          uuid: group1_uuid
+        }
+        const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.uuid).toBe(input.uuid)
+        expect(result.body.business_info_uuid).toBe(employer_info_uuid)
+        expect(result.body.is_default).toBe(false)
 
-  //     it("Should return a group", async () => {
-  //       const input = {
-  //         uuid: group1_uuid
-  //       }
-  //       const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-  //       expect(result.statusCode).toBe(200)
-  //       expect(result.body.uuid).toBe(input.uuid)
-  //       expect(result.body.value).toBe(584)
-
-  //     })
-  //   })
+      })
+    })
 
 
-  // })
+  })
 
 })

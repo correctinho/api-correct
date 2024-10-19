@@ -617,10 +617,6 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
     return employee
   }
 
-  async updateEmployeeAndSynchronizeItems(): Promise<void> {
-
-  }
-
   async createOrUpdateUserInfoByEmployer(data: AppUserInfoEntity): Promise<void> {
     await prismaClient.userInfo.upsert({
       where: {

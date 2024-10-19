@@ -7,8 +7,6 @@ import { IBusinessItemDetailsRepository } from "../../../BusinessItemsDetails/re
 export class GetOneBenefitGroupsByEmployerController {
   constructor(
     private benefitGroupsRepository: IBenefitGroupsRepository,
-    private userInfoRepository: IAppUserInfoRepository,
-    private employerItemsRepository: IBusinessItemDetailsRepository
 
 
   ) { }
@@ -21,8 +19,6 @@ export class GetOneBenefitGroupsByEmployerController {
 
       const usecase = new GetOneBenefitGroupsByEmployerUsecase(
         this.benefitGroupsRepository,
-        this.userInfoRepository,
-        this.employerItemsRepository
       )
 
       const result = await usecase.execute(uuid, business_info_uuid)

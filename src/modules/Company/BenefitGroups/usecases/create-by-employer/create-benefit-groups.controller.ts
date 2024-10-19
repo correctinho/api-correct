@@ -17,8 +17,8 @@ export class CreateBenefitGroupController {
   async handle(req: Request, res: Response) {
     try {
       const data = req.body
-      data.business_info_uuid = new Uuid(req.companyUser.businessInfoUuid)
-      data.uuid = new Uuid(req.body.uuid)
+      data.business_info_uuid = req.companyUser.businessInfoUuid
+      data.uuid = req.body.uuid
 
       const usecase = new CreateBenefitGroupsUsecase(
         this.benefitGroupsRepository,
@@ -31,9 +31,9 @@ export class CreateBenefitGroupController {
       return res.status(201).json(result)
 
     } catch (err: any) {
-      return res.status(err.statusCode).json({
-        error: err.message
-      })
+      return res.status(err.statusCode || 500).json({
+        error: err.message || "Internal Server Error"
+      });
     }
   }
 }

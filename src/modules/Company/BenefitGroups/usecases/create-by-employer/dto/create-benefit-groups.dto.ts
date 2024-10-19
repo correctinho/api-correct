@@ -5,17 +5,16 @@ export type InputCreateBenefitGroupsDTO = {
   group_name: string
   employer_item_details_uuid: string
   value: number
-  user_info_uuids: string
-  business_info_uuid: Uuid
+  business_info_uuid: string
 }
 
 
 export type OutputCreateBenefitGroupsDTO = {
   uuid: string
   group_name: string
-  employerItemDetails_uuids: string[]
+  employer_item_details_uuid: string
   value: number
-  user_info_uuids: string[]
   business_info_uuid: string
   created_at: string
+  updated_at: string
 }

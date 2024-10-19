@@ -13,7 +13,7 @@ export type BenefitGroupsProps = {
 }
 
 export type BenefitGroupsCreateCommand = {
-  uuid?: Uuid
+  //uuid?: Uuid
   group_name: string
   employer_item_details_uuid: Uuid
   value: number

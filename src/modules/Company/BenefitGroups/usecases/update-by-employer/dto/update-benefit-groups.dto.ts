@@ -1,21 +1,20 @@
 import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo"
 
 export type InputUpdateBenefitGroupsDTO = {
-  uuid?: Uuid
+  uuid: string
   group_name: string
-  employerItemDetails_uuids: string[]
+  employer_item_details_uuid: string
   value: number
-  user_info_uuids: string[]
-  business_info_uuid: Uuid
+  business_info_uuid: string
 }
 
 
 export type OutputUpdateBenefitGroupsDTO = {
   uuid: string
   group_name: string
-  employerItemDetails_uuids: string[]
+  employerItemDetails_uuid: string
   value: number
-  user_info_uuids: string[]
   business_info_uuid: string
   created_at: string
+  updated_at: string
 }

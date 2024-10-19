@@ -4,13 +4,9 @@ import { BenefitGroupsPrismaRepository } from "../../repositories/implementation
 import { GetOneBenefitGroupsByEmployerController } from "./get-one-by-employer.controller";
 
 const benefitGroupsRepository = new BenefitGroupsPrismaRepository()
-const userInfoRepository = new AppUserInfoPrismaRepository()
-const employerItemsRepository = new BusinessItemDetailsPrismaRepository()
 
 const getOneBenefitGroupsController = new GetOneBenefitGroupsByEmployerController(
   benefitGroupsRepository,
-  userInfoRepository,
-  employerItemsRepository
 
 )
 

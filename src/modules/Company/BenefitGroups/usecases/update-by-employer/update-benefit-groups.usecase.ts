@@ -3,11 +3,9 @@ import { CustomError } from "../../../../../errors/custom.error";
 import { IAppUserInfoRepository } from "../../../../AppUser/AppUserManagement/repositories/app-user-info.repository";
 import { BenefitGroupsEntity } from "../../entities/benefit-groups.entity";
 import { IBenefitGroupsRepository } from "../../repositories/benefit-groups.repository";
-import { InputUpdateBenefitGroupsDTO } from "./dto/create-benefit-groups.dto"
+import { InputUpdateBenefitGroupsDTO, OutputUpdateBenefitGroupsDTO } from "./dto/update-benefit-groups.dto"
 import { IBusinessItemDetailsRepository } from "../../../BusinessItemsDetails/repositories/business-item-details.repository";
 
-let employeesUuids: string[] = []
-let employerItems: string[] = []
 
 export class UpdateBenefitGroupsUsecase {
   constructor(
@@ -16,51 +14,34 @@ export class UpdateBenefitGroupsUsecase {
     private employerItemsRepository: IBusinessItemDetailsRepository
   ) { }
 
-  async execute(data: InputUpdateBenefitGroupsDTO) {
-    const entity = BenefitGroupsEntity.create(data)
-    await this.mapEmployees(entity.user_info_uuids, data.business_info_uuid.uuid)
+  async execute(data: InputUpdateBenefitGroupsDTO): Promise<OutputUpdateBenefitGroupsDTO> {
+    if(!data.uuid) throw new CustomError("Group uuid is required", 400)
 
-    await this.mapEmployerItems(entity.employerItemDetails_uuids, data.business_info_uuid.uuid)
+    //find group by id
+    const group = await this.benefitGroupsRepository.find(new Uuid(data.uuid))
+    if(!group) throw new CustomError("Group not found", 404)
 
-    entity.changeUserInfo(employeesUuids)
-    entity.changeEmployerItems(employerItems)
+    //check if group belongs to admin
+    if(group.business_info_uuid.uuid !== data.business_info_uuid) throw new CustomError("Unauthorized access", 403)
+
+    const entity = new BenefitGroupsEntity(group)
+    entity.changeGroupName(data.group_name)
+    entity.changeValue(data.value)
+
 
     //update group
-    const createGroup = await this.benefitGroupsRepository.createOrUpdate(entity)
+    const updateGroup = await this.benefitGroupsRepository.createOrUpdate(entity)
 
     return {
-      uuid: createGroup.uuid.uuid,
-      group_name: createGroup.group_name,
-      employerItemDetails_uuids: createGroup.employerItemDetails_uuids,
-      value: createGroup.value,
-      user_info_uuids: createGroup.user_info_uuids,
-      business_info_uuid: createGroup.business_info_uuid,
-      created_at: createGroup.created_at
+      uuid: updateGroup.uuid.uuid,
+      group_name: updateGroup.group_name,
+      employerItemDetails_uuid: updateGroup.employer_item_details_uuid.uuid,
+      value: updateGroup.value,
+      business_info_uuid: updateGroup.business_info_uuid.uuid,
+      created_at: updateGroup.created_at,
+      updated_at: updateGroup.updated_at
     }
   }
 
-  private async mapEmployees(user_info_uuids: string[], businessInfoUuid: string) {
-    for (const employee of user_info_uuids) {
-      const findAppUser = await this.userInfoRepository.find(new Uuid(employee));
-      if (!findAppUser) throw new CustomError("Employee not found", 409);
 
-      const findEmployee = findAppUser.business_info_uuids.some((business_info_uuid) => business_info_uuid === businessInfoUuid);
-      if (!findEmployee) throw new CustomError("App User is not an employee", 403);
-      employeesUuids.push(findAppUser.uuid.uuid);
-    }
-  }
-
-  private async mapEmployerItems(employerItemsList: string[], businessInfoUuid: string) {
-    const updatedEmployerItems: string[] = []; // Novo array para armazenar os resultados
-
-    for (const employerItem of employerItemsList) {
-      const findEmployerItem = await this.employerItemsRepository.find(new Uuid(employerItem));
-      if (!findEmployerItem) throw new CustomError("Employer Item not found", 404);
-
-      updatedEmployerItems.push(findEmployerItem.uuid.uuid); // Adiciona ao novo array
-    }
-
-    employerItems.length = 0; // Limpa o array original
-    employerItems.push(...updatedEmployerItems); // Adiciona os resultados processados ao array original
-  }
 }
