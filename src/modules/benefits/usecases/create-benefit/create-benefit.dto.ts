@@ -1,7 +1,6 @@
+import { ItemCategory, ItemType } from "@prisma/client";
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
 
-export type ItemType = 'gratuito' | 'programa' | 'produto';
-export type ItemCategory = 'pos_pago' | 'pre_pago' | 'especiais_correct';
 
 export interface InputCreateBenefitDto {
     name: string

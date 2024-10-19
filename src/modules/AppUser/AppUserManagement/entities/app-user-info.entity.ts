@@ -315,6 +315,16 @@ export class AppUserInfoEntity {
     this.validate();
   }
 
+  setEmployee(){
+    this._is_employee = true
+    this.validate()
+  }
+
+  setUnemployee(){
+    this._is_employee = false
+    this.validate()
+  }
+
   changeRecommendationCode(recommendation_code: string) {
     this._recommendation_code = recommendation_code;
     this.validate();

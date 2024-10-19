@@ -14,16 +14,6 @@ export class GetUserInfoByUserUsecase {
     const userInfo = await this.appUsersRepository.findByDocumentUserInfo(userdocument);
     if (!userInfo) throw new CustomError("User info not found", 404);
 
-    // // Buscar informações dos negócios associados ao usuário
-    // const businessInfoList = userInfo.Employee.length > 0
-    //   ? await Promise.all(
-    //     userInfo.Employee.map(async (employee) => {
-    //       return await this.businessInfoRepository.findById(employee.business_info_uuid);
-    //     })
-    //   )
-    //   : [];
-
-    // Retornar as informações do usuário e dos negócios, se disponíveis
     return {
       uuid: userInfo.uuid,
       address_uuid: userInfo.address_uuid || null,

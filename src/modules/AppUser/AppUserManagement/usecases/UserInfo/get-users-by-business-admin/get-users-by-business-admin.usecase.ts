@@ -6,7 +6,6 @@ import { OutputGetEmployeesByBusinessDTO } from "./dto/get-user-by-business.dto"
 export class GetUsersByBusinessAdminUsecase{
     constructor(
         private appUsersRepository: IAppUserInfoRepository,
-        private businessUserRepository: ICompanyUserRepository
 
     ){}
 
@@ -36,6 +35,7 @@ export class GetUsersByBusinessAdminUsecase{
             marital_status: employee.UserInfo.marital_status,
             dependents_quantity: employee.dependents_quantity,
             user_document_validation_uuid: employee.UserInfo.user_document_validation_uuid ? employee.UserInfo.user_document_validation_uuid : null,
+            is_employee: employee.UserInfo.is_employee,
             created_at: employee.created_at,
             updated_at: employee.updated_at,
             Address: employee.UserInfo.address_uuid ? {

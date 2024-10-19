@@ -8,6 +8,7 @@ type BusinessItemDetailsProps = {
   business_info_uuid: Uuid
   cycle_start_day?: number
   cycle_end_day?: number
+  is_active: boolean
   created_at?: string
   updated_at?: string
 }
@@ -17,6 +18,7 @@ export type BusinessItemDetailsCreateCommand = {
   business_info_uuid: Uuid
   cycle_start_day?: number
   cycle_end_day?: number
+  is_active: boolean
   created_at?: string
   updated_at?: string
 }
@@ -27,6 +29,7 @@ export class BusinessItemsDetailsEntity {
   private _business_info_uuid: Uuid
   private _cycle_start_day?: number
   private _cycle_end_day?: number
+  private _is_active: boolean
   private _created_at?: string
   private _updated_at?: string
 
@@ -36,6 +39,7 @@ export class BusinessItemsDetailsEntity {
     this._business_info_uuid = props.business_info_uuid
     this._cycle_start_day = props.cycle_start_day
     this._cycle_end_day = props.cycle_end_day
+    this._is_active = props.is_active
     this._created_at = newDateF(new Date())
     this._updated_at = newDateF(new Date())
     this.validate()
@@ -67,6 +71,10 @@ export class BusinessItemsDetailsEntity {
     return this._cycle_end_day
   }
 
+  get is_active():boolean {
+    return this._is_active
+  }
+
   get created_at(): string {
     return this._created_at
   }
@@ -75,9 +83,13 @@ export class BusinessItemsDetailsEntity {
     return this._updated_at
   }
 
-
+  changeUuid(uuid: Uuid){
+    this._uuid = uuid
+    this.validate()
+  }
   private updateCycleStartDay(endDay: number) {
     this._cycle_start_day = endDay + 1;
+    this.validate()
   }
 
   changeCycleEndDay(endDay: number) {
@@ -85,6 +97,15 @@ export class BusinessItemsDetailsEntity {
     this.updateCycleStartDay(endDay);
     this.validate();
   }
+
+  activateEmployerItem(){
+    this._is_active = true
+  }
+
+  deactivateEmployerItem(){
+    this._is_active = false
+  }
+
 
   static create(data: BusinessItemDetailsCreateCommand){
     const item = new BusinessItemsDetailsEntity(data)

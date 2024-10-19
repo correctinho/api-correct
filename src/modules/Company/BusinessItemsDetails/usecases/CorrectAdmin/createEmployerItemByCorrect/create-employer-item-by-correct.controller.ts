@@ -3,12 +3,14 @@ import { CreateEmployerItemByCorrectUsecase } from "./create-employer-item-by-co
 import { IBusinessItemDetailsRepository } from "../../../repositories/business-item-details.repository";
 import { IBenefitsRepository } from "../../../../../benefits/repositories/benefit.repository";
 import { ICompanyDataRepository } from "../../../../CompanyData/repositories/company-data.repository";
+import { IBenefitGroupsRepository } from "../../../../BenefitGroups/repositories/benefit-groups.repository";
 
 export class CreateEmployerItemByCorrectController {
   constructor(
     private itemDetailsRepository: IBusinessItemDetailsRepository,
     private benefitsRepository: IBenefitsRepository,
-    private businessRepository: ICompanyDataRepository
+    private businessRepository: ICompanyDataRepository,
+
   ) { }
 
   async handle(req: Request, res: Response){
@@ -17,7 +19,7 @@ export class CreateEmployerItemByCorrectController {
       const usecase = new CreateEmployerItemByCorrectUsecase(
         this.itemDetailsRepository,
         this.benefitsRepository,
-        this.businessRepository
+        this.businessRepository,
       )
 
       const result = await usecase.execute(data)

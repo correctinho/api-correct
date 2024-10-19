@@ -29,6 +29,7 @@ export type OutputGetEmployeesByBusinessDTO = {
     is_authenticated: boolean
     marital_status: string
     user_document_validation_uuid: string
+    is_employee: boolean
     created_at: string
     updated_at: string
 

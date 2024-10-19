@@ -19,6 +19,7 @@ export class CreateAppUserItemByEmployerUsecase {
       business_info_uuid: new Uuid(data.business_info_uuid),
       item_uuid: data.item_uuid ? new Uuid(data.item_uuid) : null,
       img_url: null,
+      group_uuid: new Uuid(data.group_uuid),
       item_name: data.item_name,
       balance: data.balance,
       status: data.status,
@@ -39,7 +40,7 @@ export class CreateAppUserItemByEmployerUsecase {
     userItemEntity.changeItemName(itemDetails.Item.name)
 
     //check if user already has this item
-    const userItem = await this.appUserItemRepository.findItemByEmployeeAndBusiness(userItemEntity.user_info_uuid.uuid, userItemEntity.business_info_uuid.uuid ,userItemEntity.item_uuid.uuid)
+    const userItem = await this.appUserItemRepository.findItemByEmployeeAndBusiness(userItemEntity.user_info_uuid.uuid, userItemEntity.business_info_uuid.uuid, userItemEntity.item_uuid.uuid)
     if (userItem) throw new CustomError("User already has this item", 409)
 
     //create user item

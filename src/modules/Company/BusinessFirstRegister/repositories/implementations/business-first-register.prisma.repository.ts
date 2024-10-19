@@ -44,6 +44,7 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
           uuid: randomUUID(),
           item_uuid: itemUuid,
           business_info_uuid: data.business_info_uuid,
+          is_active: false,
           created_at: newDateF(new Date())
         }))
       })

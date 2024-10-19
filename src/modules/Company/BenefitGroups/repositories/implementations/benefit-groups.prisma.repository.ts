@@ -4,14 +4,15 @@ import { BenefitGroupsEntity } from "../../entities/benefit-groups.entity";
 import { IBenefitGroupsRepository } from "../benefit-groups.repository";
 
 export class BenefitGroupsPrismaRepository implements IBenefitGroupsRepository {
+
   async createReturn(data: BenefitGroupsEntity): Promise<BenefitGroupsEntity> {
     const group = await prismaClient.benefitGroups.create({
       data: {
         uuid: data.uuid.uuid,
         group_name: data.group_name,
-        employerItemDetails_uuids: data.employerItemDetails_uuids,
+        employer_item_details_uuid: data.employer_item_details_uuid.uuid,
         value: data.value,
-        user_info_uuid: data.user_info_uuids,
+        is_default: data.is_default,
         business_info_uuid: data.business_info_uuid.uuid,
         created_at: data.created_at
       }
@@ -21,10 +22,10 @@ export class BenefitGroupsPrismaRepository implements IBenefitGroupsRepository {
     return {
       uuid: new Uuid(group.uuid),
       group_name: group.group_name,
-      employerItemDetails_uuids: group.employerItemDetails_uuids,
+      employer_item_details_uuid: new Uuid(group.employer_item_details_uuid),
       value: group.value,
-      user_info_uuids: group.user_info_uuid,
       business_info_uuid: new Uuid(group.business_info_uuid),
+      is_default: group.is_default,
       created_at: group.created_at
     } as BenefitGroupsEntity
   }
@@ -41,11 +42,12 @@ export class BenefitGroupsPrismaRepository implements IBenefitGroupsRepository {
       return {
         uuid: new Uuid(group.uuid),
         group_name: group.group_name,
-        employerItemDetails_uuids: group.employerItemDetails_uuids,
+        employer_item_details_uuid: new Uuid(group.employer_item_details_uuid),
         value: group.value,
-        user_info_uuids: group.user_info_uuid,
         business_info_uuid: new Uuid(group.business_info_uuid),
-        created_at: group.created_at
+        is_default: group.is_default,
+        created_at: group.created_at,
+        updated_at: group.updated_at
       }
     })
     return groupsArray as BenefitGroupsEntity[]
@@ -58,17 +60,17 @@ export class BenefitGroupsPrismaRepository implements IBenefitGroupsRepository {
       create: {
         uuid: data.uuid.uuid,
         group_name: data.group_name,
-        employerItemDetails_uuids: data.employerItemDetails_uuids,
+        employer_item_details_uuid: data.employer_item_details_uuid.uuid,
         value: data.value,
-        user_info_uuid: data.user_info_uuids,
+        is_default: data.is_default,
         business_info_uuid: data.business_info_uuid.uuid,
         created_at: data.created_at
       },
       update: {
         group_name: data.group_name,
-        employerItemDetails_uuids: data.employerItemDetails_uuids,
+        employer_item_details_uuid: data.employer_item_details_uuid.uuid,
         value: data.value,
-        user_info_uuid: data.user_info_uuids,
+        is_default: data.is_default,
         business_info_uuid: data.business_info_uuid.uuid,
         updated_at: data.updated_at
       }
@@ -77,12 +79,35 @@ export class BenefitGroupsPrismaRepository implements IBenefitGroupsRepository {
     return {
       uuid: new Uuid(group.uuid),
       group_name: group.group_name,
-      employerItemDetails_uuids: group.employerItemDetails_uuids,
+      employer_item_details_uuid: new Uuid(group.employer_item_details_uuid),
       value: group.value,
-      user_info_uuids: group.user_info_uuid,
       business_info_uuid: new Uuid(group.business_info_uuid),
+      is_default: group.is_default,
       created_at: group.created_at,
-      updated_at: group.created_at
+      updated_at: group.updated_at
+    } as BenefitGroupsEntity
+  }
+
+  async findByNameAndDefault(group_name: string, is_default: boolean, business_info_uuid: string): Promise<BenefitGroupsEntity | null> {
+    const group = await prismaClient.benefitGroups.findFirst({
+      where: {
+        group_name,
+        is_default,
+        business_info_uuid
+      }
+
+    })
+    if (!group) return null
+
+    return {
+      uuid: new Uuid(group.uuid),
+      group_name: group.group_name,
+      employer_item_details_uuid: new Uuid(group.employer_item_details_uuid),
+      value: group.value,
+      business_info_uuid: new Uuid(group.business_info_uuid),
+      is_default: group.is_default,
+      created_at: group.created_at,
+      updated_at: group.updated_at
     } as BenefitGroupsEntity
   }
 
@@ -104,11 +129,12 @@ export class BenefitGroupsPrismaRepository implements IBenefitGroupsRepository {
     return {
       uuid: new Uuid(group.uuid),
       group_name: group.group_name,
-      employerItemDetails_uuids: group.employerItemDetails_uuids,
+      employer_item_details_uuid: new Uuid(group.employer_item_details_uuid),
       value: group.value,
-      user_info_uuids: group.user_info_uuid,
       business_info_uuid: new Uuid(group.business_info_uuid),
-      created_at: group.created_at
+      is_default: group.is_default,
+      created_at: group.created_at,
+      updated_at: group.updated_at
     } as BenefitGroupsEntity
   }
   async findAll(): Promise<BenefitGroupsEntity[]> {

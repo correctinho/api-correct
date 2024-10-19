@@ -5,4 +5,5 @@ export interface IBenefitGroupsRepository extends RepositoryInterface<BenefitGro
   createOrUpdate(data: BenefitGroupsEntity):Promise<BenefitGroupsEntity>
   findAllByBusiness(business_info_uuid: string):Promise<BenefitGroupsEntity[] | []>
   createReturn(data: BenefitGroupsEntity): Promise<BenefitGroupsEntity>
+  findByNameAndDefault(group_name: string, is_default: boolean, business_info_uuid: string): Promise<BenefitGroupsEntity | null>
 }

@@ -20,9 +20,9 @@ export class  FindAllUserItemsByEmployeryController {
 
       return res.json(result)
     } catch (err: any) {
-      return res.status(err.statusCode).json({
-        error: err.message
-      })
+      return res.status(err.statusCode || 500).json({
+        error: err.message || "Internal Server Error"
+      });
     }
   }
 }

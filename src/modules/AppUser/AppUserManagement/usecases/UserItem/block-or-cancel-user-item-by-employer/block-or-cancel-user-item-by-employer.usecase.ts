@@ -16,18 +16,15 @@ export class BlockOrCanceluserItemByEmployerUsecase {
     if (!input.user_item_uuid) throw new CustomError("User item uuid is required", 400)
     if (input.status === 'active') throw new CustomError("Invalid status", 400)
 
-    //find item by id
+    //find user item item by id
     const userItem = await this.appUserItemRepository.find(new Uuid(input.user_item_uuid))
     if (!userItem) throw new CustomError("User Item not found", 404)
 
+    //check if business admin has access
     if(userItem.business_info_uuid.uuid !== input.business_info_uuid) throw new CustomError("Unauthorized acess", 403);
 
-
+    //verify status
     if (userItem.status === 'cancelled' || userItem.status === 'to_be_cancelled') throw new CustomError("User item already cancelled", 400)
-
-    //find item
-    const item = await this.itemRepository.find(userItem.item_uuid)
-    if (!item) throw new CustomError("Item not found", 404)
 
     const userItemEntity = new AppUserItemEntity(userItem)
 
@@ -39,19 +36,19 @@ export class BlockOrCanceluserItemByEmployerUsecase {
     }
 
     if (input.status === 'cancelled' || input.status === 'to_be_cancelled') {
-      if (item.item_category === 'pos_pago') {
+      if (userItem.item_category === 'pre_pago') {
         //it must schedule a cancelling data
         await userItemEntity.scheduleCancelling()
 
         userItemEntity.changeCancelReason(input.cancel_reason)
-      } else if (item.item_category === 'pre_pago') {
-        userItemEntity.cancelUserItem()
-        userItemEntity.changeCancelledAt(newDateF(new Date()))
+      } else if (userItem.item_category === 'pos_pago') {
+        userItemEntity.cancelPostPaidUserItem()
 
         userItemEntity.changeCancelReason(input.cancel_reason)
 
       }
     }
+
     await this.appUserItemRepository.update(userItemEntity)
 
     return {

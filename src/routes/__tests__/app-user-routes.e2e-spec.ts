@@ -7,7 +7,6 @@ import { Uuid } from "../../@shared/ValueObjects/uuid.vo";
 import { InputCreateBenefitDto } from "../../modules/benefits/usecases/create-benefit/create-benefit.dto";
 import path from 'path'
 import { randomUUID } from 'crypto'
-import { UserItemStatus } from "@prisma/client";
 
 let userToken1: string;
 let userToken2: string;
@@ -22,6 +21,8 @@ let employer_info_uuid2: string
 let employer_info_uuid3: string
 
 let employee_user_document: string
+
+let list_employees1_info_uuid: string[] = []
 
 let commonEmployeeUserInfoUuid: string //this is an employee for employers 1 and 2
 let employee_user_info: string
@@ -496,7 +497,6 @@ describe("E2E App User tests", () => {
         //get user info to confirm
         const getUserInfo = await request(app).get("/app-user/info").set('Authorization', `Bearer ${userToken1}`)
         expect(getUserInfo.statusCode).toBe(200)
-
 
         expect(result.statusCode).toBe(201)
         expect(result.body.sucess).toEqual("User info registered successfully")
@@ -1457,10 +1457,11 @@ describe("E2E App User tests", () => {
     })
   })
 
-  describe("E2E tests Upload csv to register users by correct", () => {
 
+  describe("E2E tests Upload csv to register users by correct", () => {
     beforeAll(async () => {
-      //create employee 1
+      //********************* CREATE APP USER TO BE AN EMPLOYEE FROM BUSINESS_INFO_UUID *********************
+
       const onlyUserAuthInput: InputCreateAppUserDTO = {
         user_info_uuid: null,
         document: '350.707.670-54', //make sure this document is in the csv test file
@@ -1471,8 +1472,7 @@ describe("E2E App User tests", () => {
       const createEmployeeAuth1 = await request(app).post("/app-user").send(onlyUserAuthInput)
       expect(createEmployeeAuth1.statusCode).toBe(201)
 
-
-      //authenticate employee
+      //********************* AUTHENTICATE EMPLOYEE *********************
       const input = {
         document: onlyUserAuthInput.document,
         password: onlyUserAuthInput.password
@@ -1481,7 +1481,9 @@ describe("E2E App User tests", () => {
       expect(userAuthResponse.statusCode).toBe(200)
       employeeAuthToken = userAuthResponse.body.token
 
-      //activate business 1
+
+
+      //********************* ACTIVATE BUSINESS *********************
       const inputToActivate = {
         address_uuid: business_address_uuid,
         fantasy_name: "Empresa novo nome",
@@ -1501,7 +1503,7 @@ describe("E2E App User tests", () => {
       const activateBusiness1 = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToActivate)
       expect(activateBusiness1.statusCode).toBe(200)
 
-      //create employer user 1
+      //********************* CREATE BUSINESS ADMIN 1 *********************
       const inputEmployer = {
         password: "123456",
         business_info_uuid: employer_info_uuid,
@@ -1513,8 +1515,7 @@ describe("E2E App User tests", () => {
       employer_user_uuid = createEmployer.body.uuid
       expect(createEmployer.statusCode).toBe(201)
 
-
-      //authenticate employer user 1
+      //********************* AUTHENTICATE BUSINESS ADMIN 1 ********************
       const authInput = {
         business_document: "empregador",
         password: "123456",
@@ -1526,136 +1527,202 @@ describe("E2E App User tests", () => {
       expect(auth.statusCode).toBe(200)
       employer_user_token = auth.body.token
 
-
-
-      // const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
-
-      // const result = await request(app)
-      //   .post('/app-users-by-correct')
-      //   .query(query)
-      //   .set('Authorization', `Bearer ${correctAdminToken}`)
-      //   .attach('file', csvFilePath)
-
-
-      //user details - It represents a user with only user Auth Details, nothing else
-      // expect(result.statusCode).toBe(200);
-      // expect(result.body.usersRegistered.length).toBe(15)
-      // expect(result.body.errorUser.length).toBe(0)
     });
+    describe("E2E tests Upload csv BEFORE business has active items", () => {
+      it("Should throw an error if file is not sent", async () => {
 
-    it("Should throw an error if business id is missing", async () => {
-      const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
+        const query = {
+          business_info_uuid: employer_info_uuid
+        }
 
-      const query = {
-        business_info_id: ''
-      }
-
-      const result = await request(app)
-        .post('/app-users-by-correct')
-        .query(query)
-        .set('Authorization', `Bearer ${correctAdminToken}`)
-        .attach('file', csvFilePath) // 'file' deve corresponder ao nome do campo esperado no endpoint
-      // Verifique o status da resposta e outras condições esperadas
-      expect(result.statusCode).toBe(400);
-      expect(result.body.error).toBe('Business Id is required');
-
-    });
-    it("Should throw an error if business is not found", async () => {
-      const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
-
-      const query = {
-        business_info_uuid: '1'
-      }
-
-      const result = await request(app)
-        .post('/app-users-by-correct')
-        .query(query)
-        .set('Authorization', `Bearer ${correctAdminToken}`)
-        .attach('file', csvFilePath) // 'file' deve corresponder ao nome do campo esperado no endpoint
-
-      expect(result.statusCode).toBe(404);
-      expect(result.body.error).toBe('Business not found');
-
-    });
-
-    it("Should throw an error if business is not active", async () => {
-      const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
-
-      const query = {
-        business_info_uuid: employer_info_uuid2
-      }
-
-      const result = await request(app)
-        .post('/app-users-by-correct')
-        .query(query)
-        .set('Authorization', `Bearer ${correctAdminToken}`)
-        .attach('file', csvFilePath) // 'file' deve corresponder ao nome do campo esperado no endpoint
-
-      expect(result.statusCode).toBe(400);
-      expect(result.body.error).toBe('Business must be activated');
-
-    });
-    it("Should throw an error if file is not sent", async () => {
-
-      const query = {
-        business_info_uuid: employer_info_uuid
-      }
-
-      const result = await request(app)
-        .post('/app-users-by-correct')
-        .query(query)
-        .set('Authorization', `Bearer ${correctAdminToken}`)
+        const result = await request(app)
+          .post('/app-users-by-correct')
+          .query(query)
+          .set('Authorization', `Bearer ${correctAdminToken}`)
 
 
-      expect(result.statusCode).toBe(400);
-      expect(result.body.error).toBe('Error upload file');
+        expect(result.statusCode).toBe(400);
+        expect(result.body.error).toBe('Error upload file');
 
-    });
-    it("Should register users from csv", async () => {
-      const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
+      });
+      it("Should throw an error if business id is missing", async () => {
+        const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
 
-      const query = {
-        business_info_uuid: employer_info_uuid
-      }
+        const query = {
+          business_info_id: ''
+        }
 
-      const result = await request(app)
-        .post('/app-users-by-correct')
-        .query(query)
-        .set('Authorization', `Bearer ${correctAdminToken}`)
-        .attach('file', csvFilePath) //
+        const result = await request(app)
+          .post('/app-users-by-correct')
+          .query(query)
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .attach('file', csvFilePath) // 'file' deve corresponder ao nome do campo esperado no endpoint
+        // Verifique o status da resposta e outras condições esperadas
+        expect(result.statusCode).toBe(400);
+        expect(result.body.error).toBe('Business Id is required');
+
+      });
+      it("Should throw an error if business is not found", async () => {
+        const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
+
+        const query = {
+          business_info_uuid: '1'
+        }
+
+        const result = await request(app)
+          .post('/app-users-by-correct')
+          .query(query)
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .attach('file', csvFilePath) // 'file' deve corresponder ao nome do campo esperado no endpoint
+
+        expect(result.statusCode).toBe(404);
+        expect(result.body.error).toBe('Business not found');
+
+      });
+
+      it("Should throw an error if business is not active", async () => {
+        const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
+
+        const query = {
+          business_info_uuid: employer_info_uuid2
+        }
+
+        const result = await request(app)
+          .post('/app-users-by-correct')
+          .query(query)
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .attach('file', csvFilePath) // 'file' deve corresponder ao nome do campo esperado no endpoint
+
+        expect(result.statusCode).toBe(400);
+        expect(result.body.error).toBe('Business must be activated');
+
+      });
+
+      it("Should throw an error if employer has no active items", async () => {
+        const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
+
+        const query = {
+          business_info_uuid: employer_info_uuid
+        }
+
+        const result = await request(app)
+          .post('/app-users-by-correct')
+          .query(query)
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .attach('file', csvFilePath) // 'file' deve corresponder ao nome do campo esperado no endpoint
+        expect(result.statusCode).toBe(404);
+        expect(result.body.error).toBe('Employer has no active items');
+
+      });
+    })
+
+    describe("E2E tests Upload csv AFTER business has active items", () => {
+      beforeAll(async () => {
+        //*********************CREATE EMPLOYER ITEM DETAILS **********************/
+        //it must be created before using csv
+        const employerItem1 = {
+          item_uuid: benefit1_uuid,
+          business_info_uuid: employer_info_uuid,
+          cycle_end_day: 1,
+          value: 200
+        };
+        const employerItem2 = {
+          item_uuid: benefit2_uuid,
+          business_info_uuid: employer_info_uuid,
+          cycle_end_day: 1,
+          value: 300
+        };
+
+        const employerItem3 = {
+          item_uuid: benefit3_uuid,
+          business_info_uuid: employer_info_uuid,
+          cycle_end_day: 1,
+          value: 350
+        };
+
+        const resultItem1 = await request(app)
+          .post("/business/item/details/correct")
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .send(employerItem1)
+
+        const resultItem2 = await request(app)
+          .post("/business/item/details/correct")
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .send(employerItem2)
+
+        const resultItem3 = await request(app)
+          .post("/business/item/details/correct")
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .send(employerItem3)
+
+        expect(resultItem1.statusCode).toBe(201)
+        expect(resultItem2.statusCode).toBe(201)
+        expect(resultItem3.statusCode).toBe(201)
+      })
+
+      it("Should register employees from csv", async () => {
+        const csvFilePath = path.join(__dirname, '../../../test-files/ideal-model.csv');
+
+        const query = {
+          business_info_uuid: employer_info_uuid
+        }
+
+        //************ REGISTER EMPLOYEES FROM CSV HERE *************/
+        const result = await request(app)
+          .post('/app-users-by-correct')
+          .query(query)
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .attach('file', csvFilePath) //
+        expect(result.statusCode).toBe(201)
+        expect(result.body.usersRegistered.length).toBe(15)
 
 
-      const onlyUserAuthDetails = await request(app)
-        .get("/app-user")
-        .set('Authorization', `Bearer ${employeeAuthToken}`)
-      expect(onlyUserAuthDetails.statusCode).toBe(200)
+        //************ GET EMPLOYEE THAT HAD ONLY AUTH DETAILS *************/
+        const onlyUserAuthDetails = await request(app)
+          .get("/app-user")
+          .set('Authorization', `Bearer ${employeeAuthToken}`)
+        expect(onlyUserAuthDetails.statusCode).toBe(200)
 
-      const findUser = await request(app).get("/app-user/info").set('Authorization', `Bearer ${employeeAuthToken}`)
+        //************ IF EMPLOYEES WERE CREATED AS EXPECTED, THIS REQUEST WILL BE SUCCESSFUL *************/
+        const findUser = await request(app).get("/app-user/info").set('Authorization', `Bearer ${employeeAuthToken}`)
 
-      expect(findUser.statusCode).toBe(200)
+        expect(findUser.statusCode).toBe(200)
+        expect(onlyUserAuthDetails.body.UserAuthDetails.user_info_uuid).toBe(findUser.body.uuid)
+        expect(findUser.body.is_employee).toBeTruthy()
 
-      employee_user_info = findUser.body.uuid
-      employee_user_document = findUser.body.document
-      expect(onlyUserAuthDetails.body.UserAuthDetails.user_info_uuid).toBe(findUser.body.uuid)
+        //************ SAVING EMPLOYEE UUID AND DOCUMENT *************/
+        employee_user_info = findUser.body.uuid
+        employee_user_document = findUser.body.document
 
-      //get list of employees to confifm
-      const employeesList = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token}`)
-      expect(result.statusCode).toBe(200)
-      expect(result.statusCode).toBe(200);
-      expect(result.body.usersRegistered.length).toBe(15)
-      expect(employeesList.body.length).toBe(15)
+        //************ GET LIST OF EMPLOYEES TO CONFIRM *************/
+        const employeesList = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token}`)
 
-      for (const employee of employeesList.body) {
-        expect(result.body.usersRegistered.some((document: any) => document === employee.document)).toBeTruthy()
+        expect(employeesList.body.length).toBe(15)
+        for (const employee of employeesList.body) {
 
-      }
-    });
+          const input: any = {
+            userInfoUuid: employee.user_info_uuid,
+          }
 
+          //HERE IS EXPECT TO BE EMPTY ARRAY, BECAUSE ALL ITEMS CREATED ARE INACTIVE
+          const userItems = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
 
+          expect(userItems.statusCode).toBe(200)
+          expect(userItems.body.length).toBe(0)
+          expect(employee.is_employee).toBeTruthy()
+          expect(result.body.usersRegistered.some((document: any) => document === employee.document)).toBeTruthy()
+          expect(employee.business_info_uuid).toBe(employer_info_uuid)
+
+        }
+      });
+    })
   })
 
   describe("E2E tests create already registered user by correct", () => {
     it("Should register an user auth", async () => {
+      //IN THIS TEST USER INFO ALREADY EXISTS, BUT NOT USER AUTH
+      //So WE ARE GOING TO CREATE USER AUTH WHEN USER INFO ALREADY EXISTS
+      //IT IS EXPECTED THAT SYNCHRONIZES AUTOMATICALLY
       //Create an userauth
       const input = {
         email: 'alreadyregistered@email.com',
@@ -1684,6 +1751,9 @@ describe("E2E App User tests", () => {
       expect(userAuthDetails.body.UserInfo).toBeTruthy()
       expect(userAuthDetails.body.UserAddress).toBeFalsy()
       expect(userAuthDetails.body.UserValidation).toBeFalsy()
+      expect(userInfoDetails.body.is_employee).toBe(true)
+      expect(userInfoDetails.body.Employee[0].business_info_uuid).toBe(employer_info_uuid)
+
 
     })
   })
@@ -1819,11 +1889,11 @@ describe("E2E App User tests", () => {
       })
 
       it("Should return a list of employees by employer", async () => {
-
         const result = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token}`)
         expect(result.body.length).toEqual(15)
         for (const employee of result.body) {
-          expect(employee.business_info_uuid === employer_info_uuid2)
+          list_employees1_info_uuid.push(employee.user_info_uuid)
+          expect(employee.business_info_uuid === employer_info_uuid)
         }
       })
 
@@ -1864,6 +1934,29 @@ describe("E2E App User tests", () => {
     })
 
     describe("Register single employee by employer", () => {
+      let employee_token: string
+      let employee_only_auth_token: string
+      beforeAll(async () => {
+        //********************* HERE WE NEED TO CREATE AN USER THAT ONLY HAS USER AUTH. USER INFO WILL BE CREATED BY A COMPANY *********************
+        const onlyUserAuthInput = {
+          document: '800.604.060-54', //make sure this document is in the csv test file
+          email: 'only_auth_new_employee@email.com',
+          password: 'senha123',
+        }
+
+        const createEmployeeAuth = await request(app).post("/app-user").send(onlyUserAuthInput)
+        expect(createEmployeeAuth.statusCode).toBe(201)
+
+        //********************* AUTHENTICATE EMPLOYEE *********************
+        const input = {
+          document: onlyUserAuthInput.document,
+          password: onlyUserAuthInput.password
+        }
+        const userAuthResponse = await request(app).post("/login-app-user").send(input)
+        expect(userAuthResponse.statusCode).toBe(200)
+        employee_only_auth_token = userAuthResponse.body.token
+
+      })
       it("Should throw an error if document is missing", async () => {
         const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`)
 
@@ -1872,6 +1965,7 @@ describe("E2E App User tests", () => {
       })
 
       it("Should register a new employee", async () => {
+        //********************* THIS EMPLOYEE DOES NOT HAVE ANY REGISTERS ANYWHERE *********************
         const input = {
           document: '868.228.050-79',
           full_name: 'João Alves da Silva',
@@ -1884,7 +1978,40 @@ describe("E2E App User tests", () => {
 
         const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).send(input)
 
+        //********************* CREATE APP USER AUTH FOR ABOVE EMPLOYEE *********************
+
+        const onlyUserAuthInput = {
+          document: input.document, //make sure this document is in the csv test file
+          email: 'employee@email.com',
+          password: 'senha123',
+        }
+        const createEmployeeAuth1 = await request(app).post("/app-user").send(onlyUserAuthInput)
+        expect(createEmployeeAuth1.statusCode).toBe(201)
+
+        //********************* AUTHENTICATE EMPLOYEE *********************
+        const inputAuth = {
+          document: onlyUserAuthInput.document,
+          password: onlyUserAuthInput.password
+        }
+        const userAuthResponse = await request(app).post("/login-app-user").send(inputAuth)
+        expect(userAuthResponse.statusCode).toBe(200)
+
+        employee_token = userAuthResponse.body.token
+
+        //************ IF EMPLOYEE WERE CREATED AS EXPECTED, THIS REQUEST WILL BE SUCCESSFUL *************/
+        const findUser = await request(app).get("/app-user/info").set('Authorization', `Bearer ${employee_token}`)
+        expect(findUser.statusCode).toBe(200)
+        expect(findUser.body.Employee.length).toBe(1)
+        expect(findUser.body.Employee[0].business_info_uuid).toBe(employer_info_uuid)
+
+        //Finding employee by employer
         const employeeCreated = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).query({ employeeDocument: input.document })
+
+        //CHECK EMPLOYEE ITEMS
+        const userItems = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query({ userInfoUuid: employeeCreated.body.uuid })
+
+        expect(userItems.statusCode).toBe(200)
+        expect(userItems.body.length).toBe(0)
         expect(employeeCreated.statusCode).toBe(200)
         expect(result.statusCode).toBe(201)
         expect(employeeCreated.body.business_info_uuid).toBe(employer_info_uuid)
@@ -1895,9 +2022,11 @@ describe("E2E App User tests", () => {
         expect(employeeCreated.body.function).toBe(input.function)
         expect(employeeCreated.body.date_of_birth).toBe(input.date_of_birth)
         expect(employeeCreated.body.dependents_quantity).toBe(input.dependents_quantity)
+        expect(employeeCreated.body.is_employee).toBe(true)
+
       })
 
-      it("Should register the same employee by a another employer", async () => {
+      it("Should register the same employee by another employer", async () => {
         const input = {
           document: '868.228.050-79',
           full_name: 'João Alves da Silva',
@@ -1912,11 +2041,55 @@ describe("E2E App User tests", () => {
         const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
         const employeeCreated = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token2}`).query({ employeeDocument: input.document })
 
+
+        //************ IF EMPLOYEE WERE CREATED AS EXPECTED, THIS REQUEST WILL BE SUCCESSFUL *************/
+        const findUser = await request(app).get("/app-user/info").set('Authorization', `Bearer ${employee_token}`)
+        expect(findUser.statusCode).toBe(200)
+        expect(findUser.body.Employee.length).toBe(2)
+        expect(findUser.body.Employee[0].business_info_uuid).toBe(employer_info_uuid)
+        expect(findUser.body.Employee[1].business_info_uuid).toBe(employer_info_uuid2)
+
         commonEmployeeUserInfoUuid = employeeCreated.body.uuid
         expect(employeeCreated.statusCode).toBe(200)
         expect(result.statusCode).toBe(201)
         expect(employeeCreated.body.business_info_uuid).toBe(employer_info_uuid2)
         expect(employeeCreated.body.document).toBe('86822805079')
+        expect(employeeCreated.body.full_name).toBe(input.full_name)
+        expect(employeeCreated.body.internal_company_code).toBe(input.internal_company_code)
+        expect(employeeCreated.body.gender).toBe(input.gender)
+        expect(employeeCreated.body.function).toBe(input.function)
+        expect(employeeCreated.body.date_of_birth).toBe(input.date_of_birth)
+        expect(employeeCreated.body.dependents_quantity).toBe(input.dependents_quantity)
+
+      })
+
+      it("Should register an employee that has only user auth", async () => {
+        const input = {
+          document: '800.604.060-54', //this document must be same as created in beforeAll
+          full_name: 'João Alves da Silva',
+          internal_company_code: '516518',
+          gender: "Masculino",
+          function: "Corretor",
+          date_of_birth: '14/02/84',
+          dependents_quantity: 2
+        }
+
+
+        const result = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
+        const employeeCreated = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token2}`).query({ employeeDocument: input.document })
+
+
+        //************ IF EMPLOYEE WERE CREATED AS EXPECTED, THIS REQUEST WILL BE SUCCESSFUL *************/
+        const findUser = await request(app).get("/app-user/info").set('Authorization', `Bearer ${employee_only_auth_token}`)
+        expect(findUser.statusCode).toBe(200)
+        expect(findUser.body.Employee.length).toBe(1)
+        expect(findUser.body.Employee[0].business_info_uuid).toBe(employer_info_uuid2)
+
+
+        expect(employeeCreated.statusCode).toBe(200)
+        expect(result.statusCode).toBe(201)
+        expect(employeeCreated.body.business_info_uuid).toBe(employer_info_uuid2)
+        expect(employeeCreated.body.document).toBe('80060406054')
         expect(employeeCreated.body.full_name).toBe(input.full_name)
         expect(employeeCreated.body.internal_company_code).toBe(input.internal_company_code)
         expect(employeeCreated.body.gender).toBe(input.gender)
@@ -1943,259 +2116,253 @@ describe("E2E App User tests", () => {
 
     })
   })
-  let pre_paid_user_item_uuid: string
+  let pre_paid_user_item_uuid: string //only employee info 1 has access to this
   let post_paid_user_item_uuid: string
 
   describe("E2E tests User Items", () => {
 
+
     describe("E2E test User items by Employer", () => {
-      describe("E2E tests create user item by employer", () => {
-        it("Should throw an error if user info id is missing", async () => {
-          const input = {
-            user_info_uuid: '',
-            item_uuid: randomUUID(),
-            balance: 1,
-            status: 'cancelled' as UserItemStatus,
-            business_info_uuid: randomUUID()
-          }
+      // describe("E2E tests create user item by employer", () => {
+      //   it("Should throw an error if user info id is missing", async () => {
+      //     const input = {
+      //       user_info_uuid: '',
+      //       item_uuid: randomUUID(),
+      //       balance: 1,
+      //       status: 'cancelled' as UserItemStatus,
+      //       business_info_uuid: randomUUID()
+      //     }
 
-          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-          expect(result.statusCode).toBe(400)
-          expect(result.body.error).toBe("User Info id is required")
+      //     const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      //     expect(result.statusCode).toBe(400)
+      //     expect(result.body.error).toBe("User Info id is required")
+      //   })
+      //   it("Should throw an error if item id is missing", async () => {
+      //     const input = {
+      //       user_info_uuid: randomUUID(),
+      //       item_uuid: '',
+      //       balance: 1,
+      //       status: 'cancelled' as UserItemStatus,
+      //       business_info_uuid: randomUUID()
+      //     }
+
+      //     const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      //     expect(result.statusCode).toBe(400)
+      //     expect(result.body.error).toBe("Item id is required")
+      //   })
+
+      //   it("Should throw an error if balance is negative", async () => {
+      //     const input = {
+      //       user_info_uuid: randomUUID(),
+      //       item_uuid: randomUUID(),
+      //       balance: -1,
+      //       status: 'cancelled' as UserItemStatus,
+      //       business_info_uuid: randomUUID()
+      //     }
+
+      //     const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      //     expect(result.statusCode).toBe(400)
+      //     expect(result.body.error).toBe("Balance cannot be negative")
+      //   })
+
+      //   it("Should throw an error if balance is not a number", async () => {
+      //     const input = {
+      //       user_info_uuid: randomUUID(),
+      //       item_uuid: randomUUID(),
+      //       balance: '1',
+      //       status: 'cancelled' as UserItemStatus,
+      //       business_info_uuid: randomUUID()
+      //     }
+
+      //     const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      //     expect(result.statusCode).toBe(400)
+      //     expect(result.body.error).toBe("Balance must be a valid number")
+      //   })
+
+      //   it("Should throw an error if status is invalid", async () => {
+      //     const input: any = {
+      //       user_info_uuid: randomUUID(),
+      //       item_uuid: randomUUID(),
+      //       balance: 1,
+      //       status: 'any status',
+      //       business_info_uuid: randomUUID()
+      //     }
+
+      //     const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      //     expect(result.statusCode).toBe(400)
+      //     expect(result.body.error).toBe("Invalid status")
+      //   })
+
+      //   it("Should throw an error if status is cancelled", async () => {
+      //     const input: any = {
+      //       user_info_uuid: randomUUID(),
+      //       item_uuid: randomUUID(),
+      //       balance: 1,
+      //       status: 'cancelled',
+      //       business_info_uuid: randomUUID()
+      //     }
+
+      //     const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      //     expect(result.statusCode).toBe(400)
+      //     expect(result.body.error).toBe("Invalid status")
+      //   })
+
+      //   it("Should throw an error if employee is not found", async () => {
+      //     const input: any = {
+      //       user_info_uuid: randomUUID(),
+      //       item_uuid: randomUUID(),
+      //       balance: 1,
+      //       status: 'active',
+      //       business_info_uuid: randomUUID()
+      //     }
+
+      //     const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      //     expect(result.statusCode).toBe(404)
+      //     expect(result.body.error).toBe("Employee not found")
+      //   })
+      //   it("Should throw an error if business does not have current benefit", async () => {
+
+      //     const input: any = {
+      //       user_info_uuid: employee_user_info,
+      //       business_info_uuid: employer_info_uuid,
+      //       item_uuid: randomUUID(),
+      //       balance: 1,
+      //     }
+
+      //     const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+
+      //     expect(result.statusCode).toBe(403)
+      //     expect(result.body.error).toBe('This item is not available for current business')
+
+
+      //   })
+
+      //   it("Should create a new item by employer 1", async () => {
+
+      //     const input: any = {
+      //       user_info_uuid: commonEmployeeUserInfoUuid,
+      //       business_info_uuid: employer_info_uuid,
+      //       item_uuid: benefit1_uuid,
+      //       balance: 1,
+      //     }
+
+      //     const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+      //     user_item_uuid = result.body.uuid
+      //     const searchUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query({ userItemId: pre_paid_user_item_uuid })
+
+      //     expect(searchUserItem.statusCode).toBe(200)
+      //     expect(searchUserItem.body.uuid).toBe(result.body.uuid)
+      //     expect(result.statusCode).toBe(201)
+      //     expect(result.body.uuid).toBeTruthy()
+      //     expect(result.body.user_info_uuid).toBe(input.user_info_uuid)
+      //     expect(result.body.item_name).toBe("Vale Alimentação")
+      //     expect(result.body.balance).toBe(1)
+      //     expect(result.body.status).toBe('active')
+      //     expect(result.body.business_info_uuid).toBe(employer_info_uuid)
+      //     expect(result.body.created_at).toBeTruthy()
+
+      //   })
+      //   it("Should create a new item for the same user be employer 2", async () => {
+
+      //     const input: any = {
+      //       user_info_uuid: commonEmployeeUserInfoUuid,
+      //       business_info_uuid: employer_info_uuid2,
+      //       item_uuid: benefit1_uuid,
+      //       balance: 1,
+      //       status: 'active',
+      //     }
+      //     const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
+      //     pre_paid_user_item_uuid = result.body.uuid
+      //     const searchUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).query({ userItemId: pre_paid_user_item_uuid })
+      //     expect(searchUserItem.statusCode).toBe(200)
+      //     expect(searchUserItem.body.uuid).toBe(result.body.uuid)
+      //     expect(result.statusCode).toBe(201)
+      //     expect(result.body.uuid).toBeTruthy()
+      //     expect(result.body.user_info_uuid).toBe(input.user_info_uuid)
+      //     expect(result.body.item_name).toBe("Vale Alimentação")
+      //     expect(result.body.balance).toBe(1)
+      //     expect(result.body.status).toBe(input.status)
+      //     expect(result.body.business_info_uuid).toBe(employer_info_uuid2)
+      //     expect(result.body.created_at).toBeTruthy()
+
+      //   })
+
+      //   it("Should throw an error if employee already has the benefit", async () => {
+
+      //     const input: any = {
+      //       user_info_uuid: commonEmployeeUserInfoUuid,
+      //       business_info_uuid: employer_info_uuid2,
+      //       item_uuid: benefit1_uuid,
+      //       balance: 1,
+      //       status: 'active',
+      //     }
+      //     const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
+      //     expect(result.statusCode).toBe(409)
+      //     expect(result.body.error).toBe("User already has this item")
+
+      //   })
+
+      // })
+      // beforeAll(async () => {
+      //   const result = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token}`)
+      //   expect(result.statusCode).toBe(200)
+
+      //   for (const employee of result.body) {
+      //     list.push(employee.uuid)
+      //   }
+      // })
+      describe("E2E Activate user item by employer", () => {
+        let employer_item_uuid_list: string[] = []
+        let item_uuid_employer_list: string[] = [] //this array keeps a list of Item uuids hired by employer
+
+        beforeAll(async () => {
+          //First we need to have employer items
+          const employerItem = await request(app).get(`/business/item/details`).set('Authorization', `Bearer ${employer_user_token}`)
+          expect(employerItem.statusCode).toBe(200)
+
+          for (const item of employerItem.body) {
+            employer_item_uuid_list.push(item.uuid)
+            item_uuid_employer_list.push(item.Item.uuid)
+          }
         })
-        it("Should throw an error if item id is missing", async () => {
+        it("Should throw an error if employee item cannot be found", async () => {
           const input = {
             user_info_uuid: randomUUID(),
-            item_uuid: '',
-            balance: 1,
-            status: 'cancelled' as UserItemStatus,
-            business_info_uuid: randomUUID()
+            item_uuid: randomUUID()
           }
-
-          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-          expect(result.statusCode).toBe(400)
-          expect(result.body.error).toBe("Item id is required")
-        })
-
-        it("Should throw an error if balance is negative", async () => {
-          const input = {
-            user_info_uuid: randomUUID(),
-            item_uuid: randomUUID(),
-            balance: -1,
-            status: 'cancelled' as UserItemStatus,
-            business_info_uuid: randomUUID()
-          }
-
-          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-          expect(result.statusCode).toBe(400)
-          expect(result.body.error).toBe("Balance cannot be negative")
-        })
-
-        it("Should throw an error if balance is not a number", async () => {
-          const input = {
-            user_info_uuid: randomUUID(),
-            item_uuid: randomUUID(),
-            balance: '1',
-            status: 'cancelled' as UserItemStatus,
-            business_info_uuid: randomUUID()
-          }
-
-          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-          expect(result.statusCode).toBe(400)
-          expect(result.body.error).toBe("Balance must be a valid number")
-        })
-
-        it("Should throw an error if status is invalid", async () => {
-          const input: any = {
-            user_info_uuid: randomUUID(),
-            item_uuid: randomUUID(),
-            balance: 1,
-            status: 'any status',
-            business_info_uuid: randomUUID()
-          }
-
-          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-          expect(result.statusCode).toBe(400)
-          expect(result.body.error).toBe("Invalid status")
-        })
-
-        it("Should throw an error if status is cancelled", async () => {
-          const input: any = {
-            user_info_uuid: randomUUID(),
-            item_uuid: randomUUID(),
-            balance: 1,
-            status: 'cancelled',
-            business_info_uuid: randomUUID()
-          }
-
-          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-          expect(result.statusCode).toBe(400)
-          expect(result.body.error).toBe("Invalid status")
-        })
-
-        it("Should throw an error if employee is not found", async () => {
-          const input: any = {
-            user_info_uuid: randomUUID(),
-            item_uuid: randomUUID(),
-            balance: 1,
-            status: 'active',
-            business_info_uuid: randomUUID()
-          }
-
-          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-          expect(result.statusCode).toBe(404)
-          expect(result.body.error).toBe("Employee not found")
-        })
-        it("Should throw an error if business does not have current benefit", async () => {
-
-          const input: any = {
-            user_info_uuid: employee_user_info,
-            business_info_uuid: employer_info_uuid,
-            item_uuid: randomUUID(),
-            balance: 1,
-          }
-
-          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-
-          expect(result.statusCode).toBe(403)
-          expect(result.body.error).toBe('This item is not available for current business')
-
+          const activateItem = await request(app).patch("/user-item/activate").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+          expect(activateItem.statusCode).toBe(404)
+          expect(activateItem.body.error).toBe("Employee item not found")
 
         })
+        it("Should activate employee item without balance", async () => {
+          for (const uuid of list_employees1_info_uuid) {
+            for (const item_uuid of item_uuid_employer_list) {
+              const input = {
+                user_info_uuid: uuid,
+                item_uuid
+              }
+              const activateItem = await request(app).patch("/user-item/activate").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+              expect(activateItem.statusCode).toBe(200)
+              expect(activateItem.body.status).toBe('active')
+              expect(activateItem.body.user_info_uuid).toBe(uuid)
+              expect(activateItem.body.business_info_uuid).toBe(employer_info_uuid)
+            }
 
-        it("Should create a new item by employer 1", async () => {
+            const userItems = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query({ userInfoUuid: uuid })
+            for(const employeeItem of userItems.body){
 
-          const input: any = {
-            user_info_uuid: commonEmployeeUserInfoUuid,
-            business_info_uuid: employer_info_uuid,
-            item_uuid: benefit1_uuid,
-            balance: 1,
+              expect(employeeItem.status).toBe('active')
+            }
+            expect(userItems.body.length).toEqual(item_uuid_employer_list.length)
+            expect(userItems.statusCode).toBe(200)
+
           }
-
-          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-          pre_paid_user_item_uuid = result.body.uuid
-          const searchUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query({ userItemId: pre_paid_user_item_uuid })
-
-          expect(searchUserItem.statusCode).toBe(200)
-          expect(searchUserItem.body.uuid).toBe(result.body.uuid)
-          expect(result.statusCode).toBe(201)
-          expect(result.body.uuid).toBeTruthy()
-          expect(result.body.user_info_uuid).toBe(input.user_info_uuid)
-          expect(result.body.item_name).toBe("Vale Alimentação")
-          expect(result.body.balance).toBe(1)
-          expect(result.body.status).toBe('active')
-          expect(result.body.business_info_uuid).toBe(employer_info_uuid)
-          expect(result.body.created_at).toBeTruthy()
-
-        })
-        it("Should create a new item for the same user be employer 2", async () => {
-
-          const input: any = {
-            user_info_uuid: commonEmployeeUserInfoUuid,
-            business_info_uuid: employer_info_uuid2,
-            item_uuid: benefit1_uuid,
-            balance: 1,
-            status: 'active',
-          }
-          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
-          pre_paid_user_item_uuid = result.body.uuid
-          const searchUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).query({ userItemId: pre_paid_user_item_uuid })
-          expect(searchUserItem.statusCode).toBe(200)
-          expect(searchUserItem.body.uuid).toBe(result.body.uuid)
-          expect(result.statusCode).toBe(201)
-          expect(result.body.uuid).toBeTruthy()
-          expect(result.body.user_info_uuid).toBe(input.user_info_uuid)
-          expect(result.body.item_name).toBe("Vale Alimentação")
-          expect(result.body.balance).toBe(1)
-          expect(result.body.status).toBe(input.status)
-          expect(result.body.business_info_uuid).toBe(employer_info_uuid2)
-          expect(result.body.created_at).toBeTruthy()
-
         })
 
-        it("Should throw an error if employee already has the benefit", async () => {
-
-          const input: any = {
-            user_info_uuid: commonEmployeeUserInfoUuid,
-            business_info_uuid: employer_info_uuid2,
-            item_uuid: benefit1_uuid,
-            balance: 1,
-            status: 'active',
-          }
-          const result = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
-          expect(result.statusCode).toBe(409)
-          expect(result.body.error).toBe("User already has this item")
-
-        })
-
-      })
-      describe("E2E find user item by id by employer", () => {
-        it("Should throw an errir if user item id is missing", async () => {
-          const input = {
-            userItemId: ''
-          }
-          const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-          expect(result.statusCode).toBe(400)
-          expect(result.body.error).toBe("User Item id is required")
-        })
-
-        it("Should throw an error if user item is not found", async () => {
-          const input = {
-            userItemId: randomUUID()
-          }
-          const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-          expect(result.statusCode).toBe(404)
-          expect(result.body.error).toBe("User Item not found")
-        })
-        it("Should throw an error if business is not the employer", async () => {
-          const input = {
-            userItemId: pre_paid_user_item_uuid
-          }
-          const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-
-          expect(result.statusCode).toBe(403)
-          expect(result.body.error).toBe("Unauthorized Acess for business admin")
-        })
-
-        it("Should return user item", async () => {
-
-          const input = {
-            userItemId: pre_paid_user_item_uuid
-          }
-          const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).query(input)
-          expect(result.statusCode).toBe(200)
-          expect(result.body.uuid).toBe(input.userItemId)
-          expect(result.body.item_name).toBe("Vale Alimentação")
-          expect(result.body.balance).toBe(1)
-          expect(result.body.status).toBe('active')
-          expect(result.body.Provider.business_info_uuid).toBe(employer_info_uuid2)
-
-
-        })
       })
       describe("E2E Find all user items by employer", () => {
-        beforeAll(async () => {
-          //create 2 more user items
-          const userItem2: any = {
-            user_info_uuid: commonEmployeeUserInfoUuid,
-            item_uuid: benefit2_uuid,
-            balance: 1,
-            status: 'active',
-          }
-          const userItem3: any = {
-            user_info_uuid: commonEmployeeUserInfoUuid,
-            item_uuid: benefit3_uuid,
-            balance: 1,
-            status: 'active',
-          }
-          const createUserItem2 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem2)
-          const createUserItem3 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem3)
 
-          post_paid_user_item_uuid = createUserItem2.body.uuid
-          expect(createUserItem2.statusCode).toBe(201)
-          expect(createUserItem3.statusCode).toBe(201)
-
-        })
         it("Should throw an error if user info is missing", async () => {
           const input: any = {
             user_info_uuid: '',
@@ -2227,31 +2394,102 @@ describe("E2E App User tests", () => {
         })
 
         it("Should return a list of user items by employer 1", async () => {
-          const input: any = {
-            userInfoUuid: commonEmployeeUserInfoUuid,
+          //************** FIRT GET LIST OF EMPLOYEES ***************/
+          const employeesList = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token}`)
+          expect(employeesList.statusCode).toBe(200)
+
+          for (const employee of employeesList.body) {
+            //for each employee, return their items
+            const input: any = {
+              userInfoUuid: employee.user_info_uuid,
+            }
+
+            const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+
+            expect(result.statusCode).toBe(200)
+            for (const employeeItem of result.body) {
+
+              expect(employeeItem.status).toBe('active')
+              expect(employeeItem.Group).toHaveProperty('group_name')
+              expect(employeeItem.Group).toHaveProperty('group_name')
+              expect(employeeItem.Group).toHaveProperty('group_value')
+              expect(employeeItem.Group).toHaveProperty('group_is_default')
+              expect(employeeItem.Provider).toHaveProperty('business_info_uuid')
+              expect(employeeItem.Provider).toHaveProperty('fantasy_name')
+
+            }
+
           }
 
-          const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-          expect(result.statusCode).toBe(200)
-          expect(result.body.length).toBe(3)
-          result.body.forEach((userItem: any) => {
-            expect(userItem.user_info_uuid).toBe(commonEmployeeUserInfoUuid)
-            expect(userItem.Provider.business_info_uuid).toBe(employer_info_uuid)
-          });
         })
-        it("Should return a list of user items by employer 2", async () => {
-          const input: any = {
-            userInfoUuid: commonEmployeeUserInfoUuid,
+        it("Should return an empty list of user items by employer 2", async () => {
+          //At this point, this employer has not activated any user items, so we expect the list to be 0
+
+          const employeesList = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token2}`)
+          expect(employeesList.statusCode).toBe(200)
+          for (const employee of employeesList.body) {
+            //for each employee, return their items
+            const input: any = {
+              userInfoUuid: employee.user_info_uuid,
+            }
+
+            const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token2}`).query(input)
+            expect(result.statusCode).toBe(200)
+            expect(result.body.length).toBe(0)
+
           }
 
-          const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token2}`).query(input)
-          expect(result.statusCode).toBe(200)
-          expect(result.body.length).toBe(1)
+        })
+      })
+      describe("E2E find user item by id by employer", () => {
+        beforeAll(async () => {
+          const input: any = {
+            userInfoUuid: employee_user_info,
+          }
+          const result = await request(app).get("/user-item/all/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
 
-          result.body.forEach((userItem: any) => {
-            expect(userItem.user_info_uuid).toBe(commonEmployeeUserInfoUuid)
-            expect(userItem.Provider.business_info_uuid).toBe(employer_info_uuid2)
-          });
+          pre_paid_user_item_uuid = result.body.find( (item: any) => item.item_category === "pre_pago").uuid
+          post_paid_user_item_uuid = result.body.find( (item: any) => item.item_category === "pos_pago").uuid
+
+
+        })
+        it("Should throw an error if user item id is missing", async () => {
+          const input = {
+            userItemId: ''
+          }
+          const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+          expect(result.statusCode).toBe(400)
+          expect(result.body.error).toBe("User Item id is required")
+        })
+
+        it("Should throw an error if user item is not found", async () => {
+          const input = {
+            userItemId: randomUUID()
+          }
+          const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+          expect(result.statusCode).toBe(404)
+          expect(result.body.error).toBe("User Item not found")
+        })
+        it("Should throw an error if business is not the employer", async () => {
+          const input = {
+            userItemId: pre_paid_user_item_uuid
+          }
+          const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token3}`).query(input)
+          expect(result.statusCode).toBe(403)
+          expect(result.body.error).toBe("Unauthorized Access for business admin")
+        })
+
+        it("Should return user item", async () => {
+
+          const input = {
+            userItemId: pre_paid_user_item_uuid
+          }
+          const result = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+          expect(result.statusCode).toBe(200)
+          expect(result.body.uuid).toBe(input.userItemId)
+          expect(result.body.item_name).toBe("Vale Alimentação")
+          expect(result.body.status).toBe('active')
+          expect(result.body.Provider.business_info_uuid).toBe(employer_info_uuid)
         })
       })
       describe("E2E Block or Cancel User item by employer", () => {
@@ -2277,13 +2515,13 @@ describe("E2E App User tests", () => {
           expect(result.body.error).toBe('User Item not found')
         })
 
-        it("Should throw an error if is not authorized to block or cancel", async () => {
+        it("Should throw an error if business admin is not authorized to block or cancel", async () => {
           const input: any = {
             user_item_uuid: pre_paid_user_item_uuid,
             status: 'blocked'
           }
 
-          const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+          const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
           expect(result.statusCode).toBe(403)
 
 
@@ -2294,26 +2532,26 @@ describe("E2E App User tests", () => {
             status: 'blocked'
           }
 
-          const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
+          const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
           const findInput = {
             userItemId: pre_paid_user_item_uuid
           }
-          const findUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).query(findInput)
+          const findUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(findInput)
           expect(findUserItem.statusCode).toBe(200)
           expect(result.statusCode).toBe(200)
           expect(result.body.status).toBe(input.status)
           expect(findUserItem.body.status).toBe(input.status)
         })
 
-        it("Should return a to be cancelled user item - post paid", async () => {
+        it("Should return a to be cancelled user item - pre paid", async () => {
           const input: any = {
-            user_item_uuid: post_paid_user_item_uuid,
+            user_item_uuid: pre_paid_user_item_uuid,
             status: 'cancelled'
           }
 
           const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
           const findInput = {
-            userItemId: post_paid_user_item_uuid
+            userItemId: pre_paid_user_item_uuid
           }
 
           const findUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(findInput)
@@ -2325,32 +2563,34 @@ describe("E2E App User tests", () => {
           expect(findUserItem.body.updated_at).toBeTruthy()
         })
 
-        it("Should return a cancelled user item - pre paid", async () => {
+        it("Should return a cancelled user item - post paid", async () => {
           const input: any = {
-            user_item_uuid: pre_paid_user_item_uuid,
+            user_item_uuid: post_paid_user_item_uuid,
             status: 'cancelled'
           }
 
-          const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
+          const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
           const findInput = {
-            userItemId: pre_paid_user_item_uuid
+            userItemId: post_paid_user_item_uuid
           }
-          const findUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).query(findInput)
+          const findUserItem = await request(app).get("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).query(findInput)
 
           expect(findUserItem.statusCode).toBe(200)
           expect(result.statusCode).toBe(200)
           expect(findUserItem.body.status).toBe('cancelled')
           expect(findUserItem.body.cancelled_at).toBeTruthy()
+          expect(findUserItem.body.Provider.business_info_uuid).toBe(employer_info_uuid)
           expect(findUserItem.body.updated_at).toBeTruthy()
         })
 
         it("Should throw an error if trying to cancel an already cancelled user item", async () => {
           const input: any = {
-            user_item_uuid: pre_paid_user_item_uuid,
+            user_item_uuid: post_paid_user_item_uuid,
             status: 'cancelled'
           }
 
-          const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token2}`).send(input)
+
+          const result = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(input)
 
           expect(result.statusCode).toBe(400)
           expect(result.body.error).toBe("User item already cancelled")
@@ -2358,7 +2598,7 @@ describe("E2E App User tests", () => {
 
         it("Should throw an error if trying to cancel an user item that is to be cancelled", async () => {
           const input: any = {
-            user_item_uuid: post_paid_user_item_uuid,
+            user_item_uuid: pre_paid_user_item_uuid,
             status: 'cancelled'
           }
 
@@ -2371,201 +2611,201 @@ describe("E2E App User tests", () => {
       })
     })
 
-    describe("E2E tests User items by app user", () => {
-      let employee1Item: string
-      describe("E2E Tests Find user item by app user", () => {
-        beforeAll(async () => {
-          const userItem1: any = {
-            user_info_uuid: employee_user_info,
-            item_uuid: benefit2_uuid,
-            balance: 1,
-            status: 'active',
-          }
-          const userItem2: any = {
-            user_info_uuid: employee_user_info,
-            item_uuid: benefit3_uuid,
-            balance: 1,
-            status: 'active',
-          }
-          const createUserItem1 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem1)
-          const createUserItem2 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem2)
+    // describe("E2E tests User items by app user", () => {
+    //   let employee1Item: string
+    //   describe("E2E Tests Find user item by app user", () => {
+    //     beforeAll(async () => {
+    //       const userItem1: any = {
+    //         user_info_uuid: employee_user_info,
+    //         item_uuid: benefit2_uuid,
+    //         balance: 1,
+    //         status: 'active',
+    //       }
+    //       const userItem2: any = {
+    //         user_info_uuid: employee_user_info,
+    //         item_uuid: benefit3_uuid,
+    //         balance: 1,
+    //         status: 'active',
+    //       }
+    //       const createUserItem1 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem1)
+    //       const createUserItem2 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem2)
 
-          employee1Item = createUserItem1.body.uuid
-          expect(createUserItem1.statusCode).toBe(201)
-          expect(createUserItem2.statusCode).toBe(201)
+    //       employee1Item = createUserItem1.body.uuid
+    //       expect(createUserItem1.statusCode).toBe(201)
+    //       expect(createUserItem2.statusCode).toBe(201)
 
-        })
-        it("Should return app user item", async () => {
-          const input = {
-            userItemId: employee1Item
-          }
+    //     })
+    //     it("Should return app user item", async () => {
+    //       const input = {
+    //         userItemId: employee1Item
+    //       }
 
-          const result = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
-          expect(result.statusCode).toBe(200)
-          expect(result.body.uuid).toBe(input.userItemId)
-          expect(result.body.user_info_uuid).toBe(employee_user_info)
+    //       const result = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
+    //       expect(result.statusCode).toBe(200)
+    //       expect(result.body.uuid).toBe(input.userItemId)
+    //       expect(result.body.user_info_uuid).toBe(employee_user_info)
 
-        })
+    //     })
 
-        it("Should throw an error if user is not authorized", async () => {
-          const input = {
-            userItemId: pre_paid_user_item_uuid
-          }
-          const result = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input)
-          expect(result.statusCode).toBe(403)
-          expect(result.body.error).toBe('Unauthorized access for user')
+    //     it("Should throw an error if user is not authorized", async () => {
+    //       const input = {
+    //         userItemId: pre_paid_user_item_uuid
+    //       }
+    //       const result = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input)
+    //       expect(result.statusCode).toBe(403)
+    //       expect(result.body.error).toBe('Unauthorized access for user')
 
-        })
-      })
+    //     })
+    //   })
 
-      describe("E2E Testes find all user items by user", () => {
-        it("Should return user items", async () => {
-          const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
-          expect(result.statusCode).toBe(200)
-          expect(result.body.length).toBe(2)
-        })
-        it("Should return empty array", async () => {
-          const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken2}`)
-          expect(result.statusCode).toBe(200)
-          expect(result.body.length).toBe(0)
-        })
-      })
-    })
+    //   describe("E2E Testes find all user items by user", () => {
+    //     it("Should return user items", async () => {
+    //       const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
+    //       expect(result.statusCode).toBe(200)
+    //       expect(result.body.length).toBe(2)
+    //     })
+    //     it("Should return empty array", async () => {
+    //       const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken2}`)
+    //       expect(result.statusCode).toBe(200)
+    //       expect(result.body.length).toBe(0)
+    //     })
+    //   })
+    // })
   })
 
-  describe("E2E tests Groups", () => {
-    let employeesListUuids: string[] = []
-    let employerItems1: string[] = []
-    let group1_uuid: string
-    describe("E2E Create groups", () => {
+  // describe("E2E tests Groups", () => {
+  //   let employeesListUuids: string[] = []
+  //   let employerItems1: string[] = []
+  //   let group1_uuid: string
+  //   describe("E2E Create groups", () => {
 
-      beforeAll(async () => {
-        //First get employees
-        const employeesList = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token}`)
-        expect(employeesList.statusCode).toBe(200)
-        employeesList.body.map((employee: any) => {
-          employeesListUuids.push(employee.user_info_uuid)
-        })
+  //     beforeAll(async () => {
+  //       //First get employees
+  //       const employeesList = await request(app).get("/business-admin/app-users").set('Authorization', `Bearer ${employer_user_token}`)
+  //       expect(employeesList.statusCode).toBe(200)
+  //       employeesList.body.map((employee: any) => {
+  //         employeesListUuids.push(employee.user_info_uuid)
+  //       })
 
-        //Second get employer items
-        const employerItems = await request(app).get(`/business/item/details`).set('Authorization', `Bearer ${employer_user_token}`)
-        expect(employerItems.statusCode).toBe(200)
-        employerItems.body.map((employerItems: any) => {
-          employerItems1.push(employerItems.uuid)
-        })
+  //       //Second get employer items
+  //       const employerItems = await request(app).get(`/business/item/details`).set('Authorization', `Bearer ${employer_user_token}`)
+  //       expect(employerItems.statusCode).toBe(200)
+  //       employerItems.body.map((employerItems: any) => {
+  //         employerItems1.push(employerItems.uuid)
+  //       })
 
-      })
-      it("Should create an group", async () => {
+  //     })
+  //     it("Should create an group", async () => {
 
-        let user_info_uuids: string[] = [employeesListUuids[0], employeesListUuids[1], employeesListUuids[2]]
-        const input: any = {
-          group_name: "Grupo 1",
-          employerItemDetails_uuids: employerItems1,
-          value: 50000,
-          user_info_uuids: user_info_uuids,
-        }
-        const result = await request(app).post("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-        group1_uuid = result.body.uuid
-        expect(result.statusCode).toBe(201)
-        expect(result.body).toHaveProperty('uuid')
-        expect(result.body.group_name).toEqual(input.group_name)
-        expect(result.body.employerItemDetails_uuids.length).toEqual(employerItems1.length)
-        expect(result.body.value).toEqual(input.value)
-        expect(result.body.user_info_uuids.length).toBe(user_info_uuids.length)
-        expect(result.body.user_info_uuids).toEqual(user_info_uuids)
-        expect(result.body.employerItemDetails_uuids).toEqual(input.employerItemDetails_uuids)
+  //       let user_info_uuids: string[] = [employeesListUuids[0], employeesListUuids[1], employeesListUuids[2]]
+  //       const input: any = {
+  //         group_name: "Grupo 1",
+  //         employerItemDetails_uuids: employerItems1,
+  //         value: 50000,
+  //         user_info_uuids: user_info_uuids,
+  //       }
+  //       const result = await request(app).post("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+  //       group1_uuid = result.body.uuid
+  //       expect(result.statusCode).toBe(201)
+  //       expect(result.body).toHaveProperty('uuid')
+  //       expect(result.body.group_name).toEqual(input.group_name)
+  //       expect(result.body.employerItemDetails_uuids.length).toEqual(employerItems1.length)
+  //       expect(result.body.value).toEqual(input.value)
+  //       expect(result.body.user_info_uuids.length).toBe(user_info_uuids.length)
+  //       expect(result.body.user_info_uuids).toEqual(user_info_uuids)
+  //       expect(result.body.employerItemDetails_uuids).toEqual(input.employerItemDetails_uuids)
 
-      })
-    })
+  //     })
+  //   })
 
-    describe("E2E Update Groups", () => {
-      it("Should update an group", async () => {
-        let user_info_uuids: string[] = [employeesListUuids[0], employeesListUuids[1], employeesListUuids[2]]
-        const input: any = {
-          uuid: group1_uuid,
-          group_name: "Grupo 1 Editado",
-          employerItemDetails_uuids: employerItems1,
-          value: 58400,
-          user_info_uuids: user_info_uuids,
-        }
-        const result = await request(app).post("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-        expect(result.statusCode).toBe(201)
-        expect(result.body).toHaveProperty('uuid')
-        expect(result.body.group_name).toEqual(input.group_name)
-        expect(result.body.employerItemDetails_uuids.length).toEqual(employerItems1.length)
-        expect(result.body.value).toEqual(input.value)
-        expect(result.body.user_info_uuids.length).toBe(user_info_uuids.length)
-        expect(result.body.user_info_uuids).toEqual(user_info_uuids)
-        expect(result.body.employerItemDetails_uuids).toEqual(input.employerItemDetails_uuids)
+  //   describe("E2E Update Groups", () => {
+  //     it("Should update an group", async () => {
+  //       let user_info_uuids: string[] = [employeesListUuids[0], employeesListUuids[1], employeesListUuids[2]]
+  //       const input: any = {
+  //         uuid: group1_uuid,
+  //         group_name: "Grupo 1 Editado",
+  //         employerItemDetails_uuids: employerItems1,
+  //         value: 58400,
+  //         user_info_uuids: user_info_uuids,
+  //       }
+  //       const result = await request(app).post("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+  //       expect(result.statusCode).toBe(201)
+  //       expect(result.body).toHaveProperty('uuid')
+  //       expect(result.body.group_name).toEqual(input.group_name)
+  //       expect(result.body.employerItemDetails_uuids.length).toEqual(employerItems1.length)
+  //       expect(result.body.value).toEqual(input.value)
+  //       expect(result.body.user_info_uuids.length).toBe(user_info_uuids.length)
+  //       expect(result.body.user_info_uuids).toEqual(user_info_uuids)
+  //       expect(result.body.employerItemDetails_uuids).toEqual(input.employerItemDetails_uuids)
 
-      })
-    })
+  //     })
+  //   })
 
-    describe("E2E Get All Groups  By Business", () => {
-      beforeAll(async () => {
-        //create one more group by employer 1
-        let user_info_uuids: string[] = [employeesListUuids[5], employeesListUuids[8], employeesListUuids[11]]
+  //   describe("E2E Get All Groups  By Business", () => {
+  //     beforeAll(async () => {
+  //       //create one more group by employer 1
+  //       let user_info_uuids: string[] = [employeesListUuids[5], employeesListUuids[8], employeesListUuids[11]]
 
-        const input: any = {
-          group_name: "Grupo 2",
-          employerItemDetails_uuids: employerItems1,
-          value: 50000,
-          user_info_uuids: user_info_uuids,
-        }
-        const result = await request(app).post("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
-        expect(result.statusCode).toBe(201)
-      })
-      it("Should return a list of groups", async () => {
-        const result = await request(app).get("/business-admin/groups").set('Authorization', `Bearer ${employer_user_token}`)
-        expect(result.body.length).toBe(2)
-        expect(result.body[1].group_name).toBe("Grupo 2")
-        expect(result.body[1].value).toBe(500)
+  //       const input: any = {
+  //         group_name: "Grupo 2",
+  //         employerItemDetails_uuids: employerItems1,
+  //         value: 50000,
+  //         user_info_uuids: user_info_uuids,
+  //       }
+  //       const result = await request(app).post("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+  //       expect(result.statusCode).toBe(201)
+  //     })
+  //     it("Should return a list of groups", async () => {
+  //       const result = await request(app).get("/business-admin/groups").set('Authorization', `Bearer ${employer_user_token}`)
+  //       expect(result.body.length).toBe(2)
+  //       expect(result.body[1].group_name).toBe("Grupo 2")
+  //       expect(result.body[1].value).toBe(500)
 
-      })
-    })
+  //     })
+  //   })
 
-    describe("E2E Get one group By Business", () => {
+  //   describe("E2E Get one group By Business", () => {
 
-      it("Should throw an error if group id is missing", async () => {
-        const input = {
-          uuid: ''
-        }
-        const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-        expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe("Uuid is required")
-      })
+  //     it("Should throw an error if group id is missing", async () => {
+  //       const input = {
+  //         uuid: ''
+  //       }
+  //       const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+  //       expect(result.statusCode).toBe(400)
+  //       expect(result.body.error).toBe("Uuid is required")
+  //     })
 
-      it("Should throw an error if id does not exist", async () => {
-        const input = {
-          uuid: randomUUID()
-        }
-        const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-        expect(result.statusCode).toBe(404)
-        expect(result.body.error).toBe("Group not found")
-      })
+  //     it("Should throw an error if id does not exist", async () => {
+  //       const input = {
+  //         uuid: randomUUID()
+  //       }
+  //       const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+  //       expect(result.statusCode).toBe(404)
+  //       expect(result.body.error).toBe("Group not found")
+  //     })
 
-      it("Should throw an error if employer cannot access the group", async () => {
-        const input = {
-          uuid: group1_uuid
-        }
-        const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token2}`).query(input)
-        expect(result.statusCode).toBe(403)
-        expect(result.body.error).toBe("Unauthorized access")
-      })
+  //     it("Should throw an error if employer cannot access the group", async () => {
+  //       const input = {
+  //         uuid: group1_uuid
+  //       }
+  //       const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token2}`).query(input)
+  //       expect(result.statusCode).toBe(403)
+  //       expect(result.body.error).toBe("Unauthorized access")
+  //     })
 
-      it("Should return a group", async () => {
-        const input = {
-          uuid: group1_uuid
-        }
-        const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).query(input)
-        expect(result.statusCode).toBe(200)
-        expect(result.body.uuid).toBe(input.uuid)
-        expect(result.body.value).toBe(584)
+  //     it("Should return a group", async () => {
+  //       const input = {
+  //         uuid: group1_uuid
+  //       }
+  //       const result = await request(app).get("/business-admin/group").set('Authorization', `Bearer ${employer_user_token}`).query(input)
+  //       expect(result.statusCode).toBe(200)
+  //       expect(result.body.uuid).toBe(input.uuid)
+  //       expect(result.body.value).toBe(584)
 
-      })
-    })
+  //     })
+  //   })
 
 
-  })
+  // })
 
 })

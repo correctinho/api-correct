@@ -1,9 +1,10 @@
 import request from 'supertest'
 import { app } from '../../app'
-import { InputCreateBenefitDto, ItemCategory, ItemType } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
+import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo'
 import { randomUUID } from 'crypto'
 import { get } from 'lodash'
+import { ItemCategory, ItemType } from '@prisma/client'
 
 let correctAdminToken: string
 let partner_info_uuid: string
@@ -32,7 +33,7 @@ let branch3_uuid: string
 let branch4_uuid: string
 let branch5_uuid: string
 
-let item_details_2: string
+let item_details_1: string
 describe("E2E Business tests", () => {
   beforeAll(async () => {
     const inputNewAdmin = {
@@ -42,7 +43,8 @@ describe("E2E Business tests", () => {
       password: "123"
     }
     //create correct admin
-    await request(app).post('/admin').send(inputNewAdmin)
+    const createCorrectAdmin = await request(app).post('/admin').send(inputNewAdmin)
+    expect(createCorrectAdmin.statusCode).toBe(201)
 
     const authenticateAdmin = {
       userName: inputNewAdmin.userName,
@@ -50,6 +52,7 @@ describe("E2E Business tests", () => {
     }
     //authenticate correct admin
     const result = await request(app).post('/login').send(authenticateAdmin)
+    expect(result.statusCode).toBe(200)
     correctAdminToken = result.body.token
 
     //create items
@@ -94,6 +97,10 @@ describe("E2E Business tests", () => {
     benefit3_uuid = benefit3Response.body.uuid
     benefit4_uuid = benefit4Response.body.uuid
 
+    expect(benefit1Response.statusCode).toBe(201)
+    expect(benefit2Response.statusCode).toBe(201)
+    expect(benefit3Response.statusCode).toBe(201)
+    expect(benefit4Response.statusCode).toBe(201)
 
     //create branches
     const branchesByName = [
@@ -142,6 +149,9 @@ describe("E2E Business tests", () => {
       .post(`/branch`)
       .set('Authorization', `Bearer ${correctAdminToken}`)
       .send(branchesByName);
+
+    expect(branches.statusCode).toBe(201)
+
     branch1_uuid = branches.body[0].uuid
     branch2_uuid = branches.body[1].uuid
     branch3_uuid = branches.body[2].uuid
@@ -1202,7 +1212,6 @@ describe("E2E Business tests", () => {
 
     describe("E2E Create business user by business admin", () => {
 
-
       it("Should throw an error if user name is missing", async () => {
         const input = {
           password: "1345687",
@@ -1266,7 +1275,7 @@ describe("E2E Business tests", () => {
           user_name: "Fernando Finanças"
         }
 
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_admin_token}`).send(input).query({ user_id: partner_finances_user_uuid})
+        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_admin_token}`).send(input).query({ user_id: partner_finances_user_uuid })
         //test if password has not changed
         const inputAuthenticate = {
           business_document: "comercio",
@@ -1288,7 +1297,7 @@ describe("E2E Business tests", () => {
           password: "new-password123"
         }
 
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_admin_token}`).send(input).query({ user_id: partner_finances_user_uuid})
+        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_admin_token}`).send(input).query({ user_id: partner_finances_user_uuid })
         //test if password has not changed
         const inputAuthenticate = {
           business_document: "comercio",
@@ -1312,7 +1321,7 @@ describe("E2E Business tests", () => {
           password: "another-new-password123"
         }
 
-        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_admin_token}`).send(input).query({ user_id: partner_finances_user_uuid})
+        const result = await request(app).patch("/company-user").set('Authorization', `Bearer ${partner_admin_token}`).send(input).query({ user_id: partner_finances_user_uuid })
         //test if password has not changed
         const inputAuthenticate = {
           business_document: "comercio",
@@ -1580,13 +1589,14 @@ describe("E2E Business tests", () => {
   })
 
   describe("Employer Item Details by Correct Admin", () => {
-    let item_details_1: string
     describe("E2E Create Employer Item details by correct admin", () => {
       it("Should throw an error if cycle end day is missing", async () => {
         const input = {
           item_uuid: randomUUID(),
           business_info_uuid: randomUUID(),
-          cycle_end_day: 0
+          cycle_end_day: 0,
+          value: 200
+
         };
         const result = await request(app)
           .post("/business/item/details/correct")
@@ -1599,7 +1609,9 @@ describe("E2E Business tests", () => {
         const input = {
           item_uuid: randomUUID(),
           business_info_uuid: randomUUID(),
-          cycle_end_day: 1
+          cycle_end_day: 1,
+          value: 200
+
         };
         const result = await request(app)
           .post("/business/item/details/correct")
@@ -1612,7 +1624,9 @@ describe("E2E Business tests", () => {
         const input = {
           item_uuid: benefit1_uuid,
           business_info_uuid: randomUUID(),
-          cycle_end_day: 1
+          cycle_end_day: 1,
+          value: 200
+
         };
         const result = await request(app)
           .post("/business/item/details/correct")
@@ -1622,41 +1636,89 @@ describe("E2E Business tests", () => {
         expect(result.body.error).toBe("Business not found");
       });
 
-      it("Should throw an error if business already has item registered", async () => {
-        const input = {
-          item_uuid: benefit1_uuid,
-          business_info_uuid: employer_info_uuid,
-          cycle_end_day: 1
-        };
-        const result = await request(app)
-          .post("/business/item/details/correct")
-          .set('Authorization', `Bearer ${correctAdminToken}`)
-          .send(input);
-        expect(result.statusCode).toBe(409);
-        expect(result.body.error).toBe("Business Already has this item")
-      });
 
       it("Should create a new item details", async () => {
         const input = {
           item_uuid: benefit4_uuid,
           business_info_uuid: employer_info_uuid,
-          cycle_end_day: 1
+          cycle_end_day: 1,
+          value: 200
         };
         const result = await request(app)
           .post("/business/item/details/correct")
           .set('Authorization', `Bearer ${correctAdminToken}`)
           .send(input);
 
-        const findItemDetails = await request(app).get(`/business/item/details/${result.body.uuid}/correct/`).set('Authorization', `Bearer ${correctAdminToken}`).send(input)
-        item_details_2 = findItemDetails.body.uuid
-
-
         expect(result.statusCode).toBe(201);
-        expect(findItemDetails.statusCode).toBe(200)
-        expect(findItemDetails.body.item_uuid).toBe(input.item_uuid)
-        expect(findItemDetails.body.business_info_uuid).toBe(input.business_info_uuid)
-        expect(findItemDetails.body.cycle_end_day).toBe(input.cycle_end_day)
-        expect(findItemDetails.body.cycle_start_day).toBe(input.cycle_end_day + 1)
+        expect(result.body.employerItem).toHaveProperty('uuid')
+        expect(result.body.employerItem.item_uuid).toBe(input.item_uuid)
+        expect(result.body.employerItem.business_info_uuid).toBe(input.business_info_uuid)
+        expect(result.body.employerItem.is_active).toBeTruthy()
+        expect(result.body.employerItem.cycle_end_day).toBe(input.cycle_end_day)
+        expect(result.body.employerItem.cycle_start_day).toBe(input.cycle_end_day + 1)
+        expect(result.body.defaultGroup).toHaveProperty('uuid')
+        expect(result.body.defaultGroup.group_name).toBe("Grupo Vale Refeição (Padrão)")
+        expect(result.body.defaultGroup.employer_item_details_uuid).toBe(result.body.employerItem.uuid)
+        expect(result.body.defaultGroup.value).toBe(input.value)
+        expect(result.body.defaultGroup.business_info_uuid).toBe(result.body.employerItem.business_info_uuid)
+        expect(result.body.employerItem.created_at).toBeTruthy()
+        expect(result.body.employerItem.updated_at).toBeFalsy()
+        expect(result.body.defaultGroup.created_at).toBeTruthy()
+        expect(result.body.defaultGroup.updated_at).toBeFalsy()
+      });
+      it("Should create a group for an existing employer item that was created on business first register", async () => {
+        const input = {
+          item_uuid: benefit1_uuid,
+          business_info_uuid: employer_info_uuid,
+          cycle_end_day: 1,
+          value: 200
+        };
+        const result = await request(app)
+          .post("/business/item/details/correct")
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .send(input);
+        expect(result.statusCode).toBe(201);
+        expect(result.body.employerItem).toHaveProperty('uuid')
+        expect(result.body.employerItem.item_uuid).toBe(input.item_uuid)
+        expect(result.body.employerItem.business_info_uuid).toBe(input.business_info_uuid)
+        expect(result.body.employerItem.cycle_end_day).toBe(input.cycle_end_day)
+        expect(result.body.employerItem.cycle_start_day).toBe(input.cycle_end_day + 1)
+        expect(result.body.defaultGroup).toHaveProperty('uuid')
+        expect(result.body.defaultGroup.group_name).toBe("Grupo Vale Alimentação (Padrão)")
+        expect(result.body.defaultGroup.employer_item_details_uuid).toBe(result.body.employerItem.uuid)
+        expect(result.body.defaultGroup.value).toBe(input.value)
+        expect(result.body.defaultGroup.business_info_uuid).toBe(result.body.employerItem.business_info_uuid)
+        expect(result.body.employerItem.created_at).toBeTruthy()
+        expect(result.body.employerItem.updated_at).toBeTruthy()
+        expect(result.body.defaultGroup.created_at).toBeTruthy()
+        expect(result.body.defaultGroup.updated_at).toBeFalsy()
+      });
+      it("Should update item and group", async () => {
+        const input = {
+          item_uuid: benefit1_uuid,
+          business_info_uuid: employer_info_uuid,
+          cycle_end_day: 5,
+          value: 300
+        };
+        const result = await request(app)
+          .post("/business/item/details/correct")
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .send(input);
+        expect(result.statusCode).toBe(201);
+        expect(result.body.employerItem).toHaveProperty('uuid')
+        expect(result.body.employerItem.item_uuid).toBe(input.item_uuid)
+        expect(result.body.employerItem.business_info_uuid).toBe(input.business_info_uuid)
+        expect(result.body.employerItem.cycle_end_day).toBe(input.cycle_end_day)
+        expect(result.body.employerItem.cycle_start_day).toBe(input.cycle_end_day + 1)
+        expect(result.body.defaultGroup).toHaveProperty('uuid')
+        expect(result.body.defaultGroup.group_name).toBe("Grupo Vale Alimentação (Padrão)")
+        expect(result.body.defaultGroup.employer_item_details_uuid).toBe(result.body.employerItem.uuid)
+        expect(result.body.defaultGroup.value).toBe(input.value)
+        expect(result.body.defaultGroup.business_info_uuid).toBe(result.body.employerItem.business_info_uuid)
+        expect(result.body.employerItem.created_at).toBeTruthy()
+        expect(result.body.employerItem.updated_at).toBeTruthy()
+        expect(result.body.defaultGroup.created_at).toBeTruthy()
+        expect(result.body.defaultGroup.updated_at).toBeTruthy()
       });
     })
     describe("E2E Find All Employer item details by correct admin", () => {
@@ -1691,9 +1753,6 @@ describe("E2E Business tests", () => {
         const result = await request(app).get(`/business/item/details/correct/${input.business_info_uuid}`).set('Authorization', `Bearer ${correctAdminToken}`).send(input)
         expect(result.statusCode).toBe(200)
         expect(result.body.length).toBe(5)
-        expect(result.body[0].item_uuid).toEqual(benefit1_uuid)
-        expect(result.body[1].item_uuid).toEqual(benefit3_uuid)
-        expect(result.body[2].item_uuid).toEqual(benefit2_uuid)
         expect(result.body[0].business_info_uuid).toEqual(employer_info_uuid)
         expect(result.body[1].business_info_uuid).toEqual(employer_info_uuid)
         expect(result.body[2].business_info_uuid).toEqual(employer_info_uuid)
@@ -1866,7 +1925,7 @@ describe("E2E Business tests", () => {
       })
       it("Should return an item detail", async () => {
         const input = {
-          id: item_details_2,
+          id: item_details_1,
         }
         const result = await request(app).get(`/business/item/details/${input.id}/employer`).set('Authorization', `Bearer ${employer_user_token}`)
         expect(result.statusCode).toBe(200)
