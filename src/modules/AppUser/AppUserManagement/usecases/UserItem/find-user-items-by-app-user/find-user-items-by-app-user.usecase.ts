@@ -15,10 +15,6 @@ export class FindAllUserItemsByAppUserUsecase {
   async execute(user_info_uuid: string): Promise<OutputFindAppUserItemDTO[] | []> {
     if (!user_info_uuid) throw new CustomError("User Info id is required", 404)
 
-    //check if app user exists
-    const userInfo = await this.appuserInfoRepository.find(new Uuid(user_info_uuid));
-    if (!userInfo) throw new CustomError("User not found", 404);
-
     const userItems = await this.appUserItemRepository.findAllUserItems(user_info_uuid);
     if (userItems.length === 0) return [];
 

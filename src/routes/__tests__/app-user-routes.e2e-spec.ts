@@ -2611,66 +2611,61 @@ describe("E2E App User tests", () => {
       })
     })
 
-    // describe("E2E tests User items by app user", () => {
-    //   let employee1Item: string
-    //   describe("E2E Tests Find user item by app user", () => {
-    //     beforeAll(async () => {
-    //       const userItem1: any = {
-    //         user_info_uuid: employee_user_info,
-    //         item_uuid: benefit2_uuid,
-    //         balance: 1,
-    //         status: 'active',
-    //       }
-    //       const userItem2: any = {
-    //         user_info_uuid: employee_user_info,
-    //         item_uuid: benefit3_uuid,
-    //         balance: 1,
-    //         status: 'active',
-    //       }
-    //       const createUserItem1 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem1)
-    //       const createUserItem2 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem2)
+    describe("E2E tests User items by app user", () => {
+      describe("E2E Tests Find user item by app user", () => {
+        // beforeAll(async () => {
+        //   const userItem1: any = {
+        //     user_info_uuid: employee_user_info,
+        //     item_uuid: benefit2_uuid,
+        //     balance: 1,
+        //     status: 'active',
+        //   }
+        //   const userItem2: any = {
+        //     user_info_uuid: employee_user_info,
+        //     item_uuid: benefit3_uuid,
+        //     balance: 1,
+        //     status: 'active',
+        //   }
+        //   const createUserItem1 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem1)
+        //   const createUserItem2 = await request(app).post("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(userItem2)
 
-    //       employee1Item = createUserItem1.body.uuid
-    //       expect(createUserItem1.statusCode).toBe(201)
-    //       expect(createUserItem2.statusCode).toBe(201)
+        //   employee1Item = createUserItem1.body.uuid
+        //   expect(createUserItem1.statusCode).toBe(201)
+        //   expect(createUserItem2.statusCode).toBe(201)
 
-    //     })
-    //     it("Should return app user item", async () => {
-    //       const input = {
-    //         userItemId: employee1Item
-    //       }
+        // })
+        it("Should return app user item", async () => {
+          const input = {
+            userItemId: pre_paid_user_item_uuid
+          }
 
-    //       const result = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
-    //       expect(result.statusCode).toBe(200)
-    //       expect(result.body.uuid).toBe(input.userItemId)
-    //       expect(result.body.user_info_uuid).toBe(employee_user_info)
+          const result = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
+          expect(result.statusCode).toBe(200)
+          expect(result.body.uuid).toBe(input.userItemId)
+          expect(result.body.user_info_uuid).toBe(employee_user_info)
+          expect(result.body.Provider.business_info_uuid).toBe(employer_info_uuid)
+        })
 
-    //     })
+        it("Should throw an error if user is not authorized", async () => {
+          const input = {
+            userItemId: pre_paid_user_item_uuid
+          }
+          const result = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input)
+          expect(result.statusCode).toBe(403)
+          expect(result.body.error).toBe('Unauthorized access for user')
 
-    //     it("Should throw an error if user is not authorized", async () => {
-    //       const input = {
-    //         userItemId: pre_paid_user_item_uuid
-    //       }
-    //       const result = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input)
-    //       expect(result.statusCode).toBe(403)
-    //       expect(result.body.error).toBe('Unauthorized access for user')
+        })
+      })
 
-    //     })
-    //   })
+      describe("E2E Testes find all user items by user", () => {
+        it("Should return user items", async () => {
+          const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
+          console.log(result.body)
+          expect(result.statusCode).toBe(200)
+        })
 
-    //   describe("E2E Testes find all user items by user", () => {
-    //     it("Should return user items", async () => {
-    //       const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
-    //       expect(result.statusCode).toBe(200)
-    //       expect(result.body.length).toBe(2)
-    //     })
-    //     it("Should return empty array", async () => {
-    //       const result = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken2}`)
-    //       expect(result.statusCode).toBe(200)
-    //       expect(result.body.length).toBe(0)
-    //     })
-    //   })
-    // })
+      })
+    })
   })
 
   // describe("E2E tests Groups", () => {
