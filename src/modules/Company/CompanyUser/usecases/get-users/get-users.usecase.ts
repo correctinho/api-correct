@@ -12,7 +12,20 @@ export class GetUsersUsecase {
 
         const getUsers = await this.companyUserRepository.findUsers(business_info_uuid)
         if(!getUsers) throw new CustomError("Users not found", 400)
-        
-        return getUsers
+
+        return getUsers.map((user) => {
+          return {
+            uuid: user.uuid.uuid,
+            business_info_uuid: user.business_info_uuid.uuid,
+            email: user.email,
+            document: user.document,
+            name: user.name,
+            is_admin: user.is_admin,
+            permissions: user.permissions,
+            user_name: user.user_name,
+            function: user.function,
+            status: user.status,
+          }
+        })
     }
 }

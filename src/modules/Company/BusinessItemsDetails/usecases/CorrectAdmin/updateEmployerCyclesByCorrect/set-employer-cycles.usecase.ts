@@ -22,6 +22,7 @@ export class SetEmployerCycleUsecase {
       uuid: new Uuid(itemDetails.uuid),
       item_uuid: new Uuid(itemDetails.item_uuid),
       business_info_uuid: new Uuid(itemDetails.business_info_uuid),
+      is_active: itemDetails.is_active,
       cycle_start_day: itemDetails.cycle_start_day,
       cycle_end_day: itemDetails.cycle_end_day
     }

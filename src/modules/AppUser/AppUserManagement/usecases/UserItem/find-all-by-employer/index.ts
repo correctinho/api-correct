@@ -5,6 +5,6 @@ import {  FindAllUserItemsByEmployeryController } from "./find-all-by-employer.c
 const appUserItemRepository = new AppUserItemPrismaRepository()
 const appUserInfoRepository = new AppUserInfoPrismaRepository()
 
-const findAllUserItemsByemployer = new  FindAllUserItemsByEmployeryController(appUserItemRepository, appUserInfoRepository)
+const findAllUserItemsByemployer = new FindAllUserItemsByEmployeryController(appUserItemRepository, appUserInfoRepository)
 
 export { findAllUserItemsByemployer}

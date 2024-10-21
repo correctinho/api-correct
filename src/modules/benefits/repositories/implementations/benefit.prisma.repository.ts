@@ -2,7 +2,6 @@ import { prismaClient } from '../../../../infra/databases/prisma.config';
 import { BenefitsEntity, BenefitsProps } from '../../entities/benefit.entity';
 import { IBenefitsRepository } from '../benefit.repository';
 import { newDateF } from '../../../../utils/date';
-import { ItemCategory, ItemType } from '../../usecases/create-benefit/create-benefit.dto';
 import { Uuid } from '../../../../@shared/ValueObjects/uuid.vo';
 import { BusinessItemsDetailsEntity } from '../../../Company/BusinessItemsDetails/entities/businessItemDetails.entity';
 
@@ -21,8 +20,8 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
       uuid: new Uuid(item.uuid),
       name: item.name,
       description: item.description,
-      item_type: item.item_type as ItemType,
-      item_category: item.item_category as ItemCategory,
+      item_type: item.item_type,
+      item_category: item.item_category,
       parent_uuid: new Uuid(item.parent_uuid),
       created_at: item.created_at,
       updated_at: item.updated_at
@@ -52,6 +51,7 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
           business_info_uuid: itemDetails.business_info_uuid.uuid,
           cycle_end_day: itemDetails.cycle_end_day,
           cycle_start_day: itemDetails.cycle_start_day,
+          is_active: itemDetails.is_active,
           created_at: itemDetails.created_at,
         }
       })
@@ -103,8 +103,8 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
       uuid: new Uuid(item.uuid),
       name: item.name,
       description: item.description,
-      item_type: item.item_type as ItemType,
-      item_category: item.item_category as ItemCategory,
+      item_type: item.item_type,
+      item_category: item.item_category,
       parent_uuid: new Uuid(item.parent_uuid),
       created_at: item.created_at,
       updated_at: item.updated_at
@@ -126,8 +126,8 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
       uuid: new Uuid(item.uuid),
       name: item.name,
       description: item.description,
-      item_type: item.item_type as ItemType,
-      item_category: item.item_category as ItemCategory,
+      item_type: item.item_type,
+      item_category: item.item_category,
       parent_uuid: new Uuid(item.parent_uuid),
       created_at: item.created_at,
       updated_at: item.updated_at

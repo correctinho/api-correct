@@ -9,9 +9,21 @@ export class GetSingleUserUsecase {
   async execute(uuid: string) {
     if (!uuid) throw new CustomError("Id is required", 400)
 
-    const getUserDetails = await this.companyUserRepository.findById(uuid)
-    if (!getUserDetails) throw new CustomError("User not found", 404)
+    const user = await this.companyUserRepository.findById(uuid)
+    if (!user) throw new CustomError("User not found", 404)
 
-    return getUserDetails
+      return {
+        uuid: user.uuid.uuid,
+        business_info_uuid: user.business_info_uuid.uuid,
+        email: user.email,
+        document: user.document,
+        name: user.name,
+        is_admin: user.is_admin,
+        permissions: user.permissions,
+        user_name: user.user_name,
+        function: user.function,
+        status: user.status,
+
+      }
   }
 }

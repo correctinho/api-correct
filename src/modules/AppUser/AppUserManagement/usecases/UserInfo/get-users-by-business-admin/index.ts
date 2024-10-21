@@ -3,8 +3,7 @@ import { AppUserInfoPrismaRepository } from "../../../repositories/implementatio
 import { GetUsersByBusinessAdminController } from "./get-users-by-business-admin.controller";
 
 const appUserRepository = new AppUserInfoPrismaRepository()
-const businessUserRepository = new CompanyUserPrismaRepository()
 
-const getUsersByAdmin = new GetUsersByBusinessAdminController(appUserRepository, businessUserRepository)
+const getUsersByAdmin = new GetUsersByBusinessAdminController(appUserRepository)
 
 export { getUsersByAdmin }

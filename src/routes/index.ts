@@ -10,6 +10,7 @@ import { companyAddressRouter } from './CompanyAddress/company-address.routes';
 import { contractsRouter } from './Contracts/contracts.routes';
 import { businessItemDetailsRouter } from './BusinessItemDetails/business-item-details.routes';
 import { appUserItemRouter } from './AppUserItem/app-user-item.routes';
+import { groupsRouter } from './Groups/groups.routes';
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use(branchRouter);
 router.use(contractsRouter)
 router.use(businessItemDetailsRouter)
 router.use(appUserItemRouter)
+router.use(groupsRouter)
 
 export { router };

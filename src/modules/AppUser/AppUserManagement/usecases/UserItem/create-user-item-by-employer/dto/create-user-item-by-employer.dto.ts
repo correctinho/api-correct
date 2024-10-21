@@ -7,6 +7,7 @@ export type InputCreateAppUserItemByEmployerDTO = {
   balance: number
   status: UserItemStatus
   business_info_uuid: string
+  group_uuid: string
 }
 
 export type OutputCreateappUserItemByEmployerDTO = {
@@ -17,5 +18,6 @@ export type OutputCreateappUserItemByEmployerDTO = {
   balance: number
   status: UserItemStatus,
   business_info_uuid: string
+  group_uuid: string
   created_at: string
 }

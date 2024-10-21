@@ -1,4 +1,4 @@
-import { UserItemStatus } from "@prisma/client";
+import { ItemCategory, ItemType, UserItemStatus } from "@prisma/client";
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
 import { addDaysToDate, newDateF } from "../../../../utils/date";
 import { CustomError } from "../../../../errors/custom.error";
@@ -9,16 +9,23 @@ export type AppUserItemProps = {
   fantasy_name?: string
   user_info_uuid: Uuid
   item_uuid: Uuid
+  item_type?: ItemType
+  item_category?: ItemCategory
   img_url: string
   item_name?: string
   balance: number
   status: UserItemStatus
+  employee_salary?: number
   blocked_at?: string
   cancelled_at?: string
   cancelling_request_at?: string
   block_reason?: string
   cancel_reason?: string
   grace_period_end_date?: string
+  group_uuid: Uuid
+  group_name?: string
+  group_value?: number
+  group_is_default?: boolean
   created_at?: string
   updated_at?: string
 }
@@ -28,15 +35,19 @@ export type AppUserItemCreateCommand = {
   fantasy_name?: string
   user_info_uuid: Uuid
   item_uuid: Uuid
+  item_type?: ItemType
+  item_category?: ItemCategory
   img_url: string
   item_name?: string
   balance: number
   status: UserItemStatus
-  // blocked_at?: string
-  // cancelled_at?: string
-  // block_reason?: string
-  // cancel_reason?: string
-  // grace_period_end_date?: string
+  employee_salary?: number
+  group_uuid: Uuid
+  blocked_at?: string
+  cancelled_at?: string
+  block_reason?: string
+  cancel_reason?: string
+  grace_period_end_date?: string
   created_at?: string
   updated_at?: string
 }
@@ -44,19 +55,26 @@ export type AppUserItemCreateCommand = {
 export class AppUserItemEntity {
   private _uuid?: Uuid
   private _business_info_uuid: Uuid
-  private _fantasy_name: string
+  private _fantasy_name?: string
   private _user_info_uuid: Uuid
   private _item_uuid: Uuid
+  private _item_type?: ItemType
+  private _item_category?: ItemCategory
   private _img_url: string
   private _item_name?: string
   private _balance: number
   private _status: UserItemStatus
+  private _employee_salary?: number
   private _blocked_at?: string
   private _cancelled_at?: string
   private _cancelling_request_at?: string
   private _block_reason?: string
   private _cancel_reason?: string
   private _grace_period_end_date?: string
+  private _group_uuid: Uuid
+  private _group_name?: string
+  private _group_value?: number
+  private _group_is_default: boolean
   private _created_at?: string
   private _updated_at?: string
 
@@ -69,13 +87,17 @@ export class AppUserItemEntity {
     this._img_url = props.img_url
     this._item_name = props.item_name
     this._balance = props.balance
-    this._status = props.status
+    this._status = props.status ?? 'active'
+    this._group_uuid = props.group_uuid
     this._blocked_at = props.blocked_at
     this._cancelled_at = props.cancel_reason
     this._cancelling_request_at = props.cancelling_request_at
     this._block_reason = props.block_reason
     this._cancel_reason = props.cancel_reason
     this._grace_period_end_date = props.grace_period_end_date
+    this._group_name = props.group_name
+    this._group_value = props.group_value
+    this._group_is_default = props.group_is_default
     this._created_at = newDateF(new Date())
     this._updated_at = newDateF(new Date())
     this.validate()
@@ -101,6 +123,14 @@ export class AppUserItemEntity {
     return this._item_uuid
   }
 
+  get item_type(): ItemType {
+    return this._item_type
+  }
+
+  get item_category(): ItemCategory {
+    return this._item_category
+  }
+
   get img_url(): string {
     return this._img_url
   }
@@ -115,6 +145,10 @@ export class AppUserItemEntity {
 
   get status(): UserItemStatus {
     return this._status
+  }
+
+  get employee_salary(): number {
+    return this._employee_salary
   }
 
   get blocked_at(): string | undefined {
@@ -141,6 +175,19 @@ export class AppUserItemEntity {
     return this._grace_period_end_date
   }
 
+  get group_uuid(): Uuid {
+    return this._group_uuid
+  }
+  get group_name(): string {
+    return this._group_name
+  }
+  get group_value(): number {
+    return this._group_value
+  }
+
+  get group_is_default(): boolean {
+    return this._group_is_default
+  }
   get created_at(): string | undefined {
     return this._created_at
   }
@@ -161,22 +208,39 @@ export class AppUserItemEntity {
 
   blockUserItem() {
     this._status = "blocked"
+    this.validate()
   }
 
   activateStatus() {
     this._status = "active"
+    this.validate()
   }
 
-  cancelUserItem() {
+  cancelPostPaidUserItem() {
     this._status = 'cancelled'
+
+    const cancelledAt = newDateF(new Date())
+    this.changeCancelledAt(cancelledAt)
+    this.validate()
   }
 
-  toBeCancelStatus() {
+  private cancelPrePaidUserItem() {
     this._status = 'to_be_cancelled'
+    this.validate()
+  }
+
+  changeGroupUuid(group_uuid: Uuid) {
+    this._group_uuid = group_uuid
+    this.validate()
+  }
+
+  changeGroupValue(group_value: number) {
+    this._group_value = group_value;
+    this.validate();
   }
 
   async scheduleCancelling() {
-    this.toBeCancelStatus()
+    this.cancelPrePaidUserItem()
 
     const requestedAt = newDateF(new Date())
 
@@ -189,6 +253,10 @@ export class AppUserItemEntity {
     this.validate()
   }
 
+  changeUserInfoUuid(user_info_uuid: Uuid) {
+    this._user_info_uuid = user_info_uuid
+    this.validate()
+  }
   changeItemName(itemName: string) {
     this._item_name = itemName;
     this.validate();
@@ -199,7 +267,7 @@ export class AppUserItemEntity {
     this.validate();
   }
 
-  changeCancelledAt(cancelledAt: string | undefined) {
+  private changeCancelledAt(cancelledAt: string | undefined) {
     this._cancelled_at = cancelledAt;
     this.validate();
   }
@@ -219,7 +287,7 @@ export class AppUserItemEntity {
     this.validate();
   }
 
-  changeCancellingRequestAt(cancelRequestAt: string | undefined) {
+  private changeCancellingRequestAt(cancelRequestAt: string | undefined) {
     this._cancelling_request_at = cancelRequestAt
     this.validate()
   }
@@ -228,6 +296,7 @@ export class AppUserItemEntity {
     if (!this._user_info_uuid) throw new CustomError("User Info id is required", 400)
     if (!this._item_uuid) throw new CustomError("Item id is required", 400)
     if (this._balance < 0) throw new CustomError("Balance cannot be negative", 400);
+    if(this._balance > this.group_value) throw new CustomError("Balance cannot be higher than group value setup", 400)
 
     if (typeof this._balance !== 'number' || isNaN(this._balance)) throw new CustomError("Balance must be a valid number", 400);
 
@@ -235,6 +304,13 @@ export class AppUserItemEntity {
     if (!Object.values(UserItemStatus).includes(this._status)) {
       throw new CustomError("Invalid status", 400);
     }
+
+    //Validate balance updates
+    //Check if balance is higher than 40% of employees salary
+    if (this._item_category === 'pos_pago' && this._employee_salary !== undefined && this._balance > 0.4 * this._employee_salary) {
+      throw new CustomError("Balance for 'pos_pago' category cannot exceed 40% of the employee's salary", 400);
+    }
+
   }
 
   static create(data: AppUserItemCreateCommand) {

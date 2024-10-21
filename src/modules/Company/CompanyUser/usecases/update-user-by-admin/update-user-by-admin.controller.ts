@@ -1,7 +1,5 @@
 import { Request, Response } from "express";
 import { ICompanyUserRepository } from "../../repositories/company-user.repository";
-import { CompanyUserEntity } from "../../entities/company-user.entity";
-import { logger } from "../../../../../utils/logger";
 import { UpdateUserByAdminUsecase } from "./update-user-by-admin.usecase";
 import { IPasswordCrypto } from "../../../../../crypto/password.crypto";
 
@@ -15,14 +13,15 @@ export class UpdateUserbyAdminController {
   async handle(req: Request, res: Response) {
 
     try {
-      const data: CompanyUserEntity = req.body
+      const data = req.body
       data.uuid = req.query.user_id as string
 
-      const businessAdminUuid = req.companyUser.companyUserId
-      const businessInfoUuid = req.companyUser.businessInfoUuid
+      data.isAdmin = req.companyUser.isAdmin
+      data.business_info_uuid = req.companyUser.businessInfoUuid
+
       const updateUserUsecase = new UpdateUserByAdminUsecase(this.companyUserRepository, this.passwordCrypto)
 
-      const updateUser = await updateUserUsecase.execute(data, businessAdminUuid, businessInfoUuid)
+      const updateUser = await updateUserUsecase.execute(data)
 
       return res.json(updateUser)
 

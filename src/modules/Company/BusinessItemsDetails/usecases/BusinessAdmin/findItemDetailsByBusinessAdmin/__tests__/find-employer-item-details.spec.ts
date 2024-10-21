@@ -1,16 +1,30 @@
 import { Uuid } from '../../../../../../../@shared/ValueObjects/uuid.vo';
 import { FindEmployerItemDetailsUsecase } from '../find-employer-item-details.usecase'
-import {randomUUID} from 'crypto'
+import { randomUUID } from 'crypto'
 const MockRepository = () => {
   return {
-      create: jest.fn(),
-      update: jest.fn(),
-      find: jest.fn(),
-      findAll: jest.fn(),
-      findByItemUuidAndBusinessInfo:jest.fn(),
-      findAllEmployerItems:jest.fn()
+    create: jest.fn(),
+    update: jest.fn(),
+    find: jest.fn(),
+    findAll: jest.fn(),
+    findByItemUuidAndBusinessInfo: jest.fn(),
+    findAllEmployerItems: jest.fn(),
+    findByIdWithItems: jest.fn()
   };
 };
+
+const ItemMockRepository = () => {
+  return {
+    create: jest.fn(),
+    find: jest.fn(),
+    update: jest.fn(),
+    findAll: jest.fn(),
+    findByName: jest.fn(),
+    findWithBranches: jest.fn(),
+    createCustomBenefit: jest.fn(),
+    findByBusiness: jest.fn()
+  };
+}
 
 describe("Unity Tests Find Employer item details usecase", () => {
   it("Should throw an error if id is missing", async () => {
@@ -20,11 +34,12 @@ describe("Unity Tests Find Employer item details usecase", () => {
     }
 
     const itemDetailsRepository = MockRepository()
-    const usecase = new FindEmployerItemDetailsUsecase(itemDetailsRepository)
+    const itemsRepository = ItemMockRepository()
+    const usecase = new FindEmployerItemDetailsUsecase(itemDetailsRepository, itemsRepository)
 
-    try{
+    try {
       await usecase.execute(input.id, input.business_info_uuid)
-    }catch(err: any){
+    } catch (err: any) {
       expect(err.statusCode).toBe(400)
       expect(err.message).toBe("Id is required")
     }
@@ -37,7 +52,7 @@ describe("Unity Tests Find Employer item details usecase", () => {
     }
 
     const foundItem = {
-      uuid:new Uuid(),
+      uuid: new Uuid(),
       item_uuid: new Uuid(),
       cycle_start_day: 0,
       cycle_end_day: 0,
@@ -46,12 +61,13 @@ describe("Unity Tests Find Employer item details usecase", () => {
     }
 
     const itemDetailsRepository = MockRepository()
-    const usecase = new FindEmployerItemDetailsUsecase(itemDetailsRepository)
+    const itemsRepository = ItemMockRepository()
+    const usecase = new FindEmployerItemDetailsUsecase(itemDetailsRepository, itemsRepository)
 
 
-    try{
+    try {
       await usecase.execute(input.id, input.business_info_uuid)
-    }catch(err: any){
+    } catch (err: any) {
       expect(err.statusCode).toBe(404)
       expect(err.message).toBe("Item details not found")
     }
@@ -60,7 +76,7 @@ describe("Unity Tests Find Employer item details usecase", () => {
   it("Should return item", async () => {
 
     const foundItem = {
-      uuid:new Uuid(randomUUID()),
+      uuid: new Uuid(randomUUID()),
       item_uuid: new Uuid(randomUUID()),
       business_info_uuid: new Uuid(randomUUID()),
       cycle_start_day: 0,
@@ -70,8 +86,11 @@ describe("Unity Tests Find Employer item details usecase", () => {
     }
 
     const itemDetailsRepository = MockRepository()
+    const itemsRepository = ItemMockRepository()
+
+    itemsRepository.find.mockResolvedValueOnce({})
     itemDetailsRepository.find.mockResolvedValueOnce(foundItem)
-    const usecase = new FindEmployerItemDetailsUsecase(itemDetailsRepository)
+    const usecase = new FindEmployerItemDetailsUsecase(itemDetailsRepository, itemsRepository)
 
     const result = await usecase.execute(foundItem.uuid.uuid, foundItem.business_info_uuid.uuid)
     expect(result.uuid).toEqual(foundItem.uuid.uuid)

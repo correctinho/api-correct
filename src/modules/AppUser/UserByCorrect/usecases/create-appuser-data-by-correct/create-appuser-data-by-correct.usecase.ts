@@ -7,32 +7,49 @@ import { AppUserInfoCreateCommand, AppUserInfoEntity, AppUserInfoProps } from '.
 import { ICompanyDataRepository } from '../../../../Company/CompanyData/repositories/company-data.repository';
 import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
 import { IAppUserAuthRepository } from '../../../AppUserManagement/repositories/app-use-auth-repository';
-import { AppUserAuthSignUpEntity } from '../../../AppUserManagement/entities/app-user-auth.entity';
+import { IBusinessItemDetailsRepository } from '../../../../Company/BusinessItemsDetails/repositories/business-item-details.repository';
+import { OutputFindEmployerItemDetailsDTO } from '../../../../Company/BusinessItemsDetails/usecases/CorrectAdmin/findItemDetailsByCorrect/dto/find-employer-item.dto';
+import { InputCreateAppUserDataByCorrectDTO } from './dto/-create-app-user-data-by-correct.dto';
+import { AppUserItemEntity } from '../../../AppUserManagement/entities/app-user-item.entity';
+import { UserItemStatus } from '@prisma/client';
+import { BenefitGroupsEntity } from '../../../../Company/BenefitGroups/entities/benefit-groups.entity';
+import { IAppUserItemRepository } from '../../../AppUserManagement/repositories/app-user-item-repository';
+
+let employerActiveItems: OutputFindEmployerItemDetailsDTO[] = []
 
 export class CreateAppUserByCorrectUsecaseTest {
   constructor(
     private appUserInfoRepository: IAppUserInfoRepository,
     private businessRepository: ICompanyDataRepository,
-    private appUserAuthRepository: IAppUserAuthRepository
+    private appUserAuthRepository: IAppUserAuthRepository,
+    private employerItemsRepository: IBusinessItemDetailsRepository,
+    private employeeItemRepository: IAppUserItemRepository
   ) { }
 
-  async execute(fileBuffer: Buffer, business_info_uuid: string) {
+  async execute(data: InputCreateAppUserDataByCorrectDTO) {
     let validatedUser: AppUserInfoEntity[] = [];
     let errorUser: string[] = [];
     let usersRegistered: string[] = [];
-    let associatedUsers: string[] = []; // Users in this array will not be registered, because they are already associated with another company
 
-    if (!business_info_uuid) throw new CustomError("Business Id is required", 400);
+    if (!data.business_info_uuid) throw new CustomError("Business Id is required", 400);
 
-    const business = await this.businessRepository.findById(business_info_uuid);
+    const business = await this.businessRepository.findById(data.business_info_uuid);
     if (!business) throw new CustomError("Business not found", 404);
     if (business.status !== 'active') throw new CustomError("Business must be activated", 400);
 
-    const users = await this.readCSV(fileBuffer);
-    await this.validateUser(users, business_info_uuid, validatedUser, errorUser);
-    await this.processUsers(validatedUser, business_info_uuid, usersRegistered, associatedUsers);
+    //check if employer has registered items
+    const employerItems = await this.employerItemsRepository.findAllEmployerItems(data.business_info_uuid)
+    if (employerItems.length === 0) throw new CustomError("No items found for employer", 404)
 
-    return { usersRegistered, errorUser, associatedUsers };
+    //It is possible there are not hired items => is_active === false. So we need to map active items
+    await this.mapEmployerActiveItems(employerItems)
+    if (employerActiveItems.length === 0) throw new CustomError("Employer has no active items", 404)
+
+    const users = await this.readCSV(data.fileBuffer);
+    await this.validateUser(users, data.business_info_uuid, validatedUser, errorUser);
+    await this.processUsers(validatedUser, data.business_info_uuid, usersRegistered);
+
+    return { usersRegistered, errorUser };
   }
 
   private async readCSV(fileBuffer: Buffer): Promise<AppUserInfoRequest[]> {
@@ -114,6 +131,7 @@ export class CreateAppUserByCorrectUsecaseTest {
         marital_status: user.marital_status,
         dependents_quantity: user.dependents_quantity,
         user_document_validation_uuid: null,
+        is_employee: true
       };
 
       try {
@@ -125,68 +143,100 @@ export class CreateAppUserByCorrectUsecaseTest {
     }
   }
 
-  private async processUsers(users: AppUserInfoEntity[], business_info_uuid: string, usersRegistered: string[], associatedUsers: string[]) {
+  private async processUsers(users: AppUserInfoEntity[], business_info_uuid: string, usersRegistered: string[]) {
     for (const user of users) {
+      //user.setEmployee()
+
       const existingUserInfo = await this.appUserInfoRepository.findByDocumentUserInfo(user.document);
       const findUserAuth = await this.appUserAuthRepository.findByDocument(user.document);
 
-      const userInfoProps: AppUserInfoProps = {
-        business_info_uuid: new Uuid(business_info_uuid),
-        address_uuid: user.address_uuid,
-        document: user.document,
-        document2: user.document2,
-        document3: user.document3,
-        full_name: user.full_name,
-        display_name: user.display_name,
-        internal_company_code: user.internal_company_code,
-        gender: user.gender,
-        date_of_birth: user.date_of_birth,
-        phone: user.phone,
-        email: user.email,
-        salary: user.salary,
-        company_owner: user.company_owner,
-        status: user.status,
-        function: user.function,
-        recommendation_code: user.recommendation_code,
-        is_authenticated: user.is_authenticated,
-        marital_status: user.marital_status,
-        dependents_quantity: user.dependents_quantity,
-        user_document_validation_uuid: user.user_document_validation_uuid,
-      };
+      let employeeItemsArray: AppUserItemEntity[] = [] // here are saved all items that must be saved for current employee
+      let defaultGroup
+      for (const employerItem of employerActiveItems) {
+        //separate the default group that was previously created by correct
+        const group = (employerItem.BenefitGroups.find(group => group.is_default === true))
+        //for each employerItem, check if employee already has this item
+        const employeeAlreadyHasItem = await this.employeeItemRepository.findItemByEmployeeAndBusiness(user.uuid.uuid, user.business_info_uuid.uuid, employerItem.item_uuid)
+        if (employeeAlreadyHasItem) {
+          const employeeAlreadyHasItemEntity = new AppUserItemEntity(employeeAlreadyHasItem)
+          employeeAlreadyHasItemEntity.changeGroupUuid(new Uuid(group.uuid))
 
-      if (existingUserInfo) {
-        const isAssociatedWithOtherBusiness = existingUserInfo.business_info_uuids.some(business => business !== business_info_uuid);
-
-        if (isAssociatedWithOtherBusiness) {
-          associatedUsers.push(existingUserInfo.document);
-          const userInfoEntity = new AppUserInfoEntity(userInfoProps);
-          await this.appUserInfoRepository.saveOrUpdateByCSV(userInfoEntity);
-
+          employeeItemsArray.push(employeeAlreadyHasItem)
         }
+
+        defaultGroup = {
+          uuid: new Uuid(group.uuid),
+          group_name: group.group_name,
+          employer_item_details_uuid: new Uuid(group.employer_item_details_uuid),
+          value: group.value,
+          is_default: group.is_default,
+          business_info_uuid: new Uuid(group.business_info_uuid),
+          created_at: group.created_at
+        }
+
+        const employeeItemEntityData = {
+          business_info_uuid: user.business_info_uuid,
+          user_info_uuid: user.uuid,
+          item_uuid: new Uuid(employerItem.item_uuid),
+          img_url: employerItem.img_url,
+          item_name: employerItem.Item.name,
+          balance: defaultGroup.value,
+          group_uuid: new Uuid(group.uuid),
+          status: 'inactive' as UserItemStatus
+        }
+
+        const employeeItemEntity = AppUserItemEntity.create(employeeItemEntityData)
+        employeeItemsArray.push(employeeItemEntity)
       }
 
 
-      if (!existingUserInfo && !findUserAuth) {
+      if (existingUserInfo) {
+        user.changeUuid(new Uuid(existingUserInfo.uuid))
 
-        const userInfoEntity = new AppUserInfoEntity(userInfoProps);
-        await this.appUserInfoRepository.saveOrUpdateByCSV(userInfoEntity);
-        usersRegistered.push(userInfoEntity.document);
+        for (const employeeItem of employeeItemsArray) {
+          employeeItem.changeUserInfoUuid(new Uuid(existingUserInfo.uuid))
+        }
+
+        //if user exists, we need to set that he is an employee
+        // also set a group for each item
+        await this.appUserInfoRepository.saveOrUpdateByCSV(user, employeeItemsArray)
+
+        //now we need to know if current user is already an employee
+        const isAlreadyAnEmployee = existingUserInfo.Employee.find(business => business.business_info_uuid === business_info_uuid);
+
+        if (isAlreadyAnEmployee) {
+          //In this situation, user already exists and is already an employee. So we must update employee info
+          //this is also going to create or update user items
+          await this.appUserInfoRepository.updateEmployeeByCSV(user, isAlreadyAnEmployee, employeeItemsArray);
+        } else {
+          //Here we need to create an employee
+          //Also create or update userItems
+          await this.appUserInfoRepository.createEmployeeAndItems(user, employeeItemsArray)
+        }
+
+        usersRegistered.push(user.document);
+      }
+
+      if (!existingUserInfo && !findUserAuth) {
+        //Here, user does not exist in any of the registers, so we are going to create a new userinfo and employee
+        await this.appUserInfoRepository.createUserInfoAndEmployee(user, employeeItemsArray);
+        usersRegistered.push(user.document);
 
       } else if (findUserAuth && !existingUserInfo) {
-        await this.appUserInfoRepository.createUserInfoandUpdateUserAuthByCSV(user);
-        usersRegistered.push(user.document);
-      } else if (existingUserInfo) {
-        const userInfoEntity = new AppUserInfoEntity(userInfoProps);
-        userInfoEntity.addBusinessInfoUuid(new Uuid(business_info_uuid));
 
-        await this.appUserInfoRepository.saveOrUpdateByCSV(userInfoEntity);
+        //Here, we must create userInfo and connect to existing user auth and create an employee
+        await this.appUserInfoRepository.createUserInfoandUpdateUserAuthByCSV(user, employeeItemsArray);
         usersRegistered.push(user.document);
 
-        if (findUserAuth) {
-          const userAuthEntity = new AppUserAuthSignUpEntity(findUserAuth);
-          userAuthEntity.changeUserInfo(existingUserInfo.uuid);
-          await this.appUserAuthRepository.update(userAuthEntity);
-        }
+      }
+
+    }
+  }
+
+  private async mapEmployerActiveItems(employerItems: OutputFindEmployerItemDetailsDTO[]) {
+    for (const item of employerItems) {
+      if (item.is_active) {
+        employerActiveItems.push(item)
       }
     }
   }

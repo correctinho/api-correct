@@ -6,7 +6,6 @@ import { GetUsersByBusinessAdminUsecase } from "./get-users-by-business-admin.us
 export class GetUsersByBusinessAdminController{
     constructor(
         private appUsersRepository: IAppUserInfoRepository,
-        private businessUserRepository: ICompanyUserRepository
     ){}
 
     async handle(req: Request, res: Response){
@@ -14,7 +13,7 @@ export class GetUsersByBusinessAdminController{
         try{
           const businessInfoUuid = req.companyUser.businessInfoUuid
 
-           const usecase = new GetUsersByBusinessAdminUsecase(this.appUsersRepository, this.businessUserRepository)
+           const usecase = new GetUsersByBusinessAdminUsecase(this.appUsersRepository)
 
             const result = await usecase.execute(businessInfoUuid)
             return res.json(result)

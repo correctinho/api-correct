@@ -19,11 +19,14 @@ const authenticateAdmin = {
 let authToken: string;
 
 beforeAll(async () => {
-  // Criação do admin
-  await request(app).post('/admin').send(inputNewAdmin);
+    //create correct admin
+    const createCorrectAdmin = await request(app).post('/admin').send(inputNewAdmin)
+    expect(createCorrectAdmin.statusCode).toBe(201)
 
   // Autenticação do admin e obtenção do token
   const loginResponse = await request(app).post('/login').send(authenticateAdmin);
+  expect(loginResponse.statusCode).toBe(200)
+
   authToken = loginResponse.body.token; //
 });
 

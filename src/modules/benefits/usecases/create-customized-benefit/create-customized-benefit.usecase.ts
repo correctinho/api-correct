@@ -36,6 +36,7 @@ export class CreateCustomizedBenefitUsecase {
       item_uuid: benefit.uuid,
       business_info_uuid: benefit.business_info_uuid,
       cycle_end_day: input.cycle_end_day,
+      is_active: false,
       cycle_start_day: input.cycle_end_day + 1
     }
 

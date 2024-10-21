@@ -1,8 +1,7 @@
 import { CustomError } from '../../../errors/custom.error';
-import { ItemType, ItemCategory } from '../usecases/create-benefit/create-benefit.dto';
 import { Uuid } from '../../../@shared/ValueObjects/uuid.vo';
-import { BenefitValidatorFactory } from '../benefit.validator';
 import { newDateF } from '../../../utils/date';
+import { ItemCategory, ItemType } from '@prisma/client';
 
 export type BenefitsProps = {
   uuid?: Uuid

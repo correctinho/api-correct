@@ -13,15 +13,15 @@ export class ConfirmPasswordController{
     async handle(req: Request, res: Response){
 
         try{
-            const user_id = req.companyUser.companyUserId
             const password = req.body.password as string
-
+            const currentPassword = req.companyUser.password
+            const business_info_uuid = req.companyUser.businessInfoUuid
             const confirmPasswordUsecase = new ConfirmPasswordUsecase(
                 this.companyUserRepository,
                 this.passwordCrypto
             )
 
-            const comparePassword = await confirmPasswordUsecase.execute(user_id, password)
+            const comparePassword = await confirmPasswordUsecase.execute(business_info_uuid, password, currentPassword)
 
             return res.json(comparePassword)
 

@@ -12,11 +12,14 @@ export class CompanyAdminJWToken implements ICompanyAdminToken{
 
     private TOKEN_SECRET_CRYPTO = createHmac('sha256', this.TOKEN_SECRET).digest('base64')
 
-    create({ uuid }: CompanyUserEntity): string {
+    create({ uuid, business_info_uuid }: CompanyUserEntity): string {
         const token = sign({
-            
+            businessUser: {
+              uuid: uuid.uuid,
+              business_info_uuid: business_info_uuid.uuid
+            }
         }, this.TOKEN_SECRET_CRYPTO, {
-            subject: uuid,
+            subject: uuid.uuid,
             expiresIn: '1D'
         })
 

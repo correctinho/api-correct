@@ -16,7 +16,7 @@ export class FindUserItemByIdByController {
       let user_info_uuid: string | undefined
 
       if(req.companyUser) {
-        business_user_business_info_uuid = req?.companyUser.businessInfoUuid
+        business_user_business_info_uuid = req.companyUser.businessInfoUuid
       }
 
       if(req.appUser) {
