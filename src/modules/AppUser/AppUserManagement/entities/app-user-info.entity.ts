@@ -351,19 +351,17 @@ export class AppUserInfoEntity {
   }
   validate() {
 
-    //rules validations
-    // if(!this.document) throw new CustomError("Document is required", 400)
-    // if(!this.email) throw new CustomError("Email is required")
     if (!this.full_name) throw new CustomError("Full name is required", 400);
     if (!this.date_of_birth) throw new CustomError("Date of birth is required", 400);
     if (!this.gender) throw new CustomError("Gender is required", 400);
 
-    //types validation
-    // this._business_info_uuids.forEach(uuid => {
-    //   if (!(uuid instanceof Uuid)) {
-    //     throw new CustomError("Each business info UUID must be an instance of Uuid", 400);
-    //   }
-    // });
+    if (typeof this.gender !== 'string')
+      throw new CustomError("Gender must be a string", 400);
+
+    if (typeof this.date_of_birth !== 'string')
+      throw new CustomError("Date of birth must be a string", 400);
+
+
 
     if (this.address_uuid && !(this.address_uuid instanceof Uuid))
       throw new CustomError("Address UUID must be instanceof Uuid", 400);
@@ -383,11 +381,7 @@ export class AppUserInfoEntity {
     if (this.internal_company_code && typeof this.internal_company_code !== 'string')
       throw new CustomError("Internal company code must be a string", 400);
 
-    if (typeof this.gender !== 'string')
-      throw new CustomError("Gender must be a string", 400);
 
-    if (typeof this.date_of_birth !== 'string')
-      throw new CustomError("Date of birth must be a string", 400);
 
     if (this.phone && typeof this.phone !== 'string')
       throw new CustomError("Phone must be a string", 400);
@@ -413,7 +407,7 @@ export class AppUserInfoEntity {
     if (this.marital_status && typeof this.marital_status !== 'string')
       throw new CustomError("Marital status must be a string", 400);
 
-    if (typeof this.dependents_quantity !== 'number')
+    if (this.dependents_quantity && typeof this.dependents_quantity !== 'number')
       throw new CustomError("Dependents quantity must be a number", 400);
 
     if (this.user_document_validation_uuid && !(this.user_document_validation_uuid instanceof Uuid)) {
