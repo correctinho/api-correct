@@ -19,6 +19,7 @@ export class CreateBranchController {
 
       return res.status(201).json(resp);
     } catch (err: any) {
+
       return res.status(err.statusCode).json({
         error: err.message,
       });

@@ -33,8 +33,7 @@ export class UpdateUserByAdminUsecase {
     if (data.user_name) {
       //check if username already exists
       const findByUsername = await this.companyUserRepository.findByBusinessIdAndUsername(findUser.business_info_uuid.uuid, data.user_name)
-      if (findByUsername) throw new CustomError("User name already registered", 409)
-
+      if (findByUsername && findByUsername.uuid !== findUser.uuid) throw new CustomError("User name already registered", 409)
 
     }
     userEntity.changeDocument(data.document)
@@ -44,7 +43,6 @@ export class UpdateUserByAdminUsecase {
     userEntity.changeFunction(data.function)
     userEntity.changePermissions(data.permissions)
     userEntity.changeStatus(data.status)
-
     //update user
     const updateUser = await this.companyUserRepository.updateUser(userEntity)
 

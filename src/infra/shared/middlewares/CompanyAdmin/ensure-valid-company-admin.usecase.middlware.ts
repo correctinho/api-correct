@@ -28,8 +28,6 @@ export class EnsureValidCompanyUserUsecase {
 
         if(user.status === 'inactive') throw new CustomError("Unauthorized", 401)
 
-        // if (User.client_User === false) throw new CustomError("User is not allowed to access", 401)
-
         return {
           uuid: user.uuid.uuid,
           businessInfoUuid: user.business_info_uuid.uuid,

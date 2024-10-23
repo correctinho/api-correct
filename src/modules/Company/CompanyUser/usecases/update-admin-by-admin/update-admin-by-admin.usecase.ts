@@ -36,7 +36,8 @@ export class UpdateAdminByAdminUsecase {
     if (data.user_name) {
       //check if username already exists
       const findByUsername = await this.companyUserRepository.findByBusinessIdAndUsername(currentData.business_info_uuid.uuid, data.user_name)
-      if (findByUsername) throw new CustomError("User name already registered", 409)
+      console.log({findByUsername})
+      if (findByUsername && findByUsername.uuid.uuid !== data.uuid) throw new CustomError("User name already registered", 409)
 
     }
 

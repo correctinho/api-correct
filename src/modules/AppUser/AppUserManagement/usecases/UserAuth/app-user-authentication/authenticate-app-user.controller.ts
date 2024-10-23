@@ -30,7 +30,6 @@ export class AuthenticateAppUserController {
             return res.json(appUser)
 
         } catch (err: any) {
-          console.log({err})
             return res.status(err.statusCode).json({
                 error: err.message
             })

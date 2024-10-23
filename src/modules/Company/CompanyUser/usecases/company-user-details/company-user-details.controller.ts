@@ -11,7 +11,6 @@ export class CompanyUserDetailsController{
         try{
 
             const companyUser = req.companyUser
-
             const user = {
               uuid: companyUser.companyUserId,
               business_info_uuid: companyUser.businessInfoUuid,
