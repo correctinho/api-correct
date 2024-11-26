@@ -19,6 +19,7 @@ export class GetPartnersByAppUserUsecase {
       fantasy_name: partner.fantasy_name,
       corporate_reason: partner.corporate_reason,
       document: partner.document,
+      has_online_products: partner.Products.length > 0 ? true : false,
       Address: {
         ...partner.Address
       }

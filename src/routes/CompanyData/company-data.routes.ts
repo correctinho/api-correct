@@ -5,6 +5,7 @@ import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/compa
 import { getCompanyDataController } from "../../modules/Company/CompanyData/usecases/get-company-data";
 import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
 import { getPartnersByAppUser } from "../../modules/Company/CompanyData/usecases/get-partners-by-app-user";
+import { getPartnerDetailsByAppUser } from "../../modules/Company/CompanyData/usecases/get-partner-details-by-app-user";
 
 export const companyDataRouter = Router()
 
@@ -26,4 +27,9 @@ companyDataRouter.get('/business/info', companyIsAuth, async (request, response)
 //get partners by app user
 companyDataRouter.get('/partners/list', appUserIsAuth, async (request, response) => {
   await getPartnersByAppUser.handle(request, response)
+})
+
+//get partner details by app user
+companyDataRouter.get('/partner/app-user', appUserIsAuth, async (request, response) => {
+  await getPartnerDetailsByAppUser.handle(request, response)
 })

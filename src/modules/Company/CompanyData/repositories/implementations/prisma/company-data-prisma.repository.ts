@@ -6,8 +6,7 @@ import { OutputGetCompanyDataDTO } from "../../../usecases/get-company-data/dto/
 
 
 export class CompanyDataPrismaRepository implements ICompanyDataRepository {
-
-  async update(data: CompanyDataEntity): Promise<CompanyDataEntity> {
+    async update(data: CompanyDataEntity): Promise<CompanyDataEntity> {
     const companyData = await prismaClient.businessInfo.update({
       where: {
         uuid: data.uuid
@@ -120,12 +119,37 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
         },
       },
       include: {
-        Address: true
+        Address: true,
+        Products: {
+          where:{
+            is_active: true
+          }
+        }
       },
       skip,
       take
     })
 
     return partners
+  }
+
+  async findPartnerDetailsByAppUser(business_info_uuid: string): Promise<any> {
+    const partner = await prismaClient.businessInfo.findUnique({
+      where:{
+        uuid: business_info_uuid
+      },
+      include:{
+        Address: true,
+        Products:{
+          where:{
+            is_active: true
+          }
+        }
+      }
+    })
+
+    if(!partner) return null
+
+    return partner
   }
 }

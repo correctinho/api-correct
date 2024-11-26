@@ -7,4 +7,5 @@ export interface ICompanyDataRepository{
     findByEmail(email: string): Promise<CompanyDataEntity | null>
     deleteById(cnpj: string):Promise<void>
     findPartnersByAppUser(city: string, page: number, limit: number): Promise<any>
+    findPartnerDetailsByAppUser(business_info_uuid: string): Promise<any>
 }
