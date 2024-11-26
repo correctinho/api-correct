@@ -2790,4 +2790,40 @@ describe("E2E App User tests", () => {
 
   })
 
+  describe("E2E tests App User and Partners", () => {
+    describe("E2E Get Partners by app user", () => {
+      it("Should throw an error if page is missing", async () => {
+        const input = {
+          city: 'Campo Grande'
+        }
+
+        const result = await request(app).get("/partners/list").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Page is required")
+
+      })
+      it("Should throw an error if city is missing", async () => {
+        const input = {
+          page: 1,
+        }
+
+        const result = await await request(app).get("/partners/list").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("City is required")
+
+      })
+      it("Should return a list of partners", async () => {
+        const input = {
+          page: 1,
+          city: 'Campo Grande'
+        }
+
+        const result = await await request(app).get("/partners/list").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+        console.log(result.body)
+        expect(result.statusCode).toBe(200)
+
+      })
+    })
+  })
+
 })
