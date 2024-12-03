@@ -7,5 +7,6 @@ export interface IBranchRepository {
     list(): Promise<BranchEntity[] | []>;
     findByName(branch_name: string): Promise<BranchEntity | null>
     createMany(data: BranchEntity[]):Promise<BranchEntity[]>
+    getAvailableBranches():Promise<BranchEntity[] | []>
     // delete(uuid: string): Promise<void>;
 }

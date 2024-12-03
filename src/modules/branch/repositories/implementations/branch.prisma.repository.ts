@@ -4,6 +4,7 @@ import { IBranchRepository } from '../branch.repository';
 import { newDateF } from '../../../../utils/date';
 
 export class BranchPrismaRepository implements IBranchRepository {
+
   async findByName(branch_name: string): Promise<BranchEntity | null> {
     const branch = await prismaClient.branchInfo.findFirst({
       where: {
@@ -109,6 +110,19 @@ export class BranchPrismaRepository implements IBranchRepository {
     return [];
   }
 
+  async getAvailableBranches(): Promise<BranchEntity[] | []> {
+    const r = await prismaClient.branchInfo.findMany({
+      where:{
+        BusinessinfoBranch: { some: {}}
+      }
+    });
+
+    if(r.length > 0){
+      return r as BranchEntity[]
+    }
+
+    return []
+  }
   // async delete(uuid: string): Promise<void> {
   //     const _r = await prismaClient.branchInfo.delete({
   //         where: { uuid: uuid },

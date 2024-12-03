@@ -4,6 +4,7 @@ import { getBranchByIDController } from '../../modules/branch/usecases/get-branc
 import { createBranchController } from '../../modules/branch/usecases/create-branch';
 import { updateBranchController } from '../../modules/branch/usecases/update-branch';
 import { getListsBranchController } from '../../modules/branch/usecases/get-list-branch';
+import { getAvailableBranchesByAppUser } from '../../modules/branch/usecases/get-available-branches-by-app-user';
 
 export const branchRouter = Router();
 
@@ -32,3 +33,8 @@ branchRouter.put(
     async (request, response) =>
         await updateBranchController.handle(request, response)
 );
+
+branchRouter.get(
+  '/branches/available',
+  async (request, response) => await getAvailableBranchesByAppUser.handle(request, response)
+)
