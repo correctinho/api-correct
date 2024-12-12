@@ -1,29 +1,71 @@
 import request from "supertest"
 import { app } from "../../app"
 
+let correctAdminToken: string
+let correctSellerToken: string
 const inputNewAdmin = {
-    name: "Admin Correct",
-    email: "admincorrect@correct.com.br",
-    userName: "admin-correct",
-    password: "123"
+  name: "Admin Correct",
+  email: "admincorrect@correct.com.br",
+  userName: "admin-correct",
+  password: "123"
 }
 
 const authenticateAdmin = {
-    userName: inputNewAdmin.userName,
-    password: inputNewAdmin.password
+  userName: inputNewAdmin.userName,
+  password: inputNewAdmin.password
 }
+describe("E2E Create Admin/user tests", () => {
 
-describe("E2E Correct admin test", () => {
+  describe("E2E Correct admin test", () => {
 
     it("Should create a new admin", async () => {
-        const result = await request(app).post('/admin').send(inputNewAdmin)
-        expect(result.statusCode).toBe(201)
+      const result = await request(app).post('/admin').send(inputNewAdmin)
+      expect(result.statusCode).toBe(201)
     })
 
     it("Should authenticate admin", async () => {
-        const result = await request(app).post('/login').send(authenticateAdmin)
-
-        expect(result.status).toBe(200)
+      const result = await request(app).post('/login').send(authenticateAdmin)
+      expect(result.status).toBe(200)
+      correctAdminToken = result.body.token
 
     })
+
+  })
+  describe("E2E Correct seller test", () => {
+    it("Should create a correct seller", async () => {
+      const inputCorrectSeller = {
+        name: "Seller Correct",
+        email: "sellercorrect@correct.com.br",
+        userName: "seller-correct",
+        password: "123"
+      }
+      const result = await request(app).post('/seller').set('Authorization', `Bearer ${correctAdminToken}`).send(inputCorrectSeller)
+      expect(result.statusCode).toBe(201)
+      expect(result.body.isAdmin).toBeFalsy()
+
+
+      const authSellerInput = {
+        userName: 'seller-correct',
+        password: '123'
+      }
+      //authenticate seller
+      const authSeller = await request(app).post('/login').send(authSellerInput)
+      expect(authSeller.statusCode).toBe(200)
+      correctSellerToken = authSeller.body.token
+
+
+    })
+
+    it("Should throw and error if user is not admin", async () => {
+      const inputCorrectSeller = {
+        name: "Seller Correct2",
+        email: "sellercorrect2@correct.com.br",
+        userName: "seller-correct2",
+        password: "123"
+      }
+      const result = await request(app).post('/seller').set('Authorization', `Bearer ${correctSellerToken}`).send(inputCorrectSeller)
+      expect(result.statusCode).toBe(401)
+
+    })
+  })
 })

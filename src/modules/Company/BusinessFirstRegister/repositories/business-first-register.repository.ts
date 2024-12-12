@@ -1,6 +1,7 @@
+import { PartnerConfigEntity } from "../../PartnerConfig/entities/partner-config.entity";
 import { BusinessRegisterEntity } from "../entities/business-first-register.entity";
 
 export interface IBusinessFirstRegisterRepository{
-    save(data: BusinessRegisterEntity): Promise<void>
-    saveEmployer(data: BusinessRegisterEntity): Promise<void>
+    savePartner(data: BusinessRegisterEntity, partnerConfig: PartnerConfigEntity, correctUserUuid?: string): Promise<any>
+    saveEmployer(data: BusinessRegisterEntity, correctUserUuid?: string): Promise<void>
 }

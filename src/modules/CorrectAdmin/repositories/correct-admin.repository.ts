@@ -6,5 +6,4 @@ export interface ICorrectAdminRepository extends RepositoryInterface<OutputFindA
     findByUserName(userName: string): Promise<OutputFindAdminDTO | null>
     findByUserNameAuth(userName: string): Promise<CorrectAdminEntity | null>
 
-
 }

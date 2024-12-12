@@ -4,28 +4,28 @@ import { ICompanyDataRepository } from "../../../CompanyData/repositories/compan
 import { BusinessRegisterEntity, BusinessRegisterProps } from "../../entities/business-first-register.entity";
 import { IBusinessFirstRegisterRepository } from "../../repositories/business-first-register.repository";
 
-export class CreateBusinessRegisterUsecase {
+export class CreateBusinessRegisterByCorrectUsecase {
     constructor(
         private businessRegisterRepository: IBusinessFirstRegisterRepository,
         private companyDataRepository: ICompanyDataRepository
     ){}
 
-    async execute(data: BusinessRegisterProps){
+    async execute(data: BusinessRegisterProps, correctUser: string){
         const findBusiness = await this.companyDataRepository.findByDocument(data.document)
         if(findBusiness) throw new CustomError("Business already registered", 409)
 
         const register = await BusinessRegisterEntity.create(data)
 
-        await this.businessRegisterRepository.save(register)
+        await this.businessRegisterRepository.save(register, correctUser)
 
-        const notififyCorrectAdmin = new NewBusinessNotification()
+        //const notififyCorrectAdmin = new NewBusinessNotification()
 
-        await notififyCorrectAdmin.notififyCorrectAdmin({
-          business_email: register.email,
-          document: register.document,
-          fantasy_name: register.fantasy_name,
-          corporate_reason: register.corporate_reason
-        })
+        // await notififyCorrectAdmin.notififyCorrectAdmin({
+        //   business_email: register.email,
+        //   document: register.document,
+        //   fantasy_name: register.fantasy_name,
+        //   corporate_reason: register.corporate_reason
+        // })
 
         return {
           address_uuid: register.address_pk_uuid,

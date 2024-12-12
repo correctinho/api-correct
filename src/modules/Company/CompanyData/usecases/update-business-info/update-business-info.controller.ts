@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { ICompanyDataRepository } from "../../repositories/company-data.repository";
 import { UpdateBusinessInfoUsecase } from "./update-business-info.usecase";
 import { CompanyDataEntity } from "../../entities/company-data.entity";
-import { logger } from "../../../../../utils/logger";
 
 export class UpdateBusinessInfoController {
     constructor(

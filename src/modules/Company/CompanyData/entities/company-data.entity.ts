@@ -1,10 +1,12 @@
 import { randomUUID } from 'crypto'
 import { CustomError } from '../../../../errors/custom.error';
 import { BusinessTypeOptions, BusinessStatus } from '@prisma/client';
+import { newDateF } from '../../../../utils/date';
 
 type CompanyDataProps = {
     address_uuid: string
     fantasy_name: string
+    main_branch?: string
     corporate_reason: string | null
     document: string
     classification: string
@@ -24,6 +26,7 @@ export class CompanyDataEntity {
     uuid: string;
     address_uuid: string
     fantasy_name: string
+    main_branch?: string
     corporate_reason: string | null
     document: string
     classification: string
@@ -49,6 +52,7 @@ export class CompanyDataEntity {
         this.uuid = randomUUID()
         this.address_uuid = props.address_uuid
         this.fantasy_name = props.fantasy_name
+        this.main_branch = props.main_branch
         this.corporate_reason = props.corporate_reason
         this.document = props.document
         this.classification = props.classification
@@ -59,8 +63,8 @@ export class CompanyDataEntity {
         this.business_type = props.business_type
         this.email = props.email
         this.employer_branch = props.employer_branch
-        this.created_at = newDate(new Date())
-        this.updated_at = newDate(new Date())
+        this.created_at = newDateF(new Date())
+        this.updated_at = newDateF(new Date())
 
     }
 
@@ -68,7 +72,4 @@ export class CompanyDataEntity {
         const companyData = new CompanyDataEntity(data)
         return companyData
     }
-}
-function newDate(arg0: Date): string {
-  throw new Error('Function not implemented.');
 }

@@ -6,6 +6,9 @@ import { getCompanyDataController } from "../../modules/Company/CompanyData/usec
 import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
 import { getPartnersByAppUser } from "../../modules/Company/CompanyData/usecases/get-partners-by-app-user";
 import { getPartnerDetailsByAppUser } from "../../modules/Company/CompanyData/usecases/get-partner-details-by-app-user";
+import { getPartnersByBranch } from "../../modules/Company/CompanyData/usecases/get-partners-by-branch";
+import { createPartnerConfigController } from "../../modules/Company/PartnerConfig/usecases/create-partner-config";
+import { getRegisterPartnerBySeller } from "../../modules/Company/CompanyData/usecases/get-company-data-by-correct-seller";
 
 export const companyDataRouter = Router()
 
@@ -32,4 +35,20 @@ companyDataRouter.get('/partners/list', appUserIsAuth, async (request, response)
 //get partner details by app user
 companyDataRouter.get('/partner/app-user', appUserIsAuth, async (request, response) => {
   await getPartnerDetailsByAppUser.handle(request, response)
+})
+
+
+//get partners by branch
+companyDataRouter.get('/partner/branch', appUserIsAuth, async (request, response) => {
+  await getPartnersByBranch.handle(request, response)
+})
+
+//get registered partner by correct seller (with limitations - check code)
+companyDataRouter.get("/partner/seller", correctIsAuth, async (request, response) => {
+  await getRegisterPartnerBySeller.handle(request, response)
+})
+
+//create partner config by correct admin
+companyDataRouter.post("/partner/config", correctIsAuth, async (request, response) => {
+  await createPartnerConfigController.handle(request, response)
 })

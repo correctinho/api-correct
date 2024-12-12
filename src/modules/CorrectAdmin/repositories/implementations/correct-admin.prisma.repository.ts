@@ -13,7 +13,8 @@ export class CorrectAdminPrismaRepository implements ICorrectAdminRepository {
                 name: data.name,
                 email: data.email,
                 userName: data.userName,
-                password: data.password
+                password: data.password,
+                isAdmin: data.isAdmin
             }
         })
     }
@@ -31,7 +32,7 @@ export class CorrectAdminPrismaRepository implements ICorrectAdminRepository {
         })
     }
     async find(id: Uuid): Promise<OutputFindAdminDTO | null> {
-        
+
         const admin = await prismaClient.correctAdmin.findUnique({
             where: {
                 uuid: id.uuid

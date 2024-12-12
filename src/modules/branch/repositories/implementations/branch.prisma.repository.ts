@@ -78,10 +78,25 @@ export class BranchPrismaRepository implements IBranchRepository {
   async getByID(uuid: string): Promise<BranchEntity | null> {
     const r = await prismaClient.branchInfo.findFirst({
       where: { uuid: uuid },
+      include: { BranchItem: true}
     });
 
+    let items_uuid: string[] = []
+    for await (const item of r.BranchItem){
+      items_uuid.push(item.item_uuid)
+    }
+
     if (r !== null) {
-      return r as BranchEntity;
+      return {
+        uuid: r.uuid,
+        name: r.name,
+        benefits_uuid: items_uuid,
+        marketing_tax: r.marketing_tax,
+        market_place_tax: r.market_place_tax,
+        admin_tax: r.admin_tax,
+        created_at: r.created_at,
+        updated_at: r.updated_at
+      } as BranchEntity;
     }
 
     return null;

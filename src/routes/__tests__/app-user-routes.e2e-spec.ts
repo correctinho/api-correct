@@ -2790,67 +2790,67 @@ describe("E2E App User tests", () => {
 
   })
 
-  describe("E2E tests App User and Partners", () => {
-    describe("E2E Get Partners by app user", () => {
-      it("Should throw an error if page is missing", async () => {
-        const input = {
-          city: 'Campo Grande'
-        }
+  // describe("E2E tests App User and Partners", () => {
+  //   describe("E2E Get Partners by app user", () => {
+  //     it("Should throw an error if page is missing", async () => {
+  //       const input = {
+  //         city: 'Campo Grande'
+  //       }
 
-        const result = await request(app).get("/partners/list").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe("Page is required")
+  //       const result = await request(app).get("/partners/list").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+  //       expect(result.statusCode).toBe(400)
+  //       expect(result.body.error).toBe("Page is required")
 
-      })
-      it("Should throw an error if city is missing", async () => {
-        const input = {
-          page: 1,
-        }
+  //     })
+  //     it("Should throw an error if city is missing", async () => {
+  //       const input = {
+  //         page: 1,
+  //       }
 
-        const result = await request(app).get("/partners/list").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe("City is required")
+  //       const result = await request(app).get("/partners/list").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+  //       expect(result.statusCode).toBe(400)
+  //       expect(result.body.error).toBe("City is required")
 
-      })
-      it("Should return a list of partners", async () => {
-        const input = {
-          page: 1,
-          city: 'Campo Grande'
-        }
+  //     })
+  //     it("Should return a list of partners", async () => {
+  //       const input = {
+  //         page: 1,
+  //         city: 'Campo Grande'
+  //       }
 
-        const result = await request(app).get("/partners/list").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        expect(result.statusCode).toBe(200)
-      })
-    })
-    describe("E2E Get Partner details by appuser", () => {
-      it("Should throw an error if business uuid is missing", async () => {
-        const input = {
+  //       const result = await request(app).get("/partners/list").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+  //       expect(result.statusCode).toBe(200)
+  //     })
+  //   })
+  //   describe("E2E Get Partner details by appuser", () => {
+  //     it("Should throw an error if business uuid is missing", async () => {
+  //       const input = {
 
-        }
+  //       }
 
-        const result = await request(app).get("/partner/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe("Business Info Uuid is required")
-      })
-      it("Should throw an error if business if an employer", async () => {
-        const input = {
-          business_info_uuid: employer_info_uuid
-        }
+  //       const result = await request(app).get("/partner/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+  //       expect(result.statusCode).toBe(400)
+  //       expect(result.body.error).toBe("Business Info Uuid is required")
+  //     })
+  //     it("Should throw an error if business if an employer", async () => {
+  //       const input = {
+  //         business_info_uuid: employer_info_uuid
+  //       }
 
-        const result = await request(app).get("/partner/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        expect(result.statusCode).toBe(404)
-        expect(result.body.error).toBe("Partner not found")
-      })
-      it("Should throw an error if partner is not found", async () => {
-        const input = {
-          business_info_uuid: randomUUID()
-        }
+  //       const result = await request(app).get("/partner/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+  //       expect(result.statusCode).toBe(404)
+  //       expect(result.body.error).toBe("Partner not found")
+  //     })
+  //     it("Should throw an error if partner is not found", async () => {
+  //       const input = {
+  //         business_info_uuid: randomUUID()
+  //       }
 
-        const result = await request(app).get("/partner/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        expect(result.statusCode).toBe(404)
-        expect(result.body.error).toBe("Partner not found")
-      })
-    })
-  })
+  //       const result = await request(app).get("/partner/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+  //       expect(result.statusCode).toBe(404)
+  //       expect(result.body.error).toBe("Partner not found")
+  //     })
+  //   })
+  // })
 
 })

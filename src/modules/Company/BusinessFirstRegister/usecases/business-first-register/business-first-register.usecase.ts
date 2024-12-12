@@ -5,14 +5,15 @@ import { IBenefitsRepository } from "../../../../benefits/repositories/benefit.r
 import { IBranchRepository } from "../../../../branch/repositories/branch.repository";
 import { OutputGetBranchDTO } from "../../../../branch/usecases/get-branch-by-id/dto/get-branch.dto";
 import { ICompanyDataRepository } from "../../../CompanyData/repositories/company-data.repository";
+import { PartnerCategory, PartnerConfigEntity } from "../../../PartnerConfig/entities/partner-config.entity";
 import { BusinessRegisterEntity } from "../../entities/business-first-register.entity";
 import { IBusinessFirstRegisterRepository } from "../../repositories/business-first-register.repository";
-import { InputBusinessFirstRegisterDTO } from "./dto/business-first-register.dto";
+import { InputBusinessFirstRegisterDTO, OutputBusinessFirstRegisterDTO } from "./dto/business-first-register.dto";
 const { awsSendMessage } = require('../../../../../infra/aws/sqs/sender.config.js')
 
 let branches: OutputGetBranchDTO[] = []
 let items: BenefitsEntity[] = []
-
+let response: OutputBusinessFirstRegisterDTO
 export class CreateBusinessRegisterUsecase {
   constructor(
     private businessRegisterRepository: IBusinessFirstRegisterRepository,
@@ -22,22 +23,58 @@ export class CreateBusinessRegisterUsecase {
 
   ) { }
 
-  async execute(data: InputBusinessFirstRegisterDTO) {
+  async execute(data: InputBusinessFirstRegisterDTO): Promise<OutputBusinessFirstRegisterDTO> {
     const register = await BusinessRegisterEntity.create(data)
-
     const findBusiness = await this.companyDataRepository.findByDocument(register.document)
     if (findBusiness) throw new CustomError("Business already registered", 409)
 
     const findByEmail = await this.companyDataRepository.findByEmail(register.email)
     if (findByEmail) throw new CustomError("Business email already registered", 409)
 
-    if(register.business_type === 'autonomo_comercio' || register.business_type === 'comercio'){
+    if (register.business_type === 'autonomo_comercio' || register.business_type === 'comercio') {
+      //In this case, we need to set partnerConfig, which involves taxes
+      const partneConfigData = {
+        business_info_uuid: new Uuid(register.business_info_uuid),
+        main_branch: new Uuid(data.partnerConfig.main_branch),
+        partner_category: data.partnerConfig.partner_category as PartnerCategory[],
+        items_uuid: ["123"],
+        admin_tax: 0,
+        marketing_tax: 0,
+        use_marketing: data.partnerConfig.use_marketing,
+        market_place_tax: 0,
+        use_market_place: data.partnerConfig.use_market_place
+      }
+
+      const partnerConfigEntity = PartnerConfigEntity.create(partneConfigData)
+      //now we need to set taxes accordding to main branch selected
+      //check if main branch is one of the branches list.
+
+      const mainBranch = register.branches_uuid.find(branch => branch === data.partnerConfig.main_branch)
+      if (!mainBranch) throw new CustomError("Invalid main branch", 400)
       //find branches
       await this.verifyBranches(register.branches_uuid)
-      await this.businessRegisterRepository.save(register)
-    }else{
+
+      //if it's all okay with branches uuid, we need to have main branch details
+      //this main branch details is included in branches array
+      //In this case, we need to check which one is the main branch
+      const mainBranchDetails = branches.find(branch => branch.uuid === data.partnerConfig.main_branch)
+
+      //now that we have main branch details, we will get all defined taxes according to main branch
+      //these taxes will be defined according to user preferences
+      if(partnerConfigEntity.use_marketing) partnerConfigEntity.changeMarketingTax(mainBranchDetails.marketing_tax)
+      if(partnerConfigEntity.use_market_place) partnerConfigEntity.changeMarketingPlaceTax(mainBranchDetails.market_place_tax)
+
+      //in this line, we will set admin tax, it doesn't required any condition
+      partnerConfigEntity.changeAdminTax(mainBranchDetails.admin_tax)
+
+      //now it's important to define which benefits will be accepted by partner. It's defined according to main branch
+      //Basically, we need to populate partnerConfigEntity.items_uuid with the benefits that comes from mainBranch detals
+      partnerConfigEntity.changeItemsUuid(mainBranchDetails.benefits_uuid)
+
+      response = await this.businessRegisterRepository.savePartner(register, partnerConfigEntity, data.correct_user_uuid)
+    } else if (register.business_type === 'empregador') {
       await this.verifyItems(register.items_uuid)
-      await this.businessRegisterRepository.saveEmployer(register)
+      await this.businessRegisterRepository.saveEmployer(register, data.correct_user_uuid)
 
     }
 
@@ -52,39 +89,17 @@ export class CreateBusinessRegisterUsecase {
     // Enviar mensagem para SQS
     //awsSendMessage(messageData);
 
-    return {
-      address_uuid: register.address_pk_uuid,
-      line1: register.line1,
-      line2: register.line2,
-      line3: register.line3,
-      neighborhood: register.neighborhood,
-      postal_code: register.postal_code,
-      city: register.city,
-      state: register.state,
-      country: register.country,
-      business_info_uuid: register.business_info_uuid,
-      address_fk_uuid: register.address_fk_uuid,
-      fantasy_name: register.fantasy_name,
-      document: register.document,
-      corporate_reason: register.corporate_reason,
-      branches_uuid: register.branches_uuid,
-      classification: register.classification,
-      colaborators_number: register.colaborators_number,
-      status: register.status,
-      phone_1: register.phone_1,
-      phone_2: register.phone_2,
-      business_type: register.business_type,
-      email: register.email
-    }
+    return response
   }
 
   private async verifyBranches(branches_uuid: string[]) {
-
-    branches_uuid.map(async (branch) => {
+    for (const branch of branches_uuid){
       const findBranch = await this.branchRepository.getByID(branch)
+
       if (!findBranch) throw new CustomError("Branch not found", 404);
       branches.push(findBranch)
-    })
+
+    }
   }
   private async verifyItems(items_uuid: string[]) {
 

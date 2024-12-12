@@ -1,9 +1,10 @@
 import { IBranchRepository } from '../../repositories/branch.repository';
+import { OutputGetAvailableBranches } from './dto/get-available-branches.dto';
 
 export class GetAvailableBranchesByAppUserUsecase {
     constructor(private branchRepository: IBranchRepository) {}
 
-    async execute() {
+    async execute(): Promise<OutputGetAvailableBranches> {
         const branches = await this.branchRepository.getAvailableBranches();
 
         return branches.map(branch => ({

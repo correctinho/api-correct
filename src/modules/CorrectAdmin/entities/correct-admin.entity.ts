@@ -70,7 +70,7 @@ export class CorrectAdminEntity {
     get password(): string{
         return this._password
     }
-    
+
     changeName(name: string) {
         this._name = name;
         this.validate();
@@ -79,6 +79,14 @@ export class CorrectAdminEntity {
     changeEmail(email: string) {
         this._email = email;
         this.validate();
+    }
+
+    enableAdmin(){
+      this._isAdmin = true
+    }
+
+    disableAdmin(){
+      this._isAdmin = false
     }
 
     async changePassword(password: string) {

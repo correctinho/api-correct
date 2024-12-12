@@ -1,12 +1,14 @@
+import { add } from "lodash";
 import { prismaClient } from "../../../../../infra/databases/prisma.config";
 import { newDateF } from "../../../../../utils/date";
+import { PartnerConfigEntity } from "../../../PartnerConfig/entities/partner-config.entity";
 import { BusinessRegisterEntity } from "../../entities/business-first-register.entity";
 import { IBusinessFirstRegisterRepository } from "../business-first-register.repository";
 import { randomUUID } from 'crypto'
 
 export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterRepository {
-  async saveEmployer(data: BusinessRegisterEntity): Promise<void> {
-    const [address, businessInfo, businessItem] = await prismaClient.$transaction([
+  async saveEmployer(data: BusinessRegisterEntity, correctUserUuid?: string): Promise<void> {
+    const [address, businessInfo, businessItem, correct] = await prismaClient.$transaction([
       prismaClient.address.create({
         data: {
           uuid: data.address_pk_uuid,
@@ -47,11 +49,19 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
           is_active: false,
           created_at: newDateF(new Date())
         }))
+      }),
+      prismaClient.correctUserBusinessInfo.create({
+        data:{
+          uuid: randomUUID(),
+          business_info_uuid: data.business_info_uuid,
+          correct_admin_uuid: correctUserUuid,
+          created_at: newDateF(new Date())
+        }
       })
     ])
   }
-  async save(data: BusinessRegisterEntity): Promise<void> {
-    const [address, businessInfo, business_branch] = await prismaClient.$transaction([
+  async savePartner(data: BusinessRegisterEntity, partnerConfig: PartnerConfigEntity, correctUserUuid?: string): Promise<any> {
+    const [address, businessInfo, business_branch, correctUserBusiness] = await prismaClient.$transaction([
 
       prismaClient.address.create({
         data: {
@@ -92,8 +102,81 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
           business_info_uuid: data.business_info_uuid,
           created_at: newDateF(new Date())
         }))
+      }),
+
+      prismaClient.correctUserBusinessInfo.create({
+        data:{
+          uuid: randomUUID(),
+          business_info_uuid: data.business_info_uuid,
+          correct_admin_uuid: correctUserUuid,
+          created_at: newDateF(new Date())
+        }
+      }),
+
+      prismaClient.partnerConfig.create({
+        data:{
+          uuid: randomUUID(),
+          business_info_uuid: data.business_info_uuid,
+          main_branch: data.branches_uuid.length === 1 ? data.branches_uuid[0] : 'empty',
+          items_uuid: data.items_uuid,
+          admin_tax: partnerConfig.admin_tax,
+          marketing_tax: partnerConfig.marketing_tax,
+          use_marketing: partnerConfig.use_marketing,
+          market_place_tax: partnerConfig.market_place_tax,
+          use_market_place: partnerConfig.use_market_place,
+          created_at: partnerConfig.created_at,
+        }
       })
     ])
+
+    return {
+      Address: {
+        uuid: address.uuid,
+        line1: address.line1,
+        line2: address.line2,
+        line3: address.line3,
+        postal_code: address.postal_code,
+        neighborhood: address.neighborhood,
+        city: address.city,
+        state: address.state,
+        country: address.country,
+        created_at: address.created_at
+      },
+      BusinessInfo: {
+        uuid: businessInfo.uuid,
+        address_uuid: businessInfo.address_uuid,
+        fantasy_name: businessInfo.fantasy_name,
+        corporate_reason: businessInfo.corporate_reason,
+        document: businessInfo.document,
+        classification: businessInfo.classification,
+        colaborators_number: businessInfo.colaborators_number,
+        status: businessInfo.status,
+        phone_1: businessInfo.phone_1,
+        phone_2: businessInfo.phone_2,
+        business_type: businessInfo.business_type,
+        email: businessInfo.email,
+        created_at: businessInfo.created_at
+      },
+      CorrectUserBusinessBranch: {
+        uuid: correctUserBusiness.uuid,
+        business_info_uuid: correctUserBusiness.business_info_uuid,
+        correct_user_uuid: correctUserBusiness.correct_admin_uuid,
+        created_at: correctUserBusiness.created_at
+      },
+      PartnerConfig: {
+        uuid: partnerConfig.uuid.uuid,
+        business_info_uuid: partnerConfig.business_info_uuid.uuid,
+        main_branch: partnerConfig.main_branch.uuid,
+        partner_category: partnerConfig.partner_category,
+        items_uuid: partnerConfig.items_uuid,
+        admin_tax: partnerConfig.admin_tax,
+        marketing_tax: partnerConfig.marketing_tax,
+        use_marketing: partnerConfig.use_marketing,
+        market_place_tax: partnerConfig.market_place_tax,
+        use_market_place: partnerConfig.use_market_place,
+        created_at: partnerConfig.created_at
+      }
+    }
   }
 
 }

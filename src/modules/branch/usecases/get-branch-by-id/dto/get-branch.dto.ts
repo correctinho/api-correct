@@ -6,6 +6,7 @@ export interface OutputGetBranchDTO {
   marketing_tax: number,
   admin_tax: number,
   market_place_tax: number,
+  benefits_uuid?: string[],
   created_at: string,
   updated_at: string
 }

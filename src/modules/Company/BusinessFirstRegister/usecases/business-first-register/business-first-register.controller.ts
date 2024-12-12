@@ -17,6 +17,8 @@ export class CreateBusinessRegisterController {
     try {
       const data = req.body
 
+      if(req?.correctAdmin) data.correct_user_uuid = req.correctAdmin.correctAdminId
+
       const businessRegisterUsecase = new CreateBusinessRegisterUsecase(
         this.businessRegisterRepository,
         this.companyDataRepository, this.branchRepository,

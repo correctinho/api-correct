@@ -3,10 +3,13 @@ import { newDateF } from "../../../../../../utils/date";
 import { CompanyDataEntity } from "../../../../CompanyData/entities/company-data.entity";
 import { ICompanyDataRepository } from "../../../../CompanyData/repositories/company-data.repository";
 import { OutputGetCompanyDataDTO } from "../../../usecases/get-company-data/dto/get-company-data.dto";
+import { OutputGetPartnersByAppUserDTO } from "../../../usecases/get-partners-by-app-user/dto/get-partner-by-app-user.dto";
 
 
 export class CompanyDataPrismaRepository implements ICompanyDataRepository {
-    async update(data: CompanyDataEntity): Promise<CompanyDataEntity> {
+
+
+  async update(data: CompanyDataEntity): Promise<CompanyDataEntity> {
     const companyData = await prismaClient.businessInfo.update({
       where: {
         uuid: data.uuid
@@ -45,7 +48,8 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
     const companyData = await prismaClient.businessInfo.findUnique({
       where: {
         document
-      }
+      },
+
     })
 
     if (!companyData) return null
@@ -95,8 +99,6 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
     };
   }
 
-
-
   async deleteById(id: string): Promise<void> {
     await prismaClient.businessInfo.delete({
       where: {
@@ -105,7 +107,7 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
     })
   }
 
-  async findPartnersByAppUser(city: string, page: number, limit: number): Promise<any> {
+  async findPartnersByAppUser(city: string, page: number, limit: number): Promise<OutputGetPartnersByAppUserDTO[] | []> {
     const take = limit; // Quantidade de registros por página
     const skip = (page - 1) * limit; // Quantos registros pular
 
@@ -114,14 +116,67 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
         NOT: {
           business_type: 'empregador'
         },
-        Address:{
+        Address: {
           city: city
         },
       },
       include: {
         Address: true,
         Products: {
-          where:{
+          where: {
+            is_active: true
+          }
+        }
+      },
+      skip,
+      take
+    })
+
+    return partners as OutputGetPartnersByAppUserDTO[] | []
+  }
+
+  async findPartnerDetailsByAppUser(business_info_uuid: string): Promise<any> {
+    const partner = await prismaClient.businessInfo.findUnique({
+      where: {
+        uuid: business_info_uuid
+      },
+      include: {
+        Address: true,
+        Products: {
+          where: {
+            is_active: true
+          }
+        },
+        BusinessinfoBranch: {
+          select: {
+            branch_info_uuid: true
+          }
+        }
+      }
+    })
+
+    if (!partner) return null
+
+    return partner
+  }
+
+  async findPartnersByBranch(branch_uuid: string, page: number, limit: number): Promise<any> {
+    const take = limit; // Quantidade de registros por página
+    const skip = (page - 1) * limit; // Quantos registros pular
+
+    const partners = await prismaClient.businessInfo.findMany({
+      where: {
+        BusinessinfoBranch: {
+          some: { branch_info_uuid: branch_uuid }
+        },
+        NOT: {
+          business_type: 'empregador'
+        }
+      },
+      include: {
+        Address: true,
+        Products: {
+          where: {
             is_active: true
           }
         }
@@ -133,22 +188,13 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
     return partners
   }
 
-  async findPartnerDetailsByAppUser(business_info_uuid: string): Promise<any> {
-    const partner = await prismaClient.businessInfo.findUnique({
-      where:{
-        uuid: business_info_uuid
+  async findPartnerByCorrect(correct_user_uuid: string, business_info_uuid: string): Promise<{ uuid: string, business_info_uuid: string }> {
+    const partner = await prismaClient.correctUserBusinessInfo.findFirst({
+      where: {
+        correct_admin_uuid: correct_user_uuid,
+        business_info_uuid: business_info_uuid
       },
-      include:{
-        Address: true,
-        Products:{
-          where:{
-            is_active: true
-          }
-        }
-      }
     })
-
-    if(!partner) return null
 
     return partner
   }
