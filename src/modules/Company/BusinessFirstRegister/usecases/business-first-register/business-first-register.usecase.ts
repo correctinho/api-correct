@@ -23,7 +23,7 @@ export class CreateBusinessRegisterUsecase {
 
   ) { }
 
-  async execute(data: InputBusinessFirstRegisterDTO): Promise<OutputBusinessFirstRegisterDTO> {
+  async execute(data: InputBusinessFirstRegisterDTO) {
     const register = await BusinessRegisterEntity.create(data)
     const findBusiness = await this.companyDataRepository.findByDocument(register.document)
     if (findBusiness) throw new CustomError("Business already registered", 409)
@@ -74,7 +74,7 @@ export class CreateBusinessRegisterUsecase {
       response = await this.businessRegisterRepository.savePartner(register, partnerConfigEntity, data.correct_user_uuid)
     } else if (register.business_type === 'empregador') {
       await this.verifyItems(register.items_uuid)
-      await this.businessRegisterRepository.saveEmployer(register, data.correct_user_uuid)
+      response = await this.businessRegisterRepository.saveEmployer(register, data.correct_user_uuid)
 
     }
 

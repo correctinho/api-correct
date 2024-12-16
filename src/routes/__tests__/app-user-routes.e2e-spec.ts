@@ -240,7 +240,7 @@ describe("E2E App User tests", () => {
     }
 
     const businessInfo = await request(app).post("/business/register").send(input)
-    employer_info_uuid = businessInfo.body.business_info_uuid
+    employer_info_uuid = businessInfo.body.BusinessInfo.uuid
 
     //create business info 2
     const input2 = {
@@ -266,7 +266,7 @@ describe("E2E App User tests", () => {
 
     const businessInfo2 = await request(app).post("/business/register").send(input2)
 
-    employer_info_uuid2 = businessInfo2.body.business_info_uuid
+    employer_info_uuid2 = businessInfo2.body.BusinessInfo.uuid
 
     //create business info 3
     const input3 = {
@@ -292,7 +292,7 @@ describe("E2E App User tests", () => {
 
     const businessInfo3 = await request(app).post("/business/register").send(input3)
 
-    employer_info_uuid3 = businessInfo3.body.business_info_uuid
+    employer_info_uuid3 = businessInfo3.body.BusinessInfo.uuid
 
 
 
@@ -1539,7 +1539,6 @@ describe("E2E App User tests", () => {
           .post('/app-users-by-correct')
           .query(query)
           .set('Authorization', `Bearer ${correctAdminToken}`)
-
 
         expect(result.statusCode).toBe(400);
         expect(result.body.error).toBe('Error upload file');

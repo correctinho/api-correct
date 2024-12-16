@@ -1,6 +1,6 @@
 import request from 'supertest'
 import { app } from '../../app'
-import { InputCreateBenefitDto, ItemCategory, ItemType } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
+import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo';
 import { BranchDTO } from '../../modules/benefits/usecases/get-benefit-by-id/get-benefit.dto';
 import {randomUUID} from 'crypto'
@@ -128,7 +128,7 @@ describe("E2E Benefit tests", () => {
 
       const result = await request(app).post("/business/register").send(input)
       expect(result.statusCode).toBe(201)
-      employer_info_uuid = result.body.business_info_uuid
+      employer_info_uuid = result.body.BusinessInfo.uuid
 
     })
 
@@ -137,8 +137,8 @@ describe("E2E Benefit tests", () => {
         name: "Vale Alimentação",
         description: "Descrição do vale",
         parent_uuid: null as any,
-        item_type: 'gratuito' as ItemType,
-        item_category: 'pre_pago' as ItemCategory,
+        item_type: 'gratuito',
+        item_category: 'pre_pago',
         business_info_uuid: '',
         cycle_end_day: 2
       }
@@ -153,8 +153,8 @@ describe("E2E Benefit tests", () => {
         name: "Vale Alimentação",
         description: "Descrição do vale",
         parent_uuid: null as any,
-        item_type: 'gratuito' as ItemType,
-        item_category: 'pre_pago' as ItemCategory,
+        item_type: 'gratuito',
+        item_category: 'pre_pago',
         business_info_uuid: employer_info_uuid,
         cycle_end_day: 0
       }
@@ -169,8 +169,8 @@ describe("E2E Benefit tests", () => {
         name: "Vale Alimentação",
         description: "",
         parent_uuid: null as any,
-        item_type: 'gratuito' as ItemType,
-        item_category: 'pre_pago' as ItemCategory,
+        item_type: 'gratuito',
+        item_category: 'pre_pago',
         business_info_uuid: employer_info_uuid,
         cycle_end_day: 2
       }
@@ -185,8 +185,8 @@ describe("E2E Benefit tests", () => {
         name: "Vale Alimentação",
         description: "Descrição",
         parent_uuid: null as any,
-        item_type: 'gratuito' as ItemType,
-        item_category: 'pre_pago' as ItemCategory,
+        item_type: 'gratuito',
+        item_category: 'pre_pago',
         business_info_uuid: randomUUID(),
         cycle_end_day: 2
       }
@@ -201,8 +201,8 @@ describe("E2E Benefit tests", () => {
         name: "Vale Customizado",
         description: "Descrição",
         parent_uuid: null as any,
-        item_type: 'gratuito' as ItemType,
-        item_category: 'pre_pago' as ItemCategory,
+        item_type: 'gratuito',
+        item_category: 'pre_pago',
         business_info_uuid: employer_info_uuid,
         cycle_end_day: 2
       }
@@ -224,8 +224,8 @@ describe("E2E Benefit tests", () => {
         name: "Vale Customizado",
         description: "Descrição",
         parent_uuid: null as any,
-        item_type: 'gratuito' as ItemType,
-        item_category: 'pre_pago' as ItemCategory,
+        item_type: 'gratuito',
+        item_category: 'pre_pago',
         business_info_uuid: employer_info_uuid,
         cycle_end_day: 2
       }

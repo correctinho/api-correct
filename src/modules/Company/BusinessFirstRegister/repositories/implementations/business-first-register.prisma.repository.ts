@@ -7,7 +7,7 @@ import { IBusinessFirstRegisterRepository } from "../business-first-register.rep
 import { randomUUID } from 'crypto'
 
 export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterRepository {
-  async saveEmployer(data: BusinessRegisterEntity, correctUserUuid?: string): Promise<void> {
+  async saveEmployer(data: BusinessRegisterEntity, correctUserUuid?: string): Promise<any> {
     const [address, businessInfo, businessItem, correct] = await prismaClient.$transaction([
       prismaClient.address.create({
         data: {
@@ -59,6 +59,42 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
         }
       })
     ])
+    return {
+      Address: {
+        uuid: address.uuid,
+        line1: address.line1,
+        line2: address.line2,
+        line3: address.line3,
+        postal_code: address.postal_code,
+        neighborhood: address.neighborhood,
+        city: address.city,
+        state: address.state,
+        country: address.country,
+        created_at: address.created_at
+      },
+      BusinessInfo: {
+        uuid: businessInfo.uuid,
+        address_uuid: businessInfo.address_uuid,
+        fantasy_name: businessInfo.fantasy_name,
+        corporate_reason: businessInfo.corporate_reason,
+        document: businessInfo.document,
+        classification: businessInfo.classification,
+        colaborators_number: businessInfo.colaborators_number,
+        status: businessInfo.status,
+        phone_1: businessInfo.phone_1,
+        phone_2: businessInfo.phone_2,
+        business_type: businessInfo.business_type,
+        email: businessInfo.email,
+        created_at: businessInfo.created_at
+      },
+      CorrectUserBusinessBranch: {
+        uuid: correct.uuid,
+        business_info_uuid: correct.business_info_uuid,
+        correct_user_uuid: correct.correct_admin_uuid,
+        created_at: correct.created_at
+      }
+
+    }
   }
   async savePartner(data: BusinessRegisterEntity, partnerConfig: PartnerConfigEntity, correctUserUuid?: string): Promise<any> {
     const [address, businessInfo, business_branch, correctUserBusiness] = await prismaClient.$transaction([

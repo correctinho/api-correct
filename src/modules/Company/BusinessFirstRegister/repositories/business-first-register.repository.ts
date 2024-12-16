@@ -3,5 +3,5 @@ import { BusinessRegisterEntity } from "../entities/business-first-register.enti
 
 export interface IBusinessFirstRegisterRepository{
     savePartner(data: BusinessRegisterEntity, partnerConfig: PartnerConfigEntity, correctUserUuid?: string): Promise<any>
-    saveEmployer(data: BusinessRegisterEntity, correctUserUuid?: string): Promise<void>
+    saveEmployer(data: BusinessRegisterEntity, correctUserUuid?: string): Promise<any>
 }

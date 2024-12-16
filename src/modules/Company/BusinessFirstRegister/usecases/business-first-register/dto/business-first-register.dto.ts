@@ -66,7 +66,7 @@ export interface OutputBusinessFirstRegisterDTO {
     correct_user_uuid: string;
     created_at: string;
   };
-  PartnerConfig: {
+  PartnerConfig?: {
     uuid: string;
     business_info_uuid: string;
     main_branch: string;
