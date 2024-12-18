@@ -49,4 +49,25 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository{
     } as PartnerConfigEntity
   }
 
+  async findPartnersByCategory(partner_category: string): Promise<any[]>{
+    const partners = await prismaClient.partnerConfig.findMany({
+      where:{
+        partner_category: {
+          has: partner_category
+        },
+        NOT:{
+          use_marketing: false
+        }
+      },
+      include:{
+        BusinessInfo:{
+          include:{
+            Address: true
+          }
+        }
+      }
+    })
+    return partners
+  }
+
 }

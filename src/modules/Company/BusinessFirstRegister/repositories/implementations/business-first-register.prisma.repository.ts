@@ -153,8 +153,9 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
         data:{
           uuid: randomUUID(),
           business_info_uuid: data.business_info_uuid,
-          main_branch: data.branches_uuid.length === 1 ? data.branches_uuid[0] : 'empty',
-          items_uuid: data.items_uuid,
+          main_branch: partnerConfig.main_branch.uuid,
+          partner_category: partnerConfig.partner_category,
+          items_uuid: partnerConfig.items_uuid,
           admin_tax: partnerConfig.admin_tax,
           marketing_tax: partnerConfig.marketing_tax,
           use_marketing: partnerConfig.use_marketing,

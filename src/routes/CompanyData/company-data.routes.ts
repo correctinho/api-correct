@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { request, Router } from "express";
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
 import { updateBusinessInfo } from "../../modules/Company/CompanyData/usecases/update-business-info";
 import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/company-admin-auth.middlware";
@@ -9,6 +9,7 @@ import { getPartnerDetailsByAppUser } from "../../modules/Company/CompanyData/us
 import { getPartnersByBranch } from "../../modules/Company/CompanyData/usecases/get-partners-by-branch";
 import { createPartnerConfigController } from "../../modules/Company/PartnerConfig/usecases/create-partner-config";
 import { getRegisterPartnerBySeller } from "../../modules/Company/CompanyData/usecases/get-company-data-by-correct-seller";
+import { getPartnersByCategory } from "../../modules/Company/PartnerConfig/usecases/get-partner-by-category";
 
 export const companyDataRouter = Router()
 
@@ -25,6 +26,11 @@ companyDataRouter.put('/business/info/company', companyIsAuth, async (request, r
 //get business data by company admin TESTED
 companyDataRouter.get('/business/info', companyIsAuth, async (request, response) => {
     await getCompanyDataController.handle(request, response)
+})
+
+//get partners by category by app user
+companyDataRouter.get('/partners/category', appUserIsAuth, async (request, response) => {
+  await getPartnersByCategory.handle(request, response)
 })
 
 //get partners by app user
