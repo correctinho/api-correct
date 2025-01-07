@@ -161,6 +161,8 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
           use_marketing: partnerConfig.use_marketing,
           market_place_tax: partnerConfig.market_place_tax,
           use_market_place: partnerConfig.use_market_place,
+          latitude: partnerConfig.latitude,
+          longitude: partnerConfig.longitude,
           created_at: partnerConfig.created_at,
         }
       })

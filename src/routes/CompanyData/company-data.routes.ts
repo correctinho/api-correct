@@ -1,4 +1,4 @@
-import { request, Router } from "express";
+import { request, response, Router } from "express";
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
 import { updateBusinessInfo } from "../../modules/Company/CompanyData/usecases/update-business-info";
 import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/company-admin-auth.middlware";
@@ -9,7 +9,8 @@ import { getPartnerDetailsByAppUser } from "../../modules/Company/CompanyData/us
 import { getPartnersByBranch } from "../../modules/Company/CompanyData/usecases/get-partners-by-branch";
 import { createPartnerConfigController } from "../../modules/Company/PartnerConfig/usecases/create-partner-config";
 import { getRegisterPartnerBySeller } from "../../modules/Company/CompanyData/usecases/get-company-data-by-correct-seller";
-import { getPartnersByCategory } from "../../modules/Company/PartnerConfig/usecases/get-partner-by-category";
+import { getPartnersByCategory } from "../../modules/Company/PartnerConfig/usecases/get-partners-by-category";
+import { setDefinitionsByBusinessAdminController } from "../../modules/Company/PartnerConfig/usecases/set-definitions-by-business-admin";
 
 export const companyDataRouter = Router()
 
@@ -57,4 +58,9 @@ companyDataRouter.get("/partner/seller", correctIsAuth, async (request, response
 //create partner config by correct admin
 companyDataRouter.post("/partner/config", correctIsAuth, async (request, response) => {
   await createPartnerConfigController.handle(request, response)
+})
+
+//update partner config preferences by partner - TESTED
+companyDataRouter.put("/partner/config", companyIsAuth, async (request, response) => {
+  await setDefinitionsByBusinessAdminController.handle(request, response)
 })

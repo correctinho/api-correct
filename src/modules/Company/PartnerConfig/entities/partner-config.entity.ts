@@ -1,6 +1,7 @@
 import { CustomError } from '../../../../errors/custom.error';
 import { Uuid } from '../../../../@shared/ValueObjects/uuid.vo';
 import { newDateF } from '../../../../utils/date';
+import { SalesType } from '@prisma/client';
 
 export type PartnerCategory = 'saude' | 'cultura' | 'comercio';
 
@@ -12,9 +13,16 @@ export type PartnerConfigProps = {
   items_uuid: string[];
   admin_tax: number;
   marketing_tax: number;
-  use_marketing: boolean
+  use_marketing: boolean;
   market_place_tax: number;
   use_market_place: boolean;
+  title?: string;
+  phone?: string;
+  description?: string;
+  sales_type?: SalesType;
+  latitude?: number,
+  longitude?: number
+
 };
 
 export class PartnerConfigEntity {
@@ -25,9 +33,15 @@ export class PartnerConfigEntity {
   private _items_uuid: string[];
   private _admin_tax: number;
   private _marketing_tax: number;
-  private _use_marketing: boolean
+  private _use_marketing: boolean;
   private _market_place_tax?: number;
   private _use_market_place: boolean;
+  private _title?: string;
+  private _phone?: string;
+  private _description?: string;
+  private _sales_type?: SalesType;
+  private _latitude?: number;
+  private _longitude?: number;
   private _created_at?: string;
   private _updated_at?: string;
 
@@ -39,9 +53,15 @@ export class PartnerConfigEntity {
     this._items_uuid = props.items_uuid;
     this._admin_tax = props.admin_tax;
     this._marketing_tax = props.marketing_tax;
-    this._use_marketing = props.use_marketing ?? false
-    this._market_place_tax = props.market_place_tax
-    this._use_market_place = props.use_market_place ?? false
+    this._use_marketing = props.use_marketing ?? false;
+    this._market_place_tax = props.market_place_tax;
+    this._use_market_place = props.use_market_place ?? false;
+    this._title = props.title;
+    this._phone = props.phone;
+    this._sales_type = props.sales_type;
+    this._description = props.description;
+    this._latitude = props.latitude;
+    this._longitude = props.longitude;
     this._created_at = newDateF(new Date());
     this._updated_at = newDateF(new Date());
     this.validate();
@@ -57,7 +77,7 @@ export class PartnerConfigEntity {
   }
 
   get main_branch(): Uuid {
-    return this._main_branch
+    return this._main_branch;
   }
 
   get partner_category(): PartnerCategory[] {
@@ -77,7 +97,7 @@ export class PartnerConfigEntity {
   }
 
   get use_marketing(): boolean {
-    return this._use_marketing
+    return this._use_marketing;
   }
 
   get market_place_tax(): number {
@@ -85,8 +105,33 @@ export class PartnerConfigEntity {
   }
 
   get use_market_place(): boolean {
-    return this._use_market_place
+    return this._use_market_place;
   }
+
+  get title(): string {
+    return this._title;
+  }
+
+  get phone(): string {
+    return this._phone;
+  }
+
+  get description(): string {
+    return this._description;
+  }
+
+  get sales_type(): SalesType {
+    return this._sales_type;
+  }
+
+  get latitude(): number {
+    return this._latitude;
+  }
+
+  get longitude(): number {
+    return this._longitude;
+  }
+
   get created_at(): string | undefined {
     return this._created_at;
   }
@@ -96,38 +141,68 @@ export class PartnerConfigEntity {
   }
 
   changeAdminTax(admin_tax: number) {
-    this._admin_tax = admin_tax
-    this.validate()
+    this._admin_tax = admin_tax;
+    this.validate();
   }
 
   changeMarketingTax(marketing_tax: number) {
-    this._marketing_tax = marketing_tax
-    this.validate()
+    this._marketing_tax = marketing_tax;
+    this.validate();
   }
 
   changeMarketingPlaceTax(market_place_tax: number) {
-    this._market_place_tax = market_place_tax
+    this._market_place_tax = market_place_tax;
+    this.validate();
+  }
+
+  enableMarketing() {
+    this._use_marketing = true;
+  }
+
+  disableMarketing() {
+    this._use_marketing = false;
+  }
+
+  enableMarketPlace() {
+    this._use_market_place = true;
+  }
+
+  disabelMarketPlace() {
+    this._use_market_place = false;
+  }
+
+  changeItemsUuid(items_uuid: string[]) {
+    this._items_uuid = items_uuid;
+    this.validate();
+  }
+
+  changeTitle(title: string) {
+    this._title = title;
+    this.validate();
+  }
+
+  changeDescription(description: string) {
+    this._description = description;
+    this.validate();
+  }
+
+  changePhone(phone: string) {
+    this._phone = phone;
+    this.validate();
+  }
+
+  changeSalesType(sales_type: SalesType) {
+    this._sales_type = sales_type;
+    this.validate();
+  }
+
+  changeLatitude(latitude: number){
+    this._latitude = latitude;
     this.validate()
   }
 
-  enableMarketing(){
-    this._use_marketing = true
-  }
-
-  disableMarketing(){
-    this._use_marketing = false
-  }
-
-  enableMarketPlace(){
-    this._use_market_place = true
-  }
-
-  disabelMarketPlace(){
-    this._use_market_place = false
-  }
-
-  changeItemsUuid(items_uuid: string[]){
-    this._items_uuid = items_uuid
+  changeLongitude(longitude: number){
+    this._longitude = longitude;
     this.validate()
   }
 
@@ -143,7 +218,9 @@ export class PartnerConfigEntity {
     if (!this._partner_category || this._partner_category.length === 0) {
       throw new CustomError('At least one partner category is required', 400);
     }
-    if(!this.main_branch) throw new CustomError("Branch uuid is required", 400)
+    if (!this.main_branch) {
+      throw new CustomError('Branch uuid is required', 400);
+    }
 
     const validCategories = ['saude', 'cultura', 'comercio'];
     this._partner_category.forEach((category) => {
@@ -162,8 +239,25 @@ export class PartnerConfigEntity {
       throw new CustomError('Marketing tax must be a positive number', 400);
     }
 
-    if(this._use_market_place === undefined) throw new CustomError("Market place boolean is required", 400)
+    if (this._use_market_place === undefined) {
+      throw new CustomError('Market place boolean is required', 400);
+    }
 
+    if (this._title && typeof this._title !== 'string') {
+      throw new CustomError('Title must be a string', 400);
+    }
+
+    if (this._phone && typeof this._phone !== 'string') {
+      throw new CustomError('Phone must be a string', 400);
+    }
+
+    if (this._description && typeof this._description !== 'string') {
+      throw new CustomError('Description must be a string', 400);
+    }
+
+    if (this._sales_type && !Object.values(SalesType).includes(this._sales_type)) {
+      throw new CustomError('Invalid sales type', 400);
+    }
   }
 
   // Método estático para criação

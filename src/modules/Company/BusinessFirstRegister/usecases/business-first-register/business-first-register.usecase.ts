@@ -1,5 +1,6 @@
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../errors/custom.error";
+import { geocodeAddress } from "../../../../../utils/geocoder";
 import { BenefitsEntity } from "../../../../benefits/entities/benefit.entity";
 import { IBenefitsRepository } from "../../../../benefits/repositories/benefit.repository";
 import { IBranchRepository } from "../../../../branch/repositories/branch.repository";
@@ -31,7 +32,12 @@ export class CreateBusinessRegisterUsecase {
     const findByEmail = await this.companyDataRepository.findByEmail(register.email)
     if (findByEmail) throw new CustomError("Business email already registered", 409)
 
+
+
     if (register.business_type === 'autonomo_comercio' || register.business_type === 'comercio') {
+      //Set address geo code (latitude longitude)
+      //const geoCode = await geocodeAddress(data.line2, data.line1, data.postal_code)
+      const geoCode: any = 0
       //In this case, we need to set partnerConfig, which involves taxes
       const partneConfigData = {
         business_info_uuid: new Uuid(register.business_info_uuid),
@@ -42,9 +48,10 @@ export class CreateBusinessRegisterUsecase {
         marketing_tax: 0,
         use_marketing: data.partnerConfig.use_marketing,
         market_place_tax: 0,
-        use_market_place: data.partnerConfig.use_market_place
+        use_market_place: data.partnerConfig.use_market_place,
+        latitude: geoCode.lat ? geoCode.lat : null,
+        longitude: geoCode.long ? geoCode.long : null
       }
-
       const partnerConfigEntity = PartnerConfigEntity.create(partneConfigData)
       //now we need to set taxes accordding to main branch selected
       //check if main branch is one of the branches list.
@@ -61,8 +68,8 @@ export class CreateBusinessRegisterUsecase {
 
       //now that we have main branch details, we will get all defined taxes according to main branch
       //these taxes will be defined according to user preferences
-      if(partnerConfigEntity.use_marketing) partnerConfigEntity.changeMarketingTax(mainBranchDetails.marketing_tax)
-      if(partnerConfigEntity.use_market_place) partnerConfigEntity.changeMarketingPlaceTax(mainBranchDetails.market_place_tax)
+      if (partnerConfigEntity.use_marketing) partnerConfigEntity.changeMarketingTax(mainBranchDetails.marketing_tax)
+      if (partnerConfigEntity.use_market_place) partnerConfigEntity.changeMarketingPlaceTax(mainBranchDetails.market_place_tax)
 
       //in this line, we will set admin tax, it doesn't required any condition
       partnerConfigEntity.changeAdminTax(mainBranchDetails.admin_tax)
@@ -93,7 +100,7 @@ export class CreateBusinessRegisterUsecase {
   }
 
   private async verifyBranches(branches_uuid: string[]) {
-    for (const branch of branches_uuid){
+    for (const branch of branches_uuid) {
       const findBranch = await this.branchRepository.getByID(branch)
 
       if (!findBranch) throw new CustomError("Branch not found", 404);

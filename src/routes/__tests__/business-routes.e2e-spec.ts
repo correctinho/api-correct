@@ -3,7 +3,7 @@ import { app } from '../../app'
 import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo'
 import { randomUUID } from 'crypto'
-import { ItemCategory, ItemType } from '@prisma/client'
+import { ItemCategory, ItemType, SalesType } from '@prisma/client'
 
 let correctAdminToken: string
 let correctSellerToken: string
@@ -2168,6 +2168,33 @@ describe("E2E Business tests", () => {
 
     })
 
+  })
+
+  describe("E2E Partner Config", () => {
+    describe("Set partner config definitions by partner", () => {
+      it("Should throw an error if any data is sent on the request", async () => {
+
+        const result = await request(app).put(`/partner/config`).set('Authorization', `Bearer ${partner_admin_token}`)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("At least one field is required")
+      })
+
+      it("Should set definitions", async () => {
+        const input = {
+          title: "Comércio muito bom",
+          phone: "67896487542",
+          description: "Descrição do comércio que é muito bom mesmo",
+          sales_type: "presencial"
+
+        }
+        const result = await request(app).put(`/partner/config`).set('Authorization', `Bearer ${partner_admin_token}`).send(input)
+        expect(result.statusCode).toBe(201)
+        expect(result.body.title).toEqual(input.title)
+        expect(result.body.phone).toEqual(input.phone)
+        expect(result.body.description).toEqual(input.description)
+        expect(result.body.sales_type).toEqual(input.sales_type)
+      })
+    })
   })
 
 })

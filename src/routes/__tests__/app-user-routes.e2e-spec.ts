@@ -2821,7 +2821,7 @@ describe("E2E App User tests", () => {
         city: "Cidade teste",
         state: "Estado teste",
         country: "País teste",
-        fantasy_name: "Empresa teste",
+        fantasy_name: "Empresa teste 1",
         document: "comercio",
         classification: "Classificação",
         colaborators_number: 5,
@@ -2852,7 +2852,7 @@ describe("E2E App User tests", () => {
         city: "Cidade teste",
         state: "Estado teste",
         country: "País teste",
-        fantasy_name: "Empresa teste",
+        fantasy_name: "Empresa teste 2",
         document: "comercio2",
         classification: "Classificação",
         colaborators_number: 5,
@@ -2883,7 +2883,7 @@ describe("E2E App User tests", () => {
         city: "Cidade teste",
         state: "Estado teste",
         country: "País teste",
-        fantasy_name: "Empresa teste",
+        fantasy_name: "Empresa teste 3",
         document: "comercio3",
         classification: "Classificação",
         colaborators_number: 5,
@@ -2914,7 +2914,7 @@ describe("E2E App User tests", () => {
         city: "Cidade teste",
         state: "Estado teste",
         country: "País teste",
-        fantasy_name: "Empresa teste",
+        fantasy_name: "Empresa teste 4",
         document: "comercio4",
         classification: "Classificação",
         colaborators_number: 5,
@@ -2945,7 +2945,7 @@ describe("E2E App User tests", () => {
         city: "Cidade teste",
         state: "Estado teste",
         country: "País teste",
-        fantasy_name: "Empresa teste",
+        fantasy_name: "Empresa teste 5",
         document: "comercio5",
         classification: "Classificação",
         colaborators_number: 5,
@@ -2976,7 +2976,7 @@ describe("E2E App User tests", () => {
         city: "Cidade teste",
         state: "Estado teste",
         country: "País teste",
-        fantasy_name: "Empresa teste",
+        fantasy_name: "Empresa teste 6",
         document: "comercio6",
         classification: "Classificação",
         colaborators_number: 5,
@@ -3007,7 +3007,7 @@ describe("E2E App User tests", () => {
         city: "Cidade teste",
         state: "Estado teste",
         country: "País teste",
-        fantasy_name: "Empresa teste",
+        fantasy_name: "Empresa teste 7",
         document: "comercio7",
         classification: "Classificação",
         colaborators_number: 5,
@@ -3038,7 +3038,7 @@ describe("E2E App User tests", () => {
         city: "Cidade teste",
         state: "Estado teste",
         country: "País teste",
-        fantasy_name: "Empresa teste",
+        fantasy_name: "Empresa teste 8",
         document: "comercio8",
         classification: "Classificação",
         colaborators_number: 5,
@@ -3069,7 +3069,7 @@ describe("E2E App User tests", () => {
         city: "Cidade teste",
         state: "Estado teste",
         country: "País teste",
-        fantasy_name: "Empresa teste",
+        fantasy_name: "Empresa teste 9",
         document: "comercio9",
         classification: "Classificação",
         colaborators_number: 5,
@@ -3100,7 +3100,7 @@ describe("E2E App User tests", () => {
         city: "Cidade teste",
         state: "Estado teste",
         country: "País teste",
-        fantasy_name: "Empresa teste",
+        fantasy_name: "Empresa teste 10",
         document: "comercio10",
         classification: "Classificação",
         colaborators_number: 5,
@@ -3131,7 +3131,8 @@ describe("E2E App User tests", () => {
       })
       it("Should return a list of partners", async () => {
         const result = await request(app).get("/partners/category").set('Authorization', `Bearer ${userToken1}`).query({partner_category: 'saude'})
-        console.log(result.body)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.length).toBe(4)
       })
     })
 
