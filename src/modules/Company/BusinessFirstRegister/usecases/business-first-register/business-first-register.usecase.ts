@@ -50,7 +50,8 @@ export class CreateBusinessRegisterUsecase {
         market_place_tax: 0,
         use_market_place: data.partnerConfig.use_market_place,
         latitude: geoCode.lat ? geoCode.lat : null,
-        longitude: geoCode.long ? geoCode.long : null
+        longitude: geoCode.long ? geoCode.long : null,
+        title: data.partnerConfig.title ? data.partnerConfig.title : null
       }
       const partnerConfigEntity = PartnerConfigEntity.create(partneConfigData)
       //now we need to set taxes accordding to main branch selected

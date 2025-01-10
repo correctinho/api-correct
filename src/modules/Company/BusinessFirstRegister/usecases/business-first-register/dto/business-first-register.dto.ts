@@ -28,7 +28,8 @@ export interface InputBusinessFirstRegisterDTO {
     main_branch: string,
     partner_category: string[]
     use_marketing: boolean,
-    use_market_place: boolean
+    use_market_place: boolean,
+    title?: string
   }
 }
 

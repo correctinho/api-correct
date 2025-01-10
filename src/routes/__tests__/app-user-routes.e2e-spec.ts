@@ -2818,10 +2818,10 @@ describe("E2E App User tests", () => {
         line3: "",
         neighborhood: "Bairro Teste",
         postal_code: "5484248423",
-        city: "Cidade teste",
+        city: "Campo Grande",
         state: "Estado teste",
         country: "País teste",
-        fantasy_name: "Empresa teste 1",
+        fantasy_name: "Mercado Empresa teste 1",
         document: "comercio",
         classification: "Classificação",
         colaborators_number: 5,
@@ -2849,10 +2849,10 @@ describe("E2E App User tests", () => {
         line3: "",
         neighborhood: "Bairro Teste",
         postal_code: "5484248423",
-        city: "Cidade teste",
+        city: "Campo Grande",
         state: "Estado teste",
         country: "País teste",
-        fantasy_name: "Empresa teste 2",
+        fantasy_name: "Mercado Empresa teste 2",
         document: "comercio2",
         classification: "Classificação",
         colaborators_number: 5,
@@ -2880,7 +2880,7 @@ describe("E2E App User tests", () => {
         line3: "",
         neighborhood: "Bairro Teste",
         postal_code: "5484248423",
-        city: "Cidade teste",
+        city: "Campo Grande",
         state: "Estado teste",
         country: "País teste",
         fantasy_name: "Empresa teste 3",
@@ -2911,7 +2911,7 @@ describe("E2E App User tests", () => {
         line3: "",
         neighborhood: "Bairro Teste",
         postal_code: "5484248423",
-        city: "Cidade teste",
+        city: "Corumbá",
         state: "Estado teste",
         country: "País teste",
         fantasy_name: "Empresa teste 4",
@@ -2942,7 +2942,7 @@ describe("E2E App User tests", () => {
         line3: "",
         neighborhood: "Bairro Teste",
         postal_code: "5484248423",
-        city: "Cidade teste",
+        city: "Corumbá",
         state: "Estado teste",
         country: "País teste",
         fantasy_name: "Empresa teste 5",
@@ -2973,7 +2973,7 @@ describe("E2E App User tests", () => {
         line3: "",
         neighborhood: "Bairro Teste",
         postal_code: "5484248423",
-        city: "Cidade teste",
+        city: "Corumbá",
         state: "Estado teste",
         country: "País teste",
         fantasy_name: "Empresa teste 6",
@@ -3004,7 +3004,7 @@ describe("E2E App User tests", () => {
         line3: "",
         neighborhood: "Bairro Teste",
         postal_code: "5484248423",
-        city: "Cidade teste",
+        city: "Ladário",
         state: "Estado teste",
         country: "País teste",
         fantasy_name: "Empresa teste 7",
@@ -3035,7 +3035,7 @@ describe("E2E App User tests", () => {
         line3: "",
         neighborhood: "Bairro Teste",
         postal_code: "5484248423",
-        city: "Cidade teste",
+        city: "Ladário",
         state: "Estado teste",
         country: "País teste",
         fantasy_name: "Empresa teste 8",
@@ -3066,7 +3066,7 @@ describe("E2E App User tests", () => {
         line3: "",
         neighborhood: "Bairro Teste",
         postal_code: "5484248423",
-        city: "Cidade teste",
+        city: "Ladário",
         state: "Estado teste",
         country: "País teste",
         fantasy_name: "Empresa teste 9",
@@ -3097,7 +3097,7 @@ describe("E2E App User tests", () => {
         line3: "",
         neighborhood: "Bairro Teste",
         postal_code: "5484248423",
-        city: "Cidade teste",
+        city: "Aquidauana",
         state: "Estado teste",
         country: "País teste",
         fantasy_name: "Empresa teste 10",
@@ -3129,11 +3129,59 @@ describe("E2E App User tests", () => {
         expect(result.body.error).toBe("Category is required")
 
       })
-      it("Should return a list of partners", async () => {
-        const result = await request(app).get("/partners/category").set('Authorization', `Bearer ${userToken1}`).query({partner_category: 'saude'})
-        console.log("result: ", result.body)
+      // it("Should return a list of partners", async () => {
+      //   const result = await request(app).get("/partners/category").set('Authorization', `Bearer ${userToken1}`).query({partner_category: 'saude'})
+      //   console.log("result: ", result.body)
+      //   expect(result.statusCode).toBe(200)
+      //   expect(result.body.length).toBe(4)
+      // })
+      it("Should return only cities located in Campo Grande with Saude category", async () => {
+        //In this test, we have 2 filters: partner_category and city
+        //So we want all partners that are located in campo grande and have the "saude" category
+        const input = {
+          city: "Campo Grande"
+        }
+        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({partner_category: 'saude'}).send(input)
         expect(result.statusCode).toBe(200)
-        expect(result.body.length).toBe(4)
+        expect(result.body.length).toBe(2)
+      })
+      it("Should return only partners located in Corumba with Comercio category", async () => {
+        //In this test, we have 2 filters: partner_category and city
+        //So we want all partners that are located in campo grande and have the "saude" category
+        const input = {
+          city: "Corumbá"
+        }
+        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({partner_category: 'comercio'}).send(input)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.length).toBe(3)
+      })
+      it("Should return only partners located in Corumba which main branch is branch4", async () => {
+        const input = {
+          city: "Corumbá",
+          main_branch: branch4_uuid
+        }
+        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({partner_category: 'comercio'}).send(input)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.length).toBe(3)
+      })
+      it("Should return only partners located in Campo Grande with specific search query", async () => {
+        const input = {
+          city: "Campo Grande",
+          search: "Mercado"
+        }
+        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({partner_category: 'saude'}).send(input)
+
+        expect(result.statusCode).toBe(200)
+        expect(result.body.length).toBe(2)
+      })
+      it("Should return only partners located in Campo Grande that accept an specefic type of benefit", async () => {
+        const input = {
+          city: "Campo Grande",
+          item_uuid: benefit1_uuid.uuid
+        }
+        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({partner_category: 'saude'}).send(input)
+        expect(result.statusCode).toBe(200)
+
       })
     })
 

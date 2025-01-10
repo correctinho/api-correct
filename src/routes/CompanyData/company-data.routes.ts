@@ -11,6 +11,7 @@ import { createPartnerConfigController } from "../../modules/Company/PartnerConf
 import { getRegisterPartnerBySeller } from "../../modules/Company/CompanyData/usecases/get-company-data-by-correct-seller";
 import { getPartnersByCategory } from "../../modules/Company/PartnerConfig/usecases/get-partners-by-category";
 import { setDefinitionsByBusinessAdminController } from "../../modules/Company/PartnerConfig/usecases/set-definitions-by-business-admin";
+import { filterPartnersByAppUser } from "../../modules/Company/PartnerConfig/usecases/filter-partners-by-appuser";
 
 export const companyDataRouter = Router()
 
@@ -32,6 +33,11 @@ companyDataRouter.get('/business/info', companyIsAuth, async (request, response)
 //get partners by category by app user
 companyDataRouter.get('/partners/category', appUserIsAuth, async (request, response) => {
   await getPartnersByCategory.handle(request, response)
+})
+
+//filter partners by appuser
+companyDataRouter.get('/partners/filter', appUserIsAuth, async (request, response) => {
+  await filterPartnersByAppUser.handle(request, response)
 })
 
 //get partners by app user
