@@ -36,8 +36,8 @@ export class CreateBusinessRegisterUsecase {
 
     if (register.business_type === 'autonomo_comercio' || register.business_type === 'comercio') {
       //Set address geo code (latitude longitude)
-      //const geoCode = await geocodeAddress(data.line2, data.line1, data.postal_code)
-      const geoCode: any = 0
+      const geoCode = await geocodeAddress(data.line2, data.line1, data.postal_code)
+      //const geoCode: any = 0
       //In this case, we need to set partnerConfig, which involves taxes
       const partneConfigData = {
         business_info_uuid: new Uuid(register.business_info_uuid),
