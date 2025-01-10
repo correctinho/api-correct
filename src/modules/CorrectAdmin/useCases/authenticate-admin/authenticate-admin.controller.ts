@@ -28,6 +28,7 @@ export class AuthenticateAdminController {
 
       return res.json(admin)
     } catch (err: any) {
+      console.log({err})
       return res.status(err.statusCode).json({
         error: err.message
       })

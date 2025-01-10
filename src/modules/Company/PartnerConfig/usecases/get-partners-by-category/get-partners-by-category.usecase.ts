@@ -1,17 +1,19 @@
 import { CustomError } from "../../../../../errors/custom.error";
 import { IPartnerConfigRepository } from "../../repositories/partner-config.repository";
+import { InputGetPartnersByCategoryDTO } from "./dto/get-partner-by-category.dto";
 
 export class GetPartnersByCategoryUsecase {
   constructor(
     private partnerConfigRepository: IPartnerConfigRepository
   ) { }
-  async execute(partner_category: string) {
-    if (!partner_category) throw new CustomError("Category is required", 400)
+  async execute(data: InputGetPartnersByCategoryDTO) {
+    if (!data.partner_category) throw new CustomError("Category is required", 400)
 
     //Get all partners with specified category
-    const partners = await this.partnerConfigRepository.findPartnersByCategory(partner_category)
+    const partners = await this.partnerConfigRepository.findPartnersByCategory(data.partner_category, 1, 15)
     return partners.map((partner: any) => {
       return {
+        offer_product: partner.use_marketing ? true : false,
         business_info_uuid: partner.BusinessInfo.uuid,
         fantasy_name: partner.BusinessInfo.fantasy_name,
         title: partner.title,

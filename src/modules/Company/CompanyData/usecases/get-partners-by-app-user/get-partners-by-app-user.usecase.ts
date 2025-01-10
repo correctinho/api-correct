@@ -12,7 +12,6 @@ export class GetPartnersByAppUserUsecase {
     if (!data.city) throw new CustomError("City is required", 400)
 
     const partners = await this.businessInfoRepository.findPartnersByAppUser(data.city, data.page, 15)
-    console.log(partners[0].Products)
 
     if (partners.length === 0) return []
 

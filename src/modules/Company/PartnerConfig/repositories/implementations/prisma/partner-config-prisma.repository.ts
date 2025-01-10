@@ -132,15 +132,16 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
     } as PartnerConfigEntity
   }
 
-  async findPartnersByCategory(partner_category: string): Promise<any[]> {
+  async findPartnersByCategory(partner_category: string, page: number, limit: number): Promise<any[]> {
+    const take = limit; // Quantidade de registros por página
+    const skip = (page - 1) * limit; // Quantos registros pular
+
     const partners = await prismaClient.partnerConfig.findMany({
       where: {
         partner_category: {
           has: partner_category
-        },
-        NOT: {
-          use_marketing: false
         }
+
       },
       include: {
         BusinessInfo: {
@@ -149,7 +150,9 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
           }
         },
 
-      }
+      },
+      skip,
+      take
     })
     return partners
   }

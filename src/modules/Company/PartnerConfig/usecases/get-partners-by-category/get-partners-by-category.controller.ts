@@ -7,9 +7,11 @@ export class GetPartnersByCategoryController {
   ) { }
   async handle(req: Request, res: Response) {
     try {
-      const category = req.query.partner_category as string
+
+      const data = req.body
+      data.partner_category = req.query.partner_category as string
       const usecase = new GetPartnersByCategoryUsecase(this.partnerConfigRepository)
-      const result = await usecase.execute(category)
+      const result = await usecase.execute(data)
 
       return res.json(result)
     } catch (err: any) {
