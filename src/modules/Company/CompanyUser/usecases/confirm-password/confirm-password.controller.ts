@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { IPasswordCrypto } from "../../../../../crypto/password.crypto";
 import { ICompanyUserRepository } from "../../repositories/company-user.repository";
-import { logger } from "../../../../../utils/logger";
 import { ConfirmPasswordUsecase } from "./confirm-password.usecase";
 
 export class ConfirmPasswordController{
@@ -26,7 +25,6 @@ export class ConfirmPasswordController{
             return res.json(comparePassword)
 
         }catch(err: any){
-            logger.error(err.stack)
             return res.status(err.statusCode).json({
                 error: err.message
             })

@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { ICompanyUserRepository } from "../../repositories/company-user.repository";
 import { DeleteUserByAdminUsecase } from "./delete-user-by-admin.usecase";
-import { logger } from "../../../../../utils/logger";
 
 export class DeleteUserByAdminController {
     constructor(
@@ -21,7 +20,6 @@ export class DeleteUserByAdminController {
             return res.json({ message: "Usuário excluído com sucesso" })
 
         } catch (err: any) {
-            logger.error(err.stack)
             return res.status(err.statusCode).json({
                 error: err.message
             })

@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { IPasswordCrypto } from "../../../../../../crypto/password.crypto";
 import { IAppUserToken } from "../../../../../../infra/shared/crypto/token/AppUser/token";
 import { AuthenticateAppuserUsecase } from "./authenticate-app-user.usecase";
-import { logger } from "../../../../../../utils/logger";
 import { IAppUserAuthRepository } from "../../../repositories/app-use-auth-repository";
 
 export class AuthenticateAppUserController {

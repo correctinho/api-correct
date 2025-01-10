@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { IAppUserAuthRepository } from "../../../repositories/app-use-auth-repository";
 import { GetByDocumentUsecase } from "./get-by-document.usecase";
-import { logger } from "../../../../../../utils/logger";
 import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repository";
 import { IAppUserDocumentValidationRepository } from "../../../repositories/app-user-document-validation.repository";
 
@@ -24,7 +23,6 @@ export class GetByDocumentController {
             return res.json(user)
 
         } catch (err: any) {
-            console.log({err})
             return res.status(err.statusCode).json({
                 error: err.message
             })

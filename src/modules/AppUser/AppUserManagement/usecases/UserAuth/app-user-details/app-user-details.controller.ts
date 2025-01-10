@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { IAppUserAuthRepository } from "../../../repositories/app-use-auth-repository";
 import { AppUserDetailsUsecase } from "./app-user-details.usecase";
-import { logger } from "../../../../../../utils/logger";
 import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repository";
 

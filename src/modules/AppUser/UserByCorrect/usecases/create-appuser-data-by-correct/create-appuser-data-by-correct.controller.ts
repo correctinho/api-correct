@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { CustomError } from "../../../../../errors/custom.error";
-import { logger } from "../../../../../utils/logger";
 import { IAppUserInfoRepository } from "../../../AppUserManagement/repositories/app-user-info.repository";
 import { ICompanyDataRepository } from "../../../../Company/CompanyData/repositories/company-data.repository";
 import { IAppUserAuthRepository } from "../../../AppUserManagement/repositories/app-use-auth-repository";

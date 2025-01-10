@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { ICorrectAdminRepository } from "../../repositories/correct-admin.repository";
 import { CreateCorrectSellerByAdminUseCase } from "./create-correct-seller.usecase";
-import { logger } from "../../../../utils/logger";
 
 export class CreateCorrectSellerByAdminController {
     constructor(

@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { ICorrectAdminRepository } from "../../repositories/correct-admin.repository";
 import { CreateCorrectAdminUseCase } from "./create-correct-admin.usecase";
-import { logger } from "../../../../utils/logger";
 
 export class CreateCorrectAdminController {
     constructor(

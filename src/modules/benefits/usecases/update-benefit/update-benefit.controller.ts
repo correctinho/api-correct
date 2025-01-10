@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { IBenefitsRepository } from '../../repositories/benefit.repository';
 import { UpdateBenefitUsecase } from './update-benefit.usercase';
-import { logger } from '../../../../utils/logger';
 import { Uuid } from '../../../../@shared/ValueObjects/uuid.vo';
 
 export class UpdateBenefitController {
@@ -18,7 +17,6 @@ export class UpdateBenefitController {
 
             return res.status(200).json(resp);
         } catch (err: any) {
-          console.log({err})
             return res.status(err.statusCode).json({
                 error: err.message,
             });

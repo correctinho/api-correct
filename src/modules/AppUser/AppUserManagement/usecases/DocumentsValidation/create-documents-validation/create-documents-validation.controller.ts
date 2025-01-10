@@ -1,6 +1,4 @@
 import { Request, Response } from "express";
-import { logger } from "../../../../../../utils/logger";
-import { DocumentValidationProps } from "../../../entities/app-user-document-validation.entity";
 import { CreateDocumentsValidationUsecase } from "./create-documents-validation.usecase";
 import { IAppUserDocumentValidationRepository } from "../../../repositories/app-user-document-validation.repository";
 import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repository";
