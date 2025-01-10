@@ -3,5 +3,6 @@ export type InputFilterPartnerByAppUserDTO = {
   search?: string,
   branch_uuid?: string,
   page: number,
-  city: string
+  city: string,
+  item_uuid: string
 }
