@@ -3129,12 +3129,11 @@ describe("E2E App User tests", () => {
         expect(result.body.error).toBe("Category is required")
 
       })
-      // it("Should return a list of partners", async () => {
-      //   const result = await request(app).get("/partners/category").set('Authorization', `Bearer ${userToken1}`).query({partner_category: 'saude'})
-      //   console.log("result: ", result.body)
-      //   expect(result.statusCode).toBe(200)
-      //   expect(result.body.length).toBe(4)
-      // })
+      it("Should return a list of partners", async () => {
+        const result = await request(app).get("/partners/category").set('Authorization', `Bearer ${userToken1}`).query({partner_category: 'saude'})
+        expect(result.statusCode).toBe(200)
+        expect(result.body.length).toBe(4)
+      })
       it("Should return only cities located in Campo Grande with Saude category", async () => {
         //In this test, we have 2 filters: partner_category and city
         //So we want all partners that are located in campo grande and have the "saude" category

@@ -8,7 +8,7 @@ export class FilterPartnersByAppUserUsecase {
   ) { }
   async execute(data: InputFilterPartnerByAppUserDTO) {
     if (!data.partner_category) throw new CustomError("Category is required", 400)
-
+    if(!data.page) data.page = 1
     //Get all partners with specified category
     const partners = await this.partnerConfigRepository.filterPartnersByAppUser(data.partner_category, data.page, 15, data.branch_uuid, data.city, data.search, data.item_uuid)
     return partners.map((partner: any) => {
