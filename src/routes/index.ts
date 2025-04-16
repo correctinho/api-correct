@@ -11,6 +11,7 @@ import { contractsRouter } from './Contracts/contracts.routes';
 import { businessItemDetailsRouter } from './BusinessItemDetails/business-item-details.routes';
 import { appUserItemRouter } from './AppUserItem/app-user-item.routes';
 import { groupsRouter } from './Groups/groups.routes';
+import { transactionsRouter } from './Transactions/transactions.routes';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use(contractsRouter)
 router.use(businessItemDetailsRouter)
 router.use(appUserItemRouter)
 router.use(groupsRouter)
+router.use(transactionsRouter)
 
 export { router };
