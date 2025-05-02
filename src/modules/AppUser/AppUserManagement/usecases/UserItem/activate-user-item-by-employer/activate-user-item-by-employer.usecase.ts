@@ -9,8 +9,6 @@ import { InputActivateUserItemByEmployer, OutputActivateUserItemByEmployer } fro
 export class ActivateUserItemByEmployerUsecase {
   constructor(
     private appUserItemRepository: IAppUserItemRepository,
-
-
     private groupsRepository: IBenefitGroupsRepository
   ) { }
 

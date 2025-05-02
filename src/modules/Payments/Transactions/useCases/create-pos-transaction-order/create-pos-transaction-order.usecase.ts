@@ -1,6 +1,5 @@
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../errors/custom.error";
-import { IBusinessItemDetailsRepository } from "../../../../Company/BusinessItemsDetails/repositories/business-item-details.repository";
 import { ICompanyDataRepository } from "../../../../Company/CompanyData/repositories/company-data.repository";
 import { IPartnerConfigRepository } from "../../../../Company/PartnerConfig/repositories/partner-config.repository";
 import { TransactionEntity } from "../../entities/transaction-order.entity";
@@ -19,7 +18,6 @@ export class CreatePOSTransactionOrderUsecase {
     const businessInfo = await this.businessInfoRepository.findById(data.business_info_uuid)
     if (!businessInfo) throw new CustomError("Business not found", 400)
 
-
     // Check if business is active
     if (businessInfo.status !== 'active') throw new CustomError("Business is not active", 403)
 
@@ -29,14 +27,13 @@ export class CreatePOSTransactionOrderUsecase {
     //Get partner config details
     const partnerConfig = await this.partnerConfigRepository.findByPartnerId(businessInfo.uuid)
     if (!partnerConfig) throw new CustomError("Partner config not found", 400)
+
     // Calculate fee
     const fee = await this.calculateFee(partnerConfig.admin_tax, partnerConfig.marketing_tax)
 
     data.transaction_type = 'POS_PAYMENT'
 
     const transactionEntity = TransactionEntity.create(data)
-    // Now we need to check if item provided is accepted by business
-    await this.checkPartnerItem(partnerConfig.items_uuid, data.item_uuid)
 
     transactionEntity.changeBusinessInfoUuid(new Uuid(data.business_info_uuid))
     transactionEntity.changeFeeAmount(fee)
@@ -55,11 +52,4 @@ export class CreatePOSTransactionOrderUsecase {
     const fee = admin_tax + marketing_tax
     return fee
   }
-
-  private async checkPartnerItem(items_uuid: string[], item_uuid: string) {
-    const item = items_uuid.find((item) => item === item_uuid)
-    if (!item) throw new CustomError("Item not accepted by the business", 403)
-
-  }
-
 }

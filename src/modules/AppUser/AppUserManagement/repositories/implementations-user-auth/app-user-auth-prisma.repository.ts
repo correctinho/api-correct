@@ -59,48 +59,6 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
         })
     }
 
-    // async saveOrUpdate(data: AppUserAuthSignUpEntity): Promise<void> {
-    //     await prismaClient.userAuth.upsert({
-    //         where:{
-    //             document: data.document
-    //         },
-    //         create:{
-    //             uuid: data.uuid,
-    //             user_info_uuid: data.user_info_uuid,
-    //             document: data.document,
-    //             email: data.email,
-    //             password: data.password,
-    //             created_at: data.created_at
-    //         },
-    //         update:{
-    //             user_info_uuid: data.user_info_uuid,
-    //             document: data.document,
-    //             email: data.email,
-    //             password: data.password,
-    //             updated_at: newDateF(new Date())
-    //         }
-    //     })
-    // }
-
-    // async findByEmail(email: string): Promise<AppUserAuthResponse | null> {
-    //     return await prismaClient.userAuth.findUnique({
-    //         where: {
-    //             email
-    //         }
-    //     }) as AppUserAuthResponse | null
-    // }
-
-
-
-    // async findByDocumentAuth(document: string): Promise<AppUserAuthResponseAuthentication | null> {
-    //     const appUser = await prismaClient.userAuth.findUnique({
-    //         where: {
-    //             document
-    //         }
-    //     })
-
-    //     return appUser as AppUserAuthResponseAuthentication | null
-    // }
 
     async findByEmail(email: string): Promise<AppUserAuthSignUpEntity | null> {
         const appUser = await prismaClient.userAuth.findUnique({
@@ -145,40 +103,6 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
 
         } as AppUserAuthSignUpEntity || null
     }
-
-
-    // async findById(uuid: string): Promise<AppUserAuthResponse | null> {
-    //     const appUser = await prismaClient.userAuth.findUnique({
-    //         where: {
-    //             uuid
-    //         },
-    //         select: {
-    //             uuid: true,
-    //             user_info_uuid: true,
-    //             document: true,
-    //             email: true,
-    //             created_at: true,
-    //             updated_at: true,
-    //             UserInfo: {
-    //                 include: {
-    //                     Address: true,
-    //                     UserValidation: {
-    //                         select:{
-    //                             uuid: true,
-    //                             document_front_status: true,
-    //                             document_back_status: true,
-    //                             selfie_status: true,
-    //                             document_selfie_status: true
-    //                         }
-    //                     }
-    //                 }
-    //             }
-
-    //         }
-    //     });
-
-    //     return appUser as AppUserAuthResponse | null
-    // }
 
 
 }

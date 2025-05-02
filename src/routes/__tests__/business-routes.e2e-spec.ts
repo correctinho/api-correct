@@ -2238,8 +2238,9 @@ describe("E2E Business tests", () => {
         expect(result.statusCode).toBe(403)
         expect(result.body.error).toBe("Business type is not allowed")
       })
-      it("Should throw an error if item is not accepted by partner", async () => {
-        //active partner
+
+      it("Should create a POS transaction", async () => {
+        //ACTIVATE PARTNER TO BE ABLE TO CREATE TRANSACTIONS
         const inputToInactivate = {
 
           status: "active"
@@ -2250,32 +2251,10 @@ describe("E2E Business tests", () => {
         const activePartner = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToInactivate)
         expect(activePartner.statusCode).toBe(200)
 
+        //CREATE TRANSACTION
         const input = {
           amount: 200,
           description: "",
-          item_uuid: benefit3_uuid
-        }
-        const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
-        expect(result.statusCode).toBe(403)
-        expect(result.body.error).toBe("Item not accepted by the business")
-
-      })
-      it("Should create an transaction for benefit1", async () => {
-        //active partner
-        const inputToInactivate = {
-
-          status: "active"
-        }
-        const query = {
-          business_info_uuid: partner_info_uuid
-        }
-        const activePartner = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToInactivate)
-        expect(activePartner.statusCode).toBe(200)
-
-        const input = {
-          amount: 200,
-          description: "",
-          item_uuid: benefit1_uuid
         }
         const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
         expect(result.statusCode).toBe(201)
@@ -2284,18 +2263,7 @@ describe("E2E Business tests", () => {
 
       })
 
-      it("Should create an transaction for benefit2", async () => {
-        const input = {
-          amount: 200,
-          description: "",
-          item_uuid: benefit2_uuid
-        }
-        const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
-        expect(result.statusCode).toBe(201)
-        expect(result.body.business_info_uuid).toBe(partner_info_uuid)
-        expect(result.body.fee).toBe(1.50) //this is because this partner main branch is branch1, as defined on line 646. And this branch was created to have admin tax as 152
 
-      })
     })
   })
 })

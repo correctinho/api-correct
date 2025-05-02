@@ -14,6 +14,7 @@ import { AppUserItemEntity } from '../../../AppUserManagement/entities/app-user-
 import { UserItemStatus } from '@prisma/client';
 import { BenefitGroupsEntity } from '../../../../Company/BenefitGroups/entities/benefit-groups.entity';
 import { IAppUserItemRepository } from '../../../AppUserManagement/repositories/app-user-item-repository';
+import { IBenefitsRepository } from '../../../../benefits/repositories/benefit.repository';
 
 let employerActiveItems: OutputFindEmployerItemDetailsDTO[] = []
 
@@ -23,7 +24,8 @@ export class CreateAppUserByCorrectUsecaseTest {
     private businessRepository: ICompanyDataRepository,
     private appUserAuthRepository: IAppUserAuthRepository,
     private employerItemsRepository: IBusinessItemDetailsRepository,
-    private employeeItemRepository: IAppUserItemRepository
+    private employeeItemRepository: IAppUserItemRepository,
+    private benefitsRepository: IBenefitsRepository
   ) { }
 
   async execute(data: InputCreateAppUserDataByCorrectDTO) {
@@ -32,6 +34,7 @@ export class CreateAppUserByCorrectUsecaseTest {
     let usersRegistered: string[] = [];
 
     if (!data.business_info_uuid) throw new CustomError("Business Id is required", 400);
+
 
     const business = await this.businessRepository.findById(data.business_info_uuid);
     if (!business) throw new CustomError("Business not found", 404);
@@ -108,6 +111,11 @@ export class CreateAppUserByCorrectUsecaseTest {
   }
 
   private async validateUser(users: AppUserInfoRequest[], business_info_uuid: string, validatedUser: AppUserInfoEntity[], errorUser: string[]) {
+    //we need to get the benefit debit card to sabe to new users
+    const benefit = await this.benefitsRepository.findByName("Correct")
+    if (!benefit) throw new CustomError("Benefit not found", 404)
+    //set debit benefit
+
     for (const user of users) {
       const data: AppUserInfoCreateCommand = {
         business_info_uuid: new Uuid(business_info_uuid),
@@ -131,11 +139,13 @@ export class CreateAppUserByCorrectUsecaseTest {
         marital_status: user.marital_status,
         dependents_quantity: user.dependents_quantity,
         user_document_validation_uuid: null,
-        is_employee: true
+        is_employee: true,
+        debit_benefit_uuid: benefit.uuid
       };
 
       try {
         const appUser = await AppUserInfoEntity.create(data);
+
         validatedUser.push(appUser);
       } catch (error: any) {
         errorUser.push(`Erro ao criar usuário: ${user.document} - ${error}`);
@@ -145,7 +155,6 @@ export class CreateAppUserByCorrectUsecaseTest {
 
   private async processUsers(users: AppUserInfoEntity[], business_info_uuid: string, usersRegistered: string[]) {
     for (const user of users) {
-      //user.setEmployee()
 
       const existingUserInfo = await this.appUserInfoRepository.findByDocumentUserInfo(user.document);
       const findUserAuth = await this.appUserAuthRepository.findByDocument(user.document);

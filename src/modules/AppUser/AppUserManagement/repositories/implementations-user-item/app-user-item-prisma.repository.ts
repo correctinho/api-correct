@@ -188,12 +188,11 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
 
       }
     })
-
     return userItems.map((userItem) => {
       return {
         uuid: new Uuid(userItem.uuid),
-        business_info_uuid: new Uuid(userItem.Business.uuid),
-        fantasy_name: userItem.Business.fantasy_name,
+        business_info_uuid: userItem.Business ? new Uuid(userItem.Business.uuid) : null,
+        fantasy_name: userItem.Business ? userItem.Business.fantasy_name : null,
         user_info_uuid: new Uuid(userItem.user_info_uuid),
         item_uuid: new Uuid(userItem.item_uuid),
         item_type: userItem.Item.item_type,
@@ -208,10 +207,10 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         cancel_reason: userItem.cancel_reason,
         cancelling_request_at: userItem.cancelling_request_at,
         grace_period_end_date: userItem.grace_period_end_date,
-        group_uuid: new Uuid(userItem.BenefitGroups.uuid),
-        group_name: userItem.BenefitGroups.group_name,
-        group_value: userItem.BenefitGroups.value,
-        group_is_default: userItem.BenefitGroups.is_default,
+        group_uuid: userItem.BenefitGroups ? new Uuid(userItem.BenefitGroups.uuid) : null,
+        group_name: userItem.BenefitGroups ? userItem.BenefitGroups.group_name : null,
+        group_value: userItem.BenefitGroups ? userItem.BenefitGroups.value : null,
+        group_is_default: userItem.BenefitGroups ? userItem.BenefitGroups.is_default : null,
         created_at: userItem.created_at,
         updated_at: userItem.updated_at
       }

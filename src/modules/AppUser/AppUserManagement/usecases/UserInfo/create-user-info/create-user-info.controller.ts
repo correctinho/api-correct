@@ -4,11 +4,13 @@ import { IAppUserAuthRepository } from "../../../repositories/app-use-auth-repos
 import { CreateAppUserInfoUsecase } from "./create-user-info.usecase";
 import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 import { InputCreateUserInfoDTO } from "./dto/create-user-info.dto";
+import { IAppUserItemRepository } from "../../../repositories/app-user-item-repository";
+import { IBenefitsRepository } from "../../../../../benefits/repositories/benefit.repository";
 
 export class CreateUserInfoController{
     constructor(
         private appUserInfoRepository: IAppUserInfoRepository,
-        private appUserAuthRepository: IAppUserAuthRepository
+        private benefitsRepository: IBenefitsRepository
 
     ){}
 
@@ -24,7 +26,7 @@ export class CreateUserInfoController{
 
             data.email = req.appUser.email
 
-            const userInfoUsecase = new CreateAppUserInfoUsecase(this.appUserInfoRepository, this.appUserAuthRepository)
+            const userInfoUsecase = new CreateAppUserInfoUsecase(this.appUserInfoRepository, this.benefitsRepository)
 
             await userInfoUsecase.execute(data)
 

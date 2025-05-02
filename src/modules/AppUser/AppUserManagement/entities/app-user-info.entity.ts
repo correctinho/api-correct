@@ -30,6 +30,7 @@ export type AppUserInfoProps = {
   dependents_quantity: number;
   user_document_validation_uuid: Uuid | null;
   is_employee?: boolean
+  debit_benefit_uuid?: Uuid
   created_at?: string
   updated_at?: string
 };
@@ -57,6 +58,7 @@ export type AppUserInfoCreateCommand = {
   dependents_quantity: number;
   user_document_validation_uuid: Uuid | null;
   is_employee?: boolean
+  debit_benefit_uuid?: Uuid
   created_at?: string
   updated_at?: string
 }
@@ -86,6 +88,7 @@ export class AppUserInfoEntity {
   private _dependents_quantity: number;
   private _user_document_validation_uuid: Uuid | null;
   private _is_employee: boolean
+  private _debit_benefit_uuid?: Uuid
   private _created_at?: string;
   private _updated_at?: string;
 
@@ -114,6 +117,7 @@ export class AppUserInfoEntity {
     this._dependents_quantity = props.dependents_quantity;
     this._user_document_validation_uuid = props.user_document_validation_uuid;
     this._is_employee = props.is_employee ?? false
+    this._debit_benefit_uuid = props.debit_benefit_uuid
     this._created_at = newDateF(new Date());
     this._updated_at = newDateF(new Date());
     this.validate();
@@ -220,6 +224,10 @@ export class AppUserInfoEntity {
 
   get updated_at(): string | undefined {
     return this._updated_at
+  }
+
+  get debit_benefit_uuid(): Uuid | undefined {
+    return this._debit_benefit_uuid
   }
 
   changeUuid(uuid: Uuid){
@@ -349,6 +357,12 @@ export class AppUserInfoEntity {
     this._user_document_validation_uuid = user_document_validation_uuid;
     this.validate();
   }
+
+  setDebitBenefitUuid(debit_benefit_uuid: Uuid) {
+    this._debit_benefit_uuid = debit_benefit_uuid
+    this.validate()
+  }
+
   validate() {
 
     if (!this.full_name) throw new CustomError("Full name is required", 400);

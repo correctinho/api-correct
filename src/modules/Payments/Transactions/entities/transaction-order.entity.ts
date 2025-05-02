@@ -15,7 +15,7 @@ export type TransactionProps = {
   description?: string | null; // Optional
   status: TransactionStatus; // Mandatory
   transaction_type?: TransactionType; // Mandatory
-  item_uuid: string
+  item_uuid?: string
   partner_user_uuid?: Uuid | null; // Optional: FK to PartnerUser
   created_at?: string; // Optional: Handled by constructor/DB
   updated_at?: string; // Optional: Handled by constructor/DB
@@ -31,7 +31,7 @@ export type TransactionCreateCommand = {
   cashback?: number;
   description?: string | null;
   status?: TransactionStatus; // Often starts as 'pending'
-  item_uuid: string
+  item_uuid?: string
   transaction_type?: TransactionType;
 };
 
@@ -47,7 +47,7 @@ export class TransactionEntity {
   private _description: string | null;
   private _status: TransactionStatus;
   private _transaction_type?: TransactionType;
-  private _item_uuid: string
+  private _item_uuid?: string
   private _partner_user_uuid?: Uuid | null;
   private _created_at: string;
   private _updated_at: string;
@@ -164,8 +164,6 @@ export class TransactionEntity {
     if (!this._transaction_type) {
       throw new CustomError("Transaction type is required", 400);
     }
-
-    if(!this.item_uuid) throw new CustomError("Item uuid is required", 400)
 
     // Validation for recipient based on type (when status indicates completion/processing)
     // This logic might need refinement based on when exactly fields become mandatory

@@ -9,7 +9,6 @@ import { randomUUID } from 'crypto'
 import { urlencoded } from "express";
 import { OutputFindUserDTO } from "../../usecases/UserInfo/get-user-info-by-user/dto/get-user-by-user.dto";
 import { AppUserItemEntity } from "../../entities/app-user-item.entity";
-import { BenefitGroupsEntity } from "../../../../Company/BenefitGroups/entities/benefit-groups.entity";
 
 export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
 
@@ -49,8 +48,21 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
           user_info_uuid: data.uuid.uuid,
           updated_at: newDateF(new Date())
         }
+      }),
+      prismaClient.userItem.create({
+        data: {
+          uuid: randomUUID(),
+          user_info_uuid: data.uuid.uuid,
+          item_uuid: data.debit_benefit_uuid.uuid,
+          item_name: "Correct",
+          balance: 0,
+          status: "active",
+          created_at: newDateF(new Date()),
+        }
       })
     ])
+
+
   }
   update(entity: AppUserInfoEntity): Promise<void> {
     throw new Error("Method not implemented.");
@@ -116,86 +128,239 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
   }
 
   async saveOrUpdateByCSV(userInfo: AppUserInfoEntity, employeeItem: AppUserItemEntity[]): Promise<void> {
-    await prismaClient.$transaction([
-      prismaClient.userInfo.upsert({
-        where: {
-          document: userInfo.document
-        },
-        create: {
-          uuid: userInfo.uuid.uuid,
-          document: userInfo.document,
-          document2: userInfo.document2,
-          full_name: userInfo.full_name,
-          gender: userInfo.gender,
-          date_of_birth: userInfo.date_of_birth,
-          phone: userInfo.phone,
-          email: userInfo.email,
-          status: userInfo.status,
-          recommendation_code: userInfo.recommendation_code,
-          is_authenticated: userInfo.is_authenticated,
-          marital_status: userInfo.marital_status,
-          is_employee: userInfo.is_employee,
-          user_document_validation_uuid: userInfo.user_document_validation_uuid ? userInfo.user_document_validation_uuid.uuid : null,
-          created_at: userInfo.created_at
-        },
-        update: {
-          document: userInfo.document,
-          document2: userInfo.document2,
-          full_name: userInfo.full_name,
-          gender: userInfo.gender,
-          date_of_birth: userInfo.date_of_birth,
-          phone: userInfo.phone,
-          email: userInfo.email,
-          status: userInfo.status,
-          recommendation_code: userInfo.recommendation_code,
-          is_authenticated: userInfo.is_authenticated,
-          marital_status: userInfo.marital_status,
-          is_employee: userInfo.is_employee,
-          user_document_validation_uuid: userInfo.user_document_validation_uuid ? userInfo.user_document_validation_uuid.uuid : null,
-          updated_at: userInfo.updated_at
-        }
-      }),
+    // Utiliza uma transação explícita para garantir atomicidade.
+    await prismaClient.$transaction(async (tx) => {
+      // 1. Verifica se o userInfo já existe.
+      const existingUserInfo = await tx.userInfo.findUnique({
+        where: { document: userInfo.document },
+        select: { uuid: true }
+      });
 
-      ...employeeItem.map((item) =>
-        prismaClient.userItem.upsert({
-          where: {
-            uuid: item.uuid.uuid
+      let userInfoUuid: string;
+
+      if (existingUserInfo) {
+        // --- CENÁRIO DE ATUALIZAÇÃO (UPDATE) ---
+        // O userInfo já existe, apenas atualiza.
+        console.log(`UserInfo encontrado para documento ${userInfo.document}. Atualizando...`);
+        const updatedUserInfo = await tx.userInfo.update({
+          where: { document: userInfo.document },
+          data: {
+            // Campos para atualizar userInfo
+            document: userInfo.document,
+            document2: userInfo.document2,
+            full_name: userInfo.full_name,
+            gender: userInfo.gender,
+            date_of_birth: userInfo.date_of_birth,
+            phone: userInfo.phone,
+            email: userInfo.email,
+            status: userInfo.status,
+            recommendation_code: userInfo.recommendation_code,
+            is_authenticated: userInfo.is_authenticated,
+            marital_status: userInfo.marital_status,
+            is_employee: userInfo.is_employee,
+            user_document_validation_uuid: userInfo.user_document_validation_uuid ? userInfo.user_document_validation_uuid.uuid : null,
+            updated_at: userInfo.updated_at ?? newDateF(new Date())
           },
-          create: {
-            uuid: item.uuid.uuid,
-            user_info_uuid: item.user_info_uuid.uuid,
-            business_info_uuid: item.business_info_uuid.uuid,
-            item_uuid: item.item_uuid.uuid,
-            item_name: item.item_name,
-            balance: item.balance,
-            group_uuid: item.group_uuid.uuid,
-            status: item.status,
-            blocked_at: item.blocked_at,
-            cancelled_at: item.cancelled_at,
-            block_reason: item.block_reason,
-            cancel_reason: item.cancel_reason,
-            grace_period_end_date: item.grace_period_end_date,
-            created_at: item.created_at,
+          select: { uuid: true }
+        });
+        userInfoUuid = updatedUserInfo.uuid;
+        console.log(`UserInfo atualizado com UUID: ${userInfoUuid}`);
+
+      } else {
+        // --- CENÁRIO DE CRIAÇÃO (CREATE) ---
+        // O userInfo não existe, cria o userInfo E o userItem "Correct".
+        console.log(`UserInfo não encontrado para documento ${userInfo.document}. Criando...`);
+
+        // Cria o userInfo
+        const createdUserInfo = await tx.userInfo.create({
+          data: {
+            // Campos para criar userInfo
+            uuid: userInfo.uuid.uuid,
+            document: userInfo.document,
+            document2: userInfo.document2,
+            full_name: userInfo.full_name,
+            gender: userInfo.gender,
+            date_of_birth: userInfo.date_of_birth,
+            phone: userInfo.phone,
+            email: userInfo.email,
+            status: userInfo.status,
+            recommendation_code: userInfo.recommendation_code,
+            is_authenticated: userInfo.is_authenticated,
+            marital_status: userInfo.marital_status,
+            is_employee: userInfo.is_employee,
+            user_document_validation_uuid: userInfo.user_document_validation_uuid ? userInfo.user_document_validation_uuid.uuid : null,
+            created_at: userInfo.created_at ?? newDateF(new Date())
           },
-          update: {
-            user_info_uuid: item.user_info_uuid.uuid,
-            business_info_uuid: item.business_info_uuid.uuid,
-            item_uuid: item.item_uuid.uuid,
-            item_name: item.item_name,
-            balance: item.balance,
-            group_uuid: item.group_uuid.uuid,
-            status: item.status,
-            blocked_at: item.blocked_at,
-            cancelled_at: item.cancelled_at,
-            block_reason: item.block_reason,
-            cancel_reason: item.cancel_reason,
-            grace_period_end_date: item.grace_period_end_date,
-            updated_at: item.updated_at,
-          }
-        })
-      )
-    ]);
+          select: { uuid: true }
+        });
+        userInfoUuid = createdUserInfo.uuid; // Armazena o novo UUID.
+        console.log(`UserInfo criado com UUID: ${userInfoUuid}`);
+
+        // --- LÓGICA ADICIONAL: Cria o userItem "Correct" ---
+        // Verifica se o debit_benefit_uuid necessário está presente em userInfo
+        if (userInfo.debit_benefit_uuid && userInfo.debit_benefit_uuid.uuid) {
+          console.log(`Criando userItem "Correct" associado para userInfo UUID: ${userInfoUuid}`);
+          await tx.userItem.create({
+            data: {
+              uuid: randomUUID(), // Gera um novo UUID para este item específico
+              user_info_uuid: userInfoUuid, // Associa ao userInfo recém-criado
+              item_uuid: userInfo.debit_benefit_uuid.uuid, // Pega do objeto userInfo de entrada
+              item_name: "Correct", // Valor fixo conforme a regra
+              balance: 0, // Valor fixo conforme a regra
+              status: "active", // Valor fixo conforme a regra
+              created_at: newDateF(new Date()), // Define a data de criação
+              // Adicione outros campos obrigatórios do userItem aqui, se necessário.
+              // Se business_info_uuid ou group_uuid forem obrigatórios e não
+              // fizerem sentido para este item "Correct", você precisará ajustar
+              // o schema ou fornecer valores padrão/nulos válidos.
+              // Exemplo (se forem nullable ou tiverem default):
+              // business_info_uuid: null, // Ou um UUID padrão, se aplicável
+              // group_uuid: null, // Ou um UUID padrão, se aplicável
+            }
+          });
+          console.log(`UserItem "Correct" criado com sucesso.`);
+        } else {
+          // Loga um aviso ou lança um erro se o UUID necessário não foi fornecido
+          console.warn(`O campo 'debit_benefit_uuid' não foi fornecido ou é inválido no objeto userInfo para o documento ${userInfo.document}. O userItem "Correct" não será criado.`);
+          // Se a criação deste item for absolutamente mandatória, descomente a linha abaixo:
+          // throw new Error(`Criação falhou: 'debit_benefit_uuid' é obrigatório para criar um novo usuário e seu item 'Correct'. Documento: ${userInfo.document}`);
+        }
+        // --- FIM DA LÓGICA ADICIONAL ---
+      }
+
+      // 2. Processa o array employeeItem (UserItems) usando upsert (INDEPENDENTE DE CREATE/UPDATE do userInfo).
+      // Esta parte continua como antes, garantindo que os itens do CSV sejam processados.
+      if (employeeItem && employeeItem.length > 0) {
+        console.log(`Processando ${employeeItem.length} userItems do array para userInfo UUID: ${userInfoUuid}...`);
+        const userItemOperations = employeeItem.map((item) =>
+          tx.userItem.upsert({
+            where: { uuid: item.uuid.uuid },
+            create: {
+              // Dados para criar item do array
+              uuid: item.uuid.uuid,
+              user_info_uuid: userInfoUuid, // Associa ao UUID correto do userInfo
+              business_info_uuid: item.business_info_uuid.uuid,
+              item_uuid: item.item_uuid.uuid,
+              item_name: item.item_name,
+              balance: item.balance,
+              group_uuid: item.group_uuid.uuid,
+              status: item.status,
+              blocked_at: item.blocked_at,
+              cancelled_at: item.cancelled_at,
+              block_reason: item.block_reason,
+              cancel_reason: item.cancel_reason,
+              grace_period_end_date: item.grace_period_end_date,
+              created_at: item.created_at ?? newDateF(new Date()),
+            },
+            update: {
+              // Dados para atualizar item do array
+              user_info_uuid: userInfoUuid, // Garante a associação correta
+              business_info_uuid: item.business_info_uuid.uuid,
+              item_uuid: item.item_uuid.uuid,
+              item_name: item.item_name,
+              balance: item.balance,
+              group_uuid: item.group_uuid.uuid,
+              status: item.status,
+              blocked_at: item.blocked_at,
+              cancelled_at: item.cancelled_at,
+              block_reason: item.block_reason,
+              cancel_reason: item.cancel_reason,
+              grace_period_end_date: item.grace_period_end_date,
+              updated_at: item.updated_at ?? newDateF(new Date()),
+            }
+          })
+        );
+
+        await Promise.all(userItemOperations);
+        console.log(`${employeeItem.length} userItems do array processados com sucesso.`);
+      } else {
+        console.log("Nenhum employeeItem no array fornecido para processar.");
+      }
+
+    }); // Fim da transação $transaction
   }
+
+  // async saveOrUpdateByCSV(userInfo: AppUserInfoEntity, employeeItem: AppUserItemEntity[]): Promise<void> {
+  //   await prismaClient.$transaction([
+  //     prismaClient.userInfo.upsert({
+  //       where: {
+  //         document: userInfo.document
+  //       },
+  //       create: {
+  //         uuid: userInfo.uuid.uuid,
+  //         document: userInfo.document,
+  //         document2: userInfo.document2,
+  //         full_name: userInfo.full_name,
+  //         gender: userInfo.gender,
+  //         date_of_birth: userInfo.date_of_birth,
+  //         phone: userInfo.phone,
+  //         email: userInfo.email,
+  //         status: userInfo.status,
+  //         recommendation_code: userInfo.recommendation_code,
+  //         is_authenticated: userInfo.is_authenticated,
+  //         marital_status: userInfo.marital_status,
+  //         is_employee: userInfo.is_employee,
+  //         user_document_validation_uuid: userInfo.user_document_validation_uuid ? userInfo.user_document_validation_uuid.uuid : null,
+  //         created_at: userInfo.created_at
+  //       },
+  //       update: {
+  //         document: userInfo.document,
+  //         document2: userInfo.document2,
+  //         full_name: userInfo.full_name,
+  //         gender: userInfo.gender,
+  //         date_of_birth: userInfo.date_of_birth,
+  //         phone: userInfo.phone,
+  //         email: userInfo.email,
+  //         status: userInfo.status,
+  //         recommendation_code: userInfo.recommendation_code,
+  //         is_authenticated: userInfo.is_authenticated,
+  //         marital_status: userInfo.marital_status,
+  //         is_employee: userInfo.is_employee,
+  //         user_document_validation_uuid: userInfo.user_document_validation_uuid ? userInfo.user_document_validation_uuid.uuid : null,
+  //         updated_at: userInfo.updated_at
+  //       }
+  //     }),
+
+  //     ...employeeItem.map((item) =>
+  //       prismaClient.userItem.upsert({
+  //         where: {
+  //           uuid: item.uuid.uuid
+  //         },
+  //         create: {
+  //           uuid: item.uuid.uuid,
+  //           user_info_uuid: item.user_info_uuid.uuid,
+  //           business_info_uuid: item.business_info_uuid.uuid,
+  //           item_uuid: item.item_uuid.uuid,
+  //           item_name: item.item_name,
+  //           balance: item.balance,
+  //           group_uuid: item.group_uuid.uuid,
+  //           status: item.status,
+  //           blocked_at: item.blocked_at,
+  //           cancelled_at: item.cancelled_at,
+  //           block_reason: item.block_reason,
+  //           cancel_reason: item.cancel_reason,
+  //           grace_period_end_date: item.grace_period_end_date,
+  //           created_at: item.created_at,
+  //         },
+  //         update: {
+  //           user_info_uuid: item.user_info_uuid.uuid,
+  //           business_info_uuid: item.business_info_uuid.uuid,
+  //           item_uuid: item.item_uuid.uuid,
+  //           item_name: item.item_name,
+  //           balance: item.balance,
+  //           group_uuid: item.group_uuid.uuid,
+  //           status: item.status,
+  //           blocked_at: item.blocked_at,
+  //           cancelled_at: item.cancelled_at,
+  //           block_reason: item.block_reason,
+  //           cancel_reason: item.cancel_reason,
+  //           grace_period_end_date: item.grace_period_end_date,
+  //           updated_at: item.updated_at,
+  //         }
+  //       })
+  //     )
+  //   ]);
+  // }
 
   async createUserInfoAndEmployee(data: AppUserInfoEntity, employeeItem: AppUserItemEntity[]): Promise<AppUserInfoEntity> {
     const [user, employee, empleeItem] = await prismaClient.$transaction([
@@ -268,7 +433,18 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
             updated_at: item.updated_at,
           }
         })
-      )
+      ),
+      prismaClient.userItem.create({
+        data: {
+          uuid: randomUUID(),
+          user_info_uuid: data.uuid.uuid,
+          item_uuid: data.debit_benefit_uuid.uuid,
+          item_name: "Correct",
+          balance: 0,
+          status: "active",
+          created_at: newDateF(new Date()),
+        }
+      })
 
     ])
 
@@ -455,6 +631,17 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
           }
         })
       ),
+      prismaClient.userItem.create({
+        data: {
+          uuid: randomUUID(),
+          user_info_uuid: data.uuid.uuid,
+          item_uuid: data.debit_benefit_uuid.uuid,
+          item_name: "Correct",
+          balance: 0,
+          status: "active",
+          created_at: newDateF(new Date()),
+        }
+      })
     ])
   }
 
@@ -609,56 +796,92 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
   }
 
   async createOrUpdateUserInfoByEmployer(data: AppUserInfoEntity): Promise<void> {
-    await prismaClient.userInfo.upsert({
-      where: {
-        document: data.document
-      },
-      create: {
-        uuid: data.uuid.uuid,
-        document: data.document,
-        document2: data.document2,
-        document3: data.document3,
-        phone: data.phone,
-        full_name: data.full_name,
-        email: data.email,
-        gender: data.gender,
-        date_of_birth: data.date_of_birth,
-        marital_status: data.marital_status,
-        is_employee: data.is_employee,
-        created_at: data.created_at
-      },
-      update: {
-        is_employee: data.is_employee,
-        updated_at: newDateF(new Date())
+    await prismaClient.$transaction(async (tx) => {
+      const existingUserInfo = await tx.userInfo.findUnique({
+        where: {
+          document: data.document,
+        },
+      });
+
+      // 2. Verifica se o usuário já existe
+      if (existingUserInfo) {
+        // --- CASO UPDATE ---
+        // O usuário já existe, então apenas atualizamos as informações necessárias.
+        // Não criamos um novo userItem aqui.
+        await tx.userInfo.update({
+          where: {
+            document: data.document, // ou existingUserInfo.uuid se preferir e tiver o ID
+          },
+          data: {
+            // Atualize os campos conforme a lógica original do 'update' do upsert
+            is_employee: data.is_employee,
+            updated_at: newDateF(new Date()), // Use sua função helper ou new Date()
+            // Adicione outros campos que precisam ser atualizados, se houver
+          },
+        });
+      } else {
+        // --- CASO CREATE ---
+        // O usuário não existe, então criamos o userInfo E o userItem.
+        // Estas duas operações ocorrerão juntas dentro da transação.
+
+        // Cria o userInfo
+        await tx.userInfo.create({
+          data: {
+            uuid: data.uuid.uuid,
+            document: data.document,
+            document2: data.document2,
+            document3: data.document3,
+            phone: data.phone,
+            full_name: data.full_name,
+            email: data.email,
+            gender: data.gender,
+            date_of_birth: data.date_of_birth,
+            marital_status: data.marital_status,
+            is_employee: data.is_employee, // Vem do 'create' original
+            created_at: data.created_at ?? newDateF(new Date()), // Use o valor fornecido ou um novo
+          },
+        });
+
+        // Cria o userItem associado
+        await tx.userItem.create({
+          data: {
+            uuid: randomUUID(), // Gera um novo UUID para o userItem
+            user_info_uuid: data.uuid.uuid, // Associa ao userInfo recém-criado
+            item_uuid: data.debit_benefit_uuid.uuid, // Usa o UUID do benefício/débito passado
+            item_name: 'Correct', // Valor fixo conforme a regra
+            balance: 0, // Valor fixo conforme a regra
+            status: 'active', // Valor fixo conforme a regra
+            created_at: newDateF(new Date()), // Use sua função helper ou new Date()
+          },
+        });
       }
     });
   }
 
-  // async findByEmailUserInfo(email: string): Promise<UserInfoResponse | null> {
-  //     const user = await prismaClient.userInfo.findUnique({
-  //         where: {
-  //             email
-  //         },
-  //         include: {
-  //             BusinessInfo: {
-  //                 select: {
-  //                     fantasy_name: true
-  //                 }
-  //             },
-  //             Address: true,
-  //             UserValidation: true,
-  //             UserAuth: {
-  //                 select:{
-  //                     uuid: true,
-  //                     document: true,
-  //                     email: true,
-  //                 }
-  //             }
-  //         }
-  //     })
-
-  //     return user as UserInfoResponse | null
+  // async createOrUpdateUserInfoByEmployer(data: AppUserInfoEntity): Promise<void> {
+  //   await prismaClient.userInfo.upsert({
+  //     where: {
+  //       document: data.document
+  //     },
+  //     create: {
+  //       uuid: data.uuid.uuid,
+  //       document: data.document,
+  //       document2: data.document2,
+  //       document3: data.document3,
+  //       phone: data.phone,
+  //       full_name: data.full_name,
+  //       email: data.email,
+  //       gender: data.gender,
+  //       date_of_birth: data.date_of_birth,
+  //       marital_status: data.marital_status,
+  //       is_employee: data.is_employee,
+  //       created_at: data.created_at
+  //     },
+  //     update: {
+  //       is_employee: data.is_employee,
+  //       updated_at: newDateF(new Date())
+  //     }
+  //   });
   // }
-
 
 }

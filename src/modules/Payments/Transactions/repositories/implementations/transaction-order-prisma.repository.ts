@@ -18,7 +18,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         status: entity.status,
         transaction_type: entity.transaction_type,
         partner_user_uuid: entity.partner_user_uuid ? entity.partner_user_uuid.uuid : null,
-        item_uuid: entity.item_uuid,
         created_at: entity.created_at,
         updated_at: entity.updated_at
       }
@@ -46,8 +45,29 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
   update(entity: TransactionEntity): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  find(id: Uuid): Promise<TransactionEntity> {
-    throw new Error("Method not implemented.");
+  async find(id: Uuid): Promise<TransactionEntity | null> {
+    const transaction = await prismaClient.transactions.findUnique({
+      where: {
+        uuid: id.uuid
+      }
+    })
+
+    if(!transaction) return null
+
+    return {
+      uuid: new Uuid(transaction.uuid),
+      user_item_uuid: transaction.user_item_uuid ? new Uuid(transaction.user_item_uuid) : null,
+      favored_user_uuid: transaction.favored_user_uuid ? new Uuid(transaction.favored_user_uuid) : null,
+      favored_business_info_uuid: transaction.favored_business_info_uuid ? new Uuid(transaction.favored_business_info_uuid) : null,
+      amount: transaction.amount,
+      fee_amount: transaction.fee_amount,
+      cashback: transaction.cashback,
+      description: transaction.description,
+      status: transaction.status,
+      transaction_type: transaction.transaction_type,
+      created_at: transaction.created_at,
+      updated_at: transaction.updated_at
+    } as TransactionEntity
   }
   findAll(): Promise<TransactionEntity[]> {
     throw new Error("Method not implemented.");

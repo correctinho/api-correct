@@ -15,7 +15,7 @@ export class CreateUserItemsByCorrectAdminUsecase {
     //First find employer items
     const employerItems = await this.employerItemDetailsRepository.findAllEmployerItems(data.business_info_uuid)
     if (employerItems.length === 0) throw new CustomError("Employer has no items hired", 404)
-
+      console.log("employerItems", employerItems);
     const employees = await this.appUserInfoRepository.findManyByBusiness(data.business_info_uuid)
     if (employees.length === 0) throw new CustomError("Employees not registered", 404)
 
