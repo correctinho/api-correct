@@ -6,6 +6,7 @@ import { IAppUserItemRepository } from "../../../../AppUser/AppUserManagement/re
 import { IPartnerConfigRepository } from "../../../../Company/PartnerConfig/repositories/partner-config.repository";
 import { ITransactionOrderRepository } from "../../repositories/transaction-order.repository";
 import { InputGetTransactionByAppUserDTO, OutputGetTransactionByAppUserDTO } from "../../transactions-dto/transactions.dto";
+import { ICompanyDataRepository } from "../../../../Company/CompanyData/repositories/company-data.repository";
 
 interface AvailableUserItemDetails {
   item_uuid: string;
@@ -18,7 +19,8 @@ export class GetPOSTransactionByAppUserUsecase {
   constructor(
     private transactionOrderRepository: ITransactionOrderRepository,
     private userItemRepository: IAppUserItemRepository,
-    private partnerConfigRepository: IPartnerConfigRepository
+    private partnerConfigRepository: IPartnerConfigRepository,
+    private businessInfoRepository: ICompanyDataRepository
   ) { }
 
   async execute(data: InputGetTransactionByAppUserDTO): Promise<any> {
@@ -40,6 +42,9 @@ export class GetPOSTransactionByAppUserUsecase {
     const partnerConfig = await this.partnerConfigRepository.findByPartnerId(transaction.favored_business_info_uuid.uuid);
     if (!partnerConfig) throw new CustomError("Partner config not found", 404);
 
+    //get business info
+    const businessInfo = await this.businessInfoRepository.findById(transaction.favored_business_info_uuid.uuid);
+    if (!businessInfo) throw new CustomError("Business info not found", 404);
 
 
     //the items that are accepted by the partner are located in the partnerConfig.items_uuid
@@ -50,6 +55,10 @@ export class GetPOSTransactionByAppUserUsecase {
     const compareUserItems = await this.compareUserItemsWithPartnerConfig(userItems, partnerConfig.items_uuid);
 
 
+    return {
+      fantasy_name:businessInfo.fantasy_name,
+      availableItems: compareUserItems
+    }
   }
 
   private async compareUserItemsWithPartnerConfig(userItems: AppUserItemEntity[], partnerConfigItems: string[]): Promise<AvailableUserItemDetails[]> {

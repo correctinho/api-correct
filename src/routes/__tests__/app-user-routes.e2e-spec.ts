@@ -46,6 +46,7 @@ let employeeAuthToken2: string
 
 let non_employee_user_info: string
 let non_employee_user_document: string
+let non_employee_token: string
 
 let employer_user_uuid: string
 let employer_user_uuid2: string
@@ -1886,7 +1887,7 @@ describe("E2E App User tests", () => {
         //authenticate non employee user
         const auth_non_employe = await request(app).post("/login-app-user").send(authNonEmployeeInput)
         expect(auth_non_employe.statusCode).toBe(200)
-        const non_employee_token = auth_non_employe.body.token
+        non_employee_token = auth_non_employe.body.token
 
         const nonEmployeeUserInput: any = {
           full_name: "User Full Name",
@@ -3258,13 +3259,28 @@ describe("E2E App User tests", () => {
         expect(result.statusCode).toBe(404)
         expect(result.body.error).toBe("Transaction not found")
       })
-      it("Should do something", async () => {
+      it("Should return available items to be selected by employee", async () => {
         const input = {
           transactionId: transaction1_uuid
         }
 
         const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        console.log(result.body)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.availableItems.length).toBe(3)
+        expect(result.body.fantasy_name).toBe("Empresa teste 3")
+      })
+
+      it("Should return only Correct Item", async () => {
+        const input = {
+          transactionId: transaction1_uuid
+        }
+
+        const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${non_employee_token}`).send(input)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.availableItems.length).toBe(1)
+        expect(result.body.fantasy_name).toBe("Empresa teste 3")
+
+
       })
     })
 

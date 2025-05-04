@@ -1,8 +1,9 @@
-import { includes } from "lodash";
+import { includes, random } from "lodash";
 import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 import { prismaClient } from "../../../../../../infra/databases/prisma.config";
 import { PartnerCategory, PartnerConfigEntity } from "../../../entities/partner-config.entity";
 import { IPartnerConfigRepository } from "../../partner-config.repository";
+import { BusinessAccountEntity } from "../../../../CompanyData/entities/business-account.entity";
 
 export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
   // async upsert(data: PartnerConfigEntity): Promise<PartnerConfigEntity> {
@@ -101,24 +102,37 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
     throw new Error("Method not implemented.");
   }
 
-  async createPartnerConfig(data: PartnerConfigEntity): Promise<PartnerConfigEntity> {
-    const config = await prismaClient.partnerConfig.create({
+  async createPartnerConfig(data: PartnerConfigEntity, businessAccountEntity: BusinessAccountEntity): Promise<PartnerConfigEntity> {
 
-      data: {
-        uuid: data.uuid.uuid,
-        business_info_uuid: data.business_info_uuid.uuid,
-        main_branch: data.main_branch.uuid,
-        partner_category: data.partner_category,
-        items_uuid: data.items_uuid,
-        admin_tax: data.admin_tax,
-        marketing_tax: data.marketing_tax,
-        use_marketing: data.use_marketing,
-        market_place_tax: data.market_place_tax,
-        use_market_place: data.use_market_place,
-        created_at: data.created_at
-      }
+    const [config, businessAccount] = await prismaClient.$transaction([
+      prismaClient.partnerConfig.create({
 
-    })
+        data: {
+          uuid: data.uuid.uuid,
+          business_info_uuid: data.business_info_uuid.uuid,
+          main_branch: data.main_branch.uuid,
+          partner_category: data.partner_category,
+          items_uuid: data.items_uuid,
+          admin_tax: data.admin_tax,
+          marketing_tax: data.marketing_tax,
+          use_marketing: data.use_marketing,
+          market_place_tax: data.market_place_tax,
+          use_market_place: data.use_market_place,
+          created_at: data.created_at
+        }
+
+      }),
+      prismaClient.businessAccount.create({
+        data:{
+          uuid: businessAccountEntity.uuid,
+          balance: businessAccountEntity.balance,
+          business_info_uuid: data.business_info_uuid.uuid,
+          status: businessAccountEntity.status,
+          created_at: data.created_at,
+        }
+      })
+
+    ])
 
     return {
       uuid: new Uuid(config.uuid),
@@ -205,4 +219,7 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
     })
     return partners
   }
+}
+function randomUUID(): string {
+  throw new Error("Function not implemented.");
 }

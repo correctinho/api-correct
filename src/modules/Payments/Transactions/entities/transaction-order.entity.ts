@@ -152,6 +152,11 @@ export class TransactionEntity {
     this.validate();
   }
 
+  changeUserItemUuid(user_item_uuid: Uuid): void {
+    this._user_item_uuid = user_item_uuid;
+    this.validate();
+  }
+
   // --- Validation Logic ---
   private validate(): void {
     // Basic mandatory field checks
