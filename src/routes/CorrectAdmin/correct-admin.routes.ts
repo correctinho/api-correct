@@ -4,6 +4,7 @@ import { authAdminController } from "../../modules/CorrectAdmin/useCases/authent
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
 import { findCorrectAdminController } from "../../modules/CorrectAdmin/useCases/find-correct-admin";
 import { createCorrectSellerController } from "../../modules/CorrectAdmin/useCases/create-correct-seller-by-admin";
+import { getCorrectAdminAccount } from "../../modules/Payments/Accounts/usecases/correctAdmin/get-correct-admin-account";
 
 const correctAdminRouter = Router()
 
@@ -22,6 +23,11 @@ correctAdminRouter.post('/login', async (request, response) => {
 
 correctAdminRouter.get("/admin/profile", correctIsAuth, async (request, response) => {
   await findCorrectAdminController.handle(request, response)
+})
+
+//correct admin accounts
+correctAdminRouter.get("/admin/account", correctIsAuth, async (request, response) => {
+  await getCorrectAdminAccount.handle(request, response)
 })
 
 export { correctAdminRouter }

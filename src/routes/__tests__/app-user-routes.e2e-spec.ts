@@ -3215,213 +3215,246 @@ describe("E2E App User tests", () => {
   })
 
   describe("E2E Transactions", () => {
-    let transaction1_uuid: string
-
-    //first we need to create transactions by partner
-    beforeAll(async () => {
-      //lets first create partner users
-      const inputPartner3 = {
-        password: "123456",
-        business_info_uuid: partner_info_uuid3,
-        email: "comercio3@comercio.com",
-        name: "Nome do admin partner"
+    describe("E2E POS transactions", () => {
+      let inputTransaction1: {
+        amount: number
+        description: string
       }
-      const createPartner3 = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputPartner3)
-      partner_user_uuid3 = createPartner3.body.uuid
-
-      //NOW WE NEED TO AUTHENTICATE THIS NEW USER SO HE CAN CREATE TRANSACTIONS
-      const authenticateAdminPartner3 = {
-        business_document: "comercio3",
-        password: inputPartner3.password,
-        email: inputPartner3.email
-      }
-      //authenticate correct admin
-      const adminPartner3Auth = await request(app).post('/business/admin/login').send(authenticateAdminPartner3)
-
-      expect(adminPartner3Auth.statusCode).toBe(200)
-
-      partner_auth_token3 = adminPartner3Auth.body.token
-
-      //NOW WE NEED TO CREATE AN TRANSACTION
-      const input = {
-        amount: 200,
-        description: "",
-      }
-      const createTransaction = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_auth_token3}`).send(input)
-      transaction1_uuid = createTransaction.body.transaction_uuid
-      expect(createTransaction.statusCode).toBe(201)
-
-      //Get employee 1 user items
-      const employee1UserItems = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
-      expect(employee1UserItems.statusCode).toBe(200)
-      correct_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Correct').uuid;
-      alimentacao_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Vale Alimentação').uuid;
-      convenio_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Convênio').uuid;
-
-      //Get employee 2 user items
-      const employee2UserItems = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken2}`)
-      expect(employee2UserItems.statusCode).toBe(200)
-      correct_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Correct').uuid;
-      alimentacao_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Vale Alimentação').uuid;
-      blocked_adiantamento_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Adiantamento Salarial').uuid;
-      convenio_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Convênio').uuid;
-
-      //HERE WE ARE GOING TO BLOCK ADIANTAMENTO BENEFIT FOR EMPLOYEE 2 FOR TESTS PURPOSES
-      const blockInput: any = {
-        user_item_uuid: blocked_adiantamento_benefit_user2_uuid,
-        status: 'blocked'
-      }
-      const blockEmployee2Adiantamento = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(blockInput)
-      expect(blockEmployee2Adiantamento.statusCode).toBe(200)
-      expect(blockEmployee2Adiantamento.body.status).toBe('blocked')
-
-    })
-    describe("E2E Get transaction by app user", () => {
-      it("Should throw an error if transaction id is missing", async () => {
-        const input = {
-          transactionId: ''
+      let transaction1_uuid: string
+      let correctAdminCurrentBalance: number
+      let employee2CurrentDebitBalance: number
+      let partner3CurrentBalance: number
+      //first we need to create transactions by partner
+      beforeAll(async () => {
+        //lets first create partner users
+        const inputPartner3 = {
+          password: "123456",
+          business_info_uuid: partner_info_uuid3,
+          email: "comercio3@comercio.com",
+          name: "Nome do admin partner"
         }
+        const createPartner3 = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputPartner3)
+        partner_user_uuid3 = createPartner3.body.uuid
 
-        const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-
-        expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe("Transaction ID is required")
-      })
-      it("Should throw an error if transaction is not found", async () => {
-        const input = {
-          transactionId: randomUUID()
+        //NOW WE NEED TO AUTHENTICATE THIS NEW USER SO HE CAN CREATE TRANSACTIONS
+        const authenticateAdminPartner3 = {
+          business_document: "comercio3",
+          password: inputPartner3.password,
+          email: inputPartner3.email
         }
+        //authenticate correct admin
+        const adminPartner3Auth = await request(app).post('/business/admin/login').send(authenticateAdminPartner3)
 
+        expect(adminPartner3Auth.statusCode).toBe(200)
 
-        const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+        partner_auth_token3 = adminPartner3Auth.body.token
 
-        expect(result.statusCode).toBe(404)
-        expect(result.body.error).toBe("Transaction not found")
-      })
-      it("Should return available items to be selected by employee", async () => {
-        const input = {
-          transactionId: transaction1_uuid
+        //NOW WE NEED TO CREATE AN TRANSACTION
+        inputTransaction1 = {
+          amount: 200,
+          description: "",
         }
+        const createTransaction = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_auth_token3}`).send(inputTransaction1)
+        transaction1_uuid = createTransaction.body.transaction_uuid
+        expect(createTransaction.statusCode).toBe(201)
 
-        const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        expect(result.statusCode).toBe(200)
-        expect(result.body.availableItems.length).toBe(3)
-        expect(result.body.fantasy_name).toBe("Empresa teste 3")
-      })
+        //Get employee 1 user items
+        const employee1UserItems = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
+        expect(employee1UserItems.statusCode).toBe(200)
+        correct_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Correct').uuid;
+        alimentacao_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Vale Alimentação').uuid;
+        convenio_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Convênio').uuid;
 
-      it("Should return only Correct Item", async () => {
-        const input = {
-          transactionId: transaction1_uuid
+        //Get employee 2 user items
+        const employee2UserItems = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken2}`)
+        expect(employee2UserItems.statusCode).toBe(200)
+        correct_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Correct').uuid;
+        alimentacao_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Vale Alimentação').uuid;
+        blocked_adiantamento_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Adiantamento Salarial').uuid;
+        convenio_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Convênio').uuid;
+
+        //HERE WE ARE GOING TO BLOCK ADIANTAMENTO BENEFIT FOR EMPLOYEE 2 FOR TESTS PURPOSES
+        const blockInput: any = {
+          user_item_uuid: blocked_adiantamento_benefit_user2_uuid,
+          status: 'blocked'
         }
-
-        const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${non_employee_token}`).send(input)
-        expect(result.statusCode).toBe(200)
-        expect(result.body.availableItems.length).toBe(1)
-        expect(result.body.fantasy_name).toBe("Empresa teste 3")
-
-
-      })
-    })
-    describe("E2E Process Pre paid Transaction", () => {
-      it("Should throw an error if transaction id is missing", async () => {
-
-        const input = {
-          transactionId: "",
-          benefit_uuid: randomUUID
-        }
-        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe("Transaction ID is required")
-      })
-      it("Should throw an error if benefit id is missing", async () => {
-
-        const input = {
-          transactionId: randomUUID(),
-          benefit_uuid: ""
-        }
-        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        expect(result.statusCode).toBe(400)
-        expect(result.body.error).toBe("Benefit UUID is required")
-      })
-
-      it("Should throw an error if transaction does not exist", async () => {
-
-        const input = {
-          transactionId: randomUUID(),
-          benefit_uuid: randomUUID()
-        }
-        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        expect(result.statusCode).toBe(404)
-        expect(result.body.error).toBe("Transaction not found")
-      })
-
-      it("Should throw an error if user does not have this benefit", async () => {
-
-        const input = {
-          transactionId: transaction1_uuid,
-          benefit_uuid: randomUUID()
-        }
-        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        expect(result.statusCode).toBe(404)
-        expect(result.body.error).toBe("User item not found")
-      })
-      it("Should throw an error if user item is blocked or inactive", async () => {
-
-        const input = {
-          transactionId: transaction1_uuid,
-          benefit_uuid: blocked_adiantamento_benefit_user2_uuid
-        }
-        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-        expect(result.statusCode).toBe(403)
-        expect(result.body.error).toBe("User item is not active")
-      })
-      it("Should throw an error if balance is not enough", async () => {
-        const input = {
-          transactionId: transaction1_uuid,
-          benefit_uuid: correct_benefit_user2_uuid
-        }
-        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-        expect(result.statusCode).toBe(403)
-        expect(result.body.error).toBe("User item balance is not enough")
-      })
-      //BELOW TEST STILL MUST BE IMPLEMENTED
-      // it("Should throw an error if business does not accept user benefit", async () => {
-
-      //   //The partner that created the transaction follows below rules
-      //   //   {
-      //   //   name: "Mercearias",
-      //   //   marketing_tax: 130,
-      //   //   admin_tax: 140,
-      //   //   market_place_tax: 130,
-      //   //   benefits_name: ['Convênio', 'Vale Alimentação', 'Correct']
-      //   // },
-      //   const input = {
-      //     transactionId: transaction1_uuid,
-      //     benefit_uuid: adiantamento_benefit_user1_uuid
-      //   }
-      //   const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-      //   expect(result.statusCode).toBe(403)
-      //   expect(result.body.error).toBe("User item is not valid for this transaction")
-      // })
-      it("Should process pre paid benefit", async () => {
-        console.log("**********")
-        const input = {
-          transactionId: transaction1_uuid,
-          benefit_uuid: alimentacao_benefit_user2_uuid
-        }
-        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-        console.log(result.body)
-
-        //let's get Correct Benefit user 2 to compare
-        const correctBenefitUser2 = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid })
-        console.log("correct benefit", correctBenefitUser2.body)
-        expect(correctBenefitUser2.statusCode).toBe(200)
-        expect(correctBenefitUser2.body.balance).toBe(160)
-
-
+        const blockEmployee2Adiantamento = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(blockInput)
+        expect(blockEmployee2Adiantamento.statusCode).toBe(200)
+        expect(blockEmployee2Adiantamento.body.status).toBe('blocked')
 
       })
 
+      describe("E2E Get transaction by app user", () => {
+        it("Should throw an error if transaction id is missing", async () => {
+          const input = {
+            transactionId: ''
+          }
+
+          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+
+          expect(result.statusCode).toBe(400)
+          expect(result.body.error).toBe("Transaction ID is required")
+        })
+        it("Should throw an error if transaction is not found", async () => {
+          const input = {
+            transactionId: randomUUID()
+          }
+
+
+          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+
+          expect(result.statusCode).toBe(404)
+          expect(result.body.error).toBe("Transaction not found")
+        })
+        it("Should return available items to be selected by employee", async () => {
+          const input = {
+            transactionId: transaction1_uuid
+          }
+
+          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(200)
+          expect(result.body.availableItems.length).toBe(3)
+          expect(result.body.fantasy_name).toBe("Empresa teste 3")
+        })
+
+        it("Should return only Correct Item", async () => {
+          const input = {
+            transactionId: transaction1_uuid
+          }
+
+          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${non_employee_token}`).send(input)
+          expect(result.statusCode).toBe(200)
+          expect(result.body.availableItems.length).toBe(1)
+          expect(result.body.fantasy_name).toBe("Empresa teste 3")
+
+
+        })
+      })
+      describe("E2E Process Pre paid Transaction", () => {
+        it("Should throw an error if transaction id is missing", async () => {
+
+          const input = {
+            transactionId: "",
+            benefit_uuid: randomUUID
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(400)
+          expect(result.body.error).toBe("Transaction ID is required")
+        })
+        it("Should throw an error if benefit id is missing", async () => {
+
+          const input = {
+            transactionId: randomUUID(),
+            benefit_uuid: ""
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(400)
+          expect(result.body.error).toBe("Benefit UUID is required")
+        })
+
+        it("Should throw an error if transaction does not exist", async () => {
+
+          const input = {
+            transactionId: randomUUID(),
+            benefit_uuid: randomUUID()
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(404)
+          expect(result.body.error).toBe("Transaction not found")
+        })
+
+        it("Should throw an error if user does not have this benefit", async () => {
+
+          const input = {
+            transactionId: transaction1_uuid,
+            benefit_uuid: randomUUID()
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(404)
+          expect(result.body.error).toBe("User item not found")
+        })
+        it("Should throw an error if user item is blocked or inactive", async () => {
+
+          const input = {
+            transactionId: transaction1_uuid,
+            benefit_uuid: blocked_adiantamento_benefit_user2_uuid
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+          expect(result.statusCode).toBe(403)
+          expect(result.body.error).toBe("User item is not active")
+        })
+        it("Should throw an error if balance is not enough", async () => {
+          const input = {
+            transactionId: transaction1_uuid,
+            benefit_uuid: correct_benefit_user2_uuid
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+          expect(result.statusCode).toBe(403)
+          expect(result.body.error).toBe("User item balance is not enough")
+        })
+        //BELOW TEST STILL MUST BE IMPLEMENTED
+        // it("Should throw an error if business does not accept user benefit", async () => {
+
+        //   //The partner that created the transaction follows below rules
+        //   //   {
+        //   //   name: "Mercearias",
+        //   //   marketing_tax: 130,
+        //   //   admin_tax: 140,
+        //   //   market_place_tax: 130,
+        //   //   benefits_name: ['Convênio', 'Vale Alimentação', 'Correct']
+        //   // },
+        //   const input = {
+        //     transactionId: transaction1_uuid,
+        //     benefit_uuid: adiantamento_benefit_user1_uuid
+        //   }
+        //   const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+        //   expect(result.statusCode).toBe(403)
+        //   expect(result.body.error).toBe("User item is not valid for this transaction")
+        // })
+        it("Should process pre paid benefit", async () => {
+          console.log("**********")
+          const input = {
+            transactionId: transaction1_uuid,
+            benefit_uuid: alimentacao_benefit_user2_uuid
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+          console.log("transaction process", result.body)
+          expect(result.statusCode).toBe(200)
+          expect(result.body.result).toBeTruthy()
+
+          //get correct admin account to check if tax was applied
+          const correctAdminAccount = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctAdminToken}`)
+          console.log("correct admin account", correctAdminAccount.body)
+          //At this point, we expect the balance to be 200 (transaction value) - 130 / 100 (admin tax) - 140 (market place tax) - 20% of Total (cashback to user)
+          const fee = (130 + 140) / 100
+          const expectedGrossBalance = (fee / 100) * inputTransaction1.amount
+          const expectedNetBalance = expectedGrossBalance - (0.2 * expectedGrossBalance)
+          correctAdminCurrentBalance = +correctAdminAccount.body.balance
+          expect(correctAdminAccount.statusCode).toBe(200)
+          expect(correctAdminAccount.body.balance).toBe(expectedNetBalance * 100)
+          expect(correctAdminCurrentBalance).toEqual(expectedNetBalance * 100)
+          expect(correctAdminAccount.body.updated_at).toBeTruthy()
+
+          //let's get Correct Benefit user 2 to compare
+          const correctBenefitUser2 = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid })
+          console.log("user correct benefit", correctBenefitUser2.body)
+          expect(correctBenefitUser2.statusCode).toBe(200)
+          expect(correctBenefitUser2.body.balance).toBe(0.2 * expectedGrossBalance * 100)
+          employee2CurrentDebitBalance = +correctBenefitUser2.body.balance
+          expect(employee2CurrentDebitBalance).toEqual(correctBenefitUser2.body.balance)
+
+          //Get Business Account to check
+          //api needs to be created
+          const partnerAccount = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_auth_token3}`)
+          expect(partnerAccount.statusCode).toBe(200)
+          console.log("partner account", partnerAccount.body)
+          partner3CurrentBalance = inputTransaction1.amount - inputTransaction1.amount*fee/100
+          expect(partnerAccount.body.balance).toBe(partner3CurrentBalance * 100)
+
+
+        })
+
+      })
     })
   })
 })

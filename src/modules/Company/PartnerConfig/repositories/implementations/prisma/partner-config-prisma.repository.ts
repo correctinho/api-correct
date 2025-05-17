@@ -3,7 +3,7 @@ import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 import { prismaClient } from "../../../../../../infra/databases/prisma.config";
 import { PartnerCategory, PartnerConfigEntity } from "../../../entities/partner-config.entity";
 import { IPartnerConfigRepository } from "../../partner-config.repository";
-import { BusinessAccountEntity } from "../../../entities/business-account.entity";
+import { BusinessAccountEntity } from "../../../../../Payments/Accounts/entities/business-account.entity";
 
 export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
   // async upsert(data: PartnerConfigEntity): Promise<PartnerConfigEntity> {

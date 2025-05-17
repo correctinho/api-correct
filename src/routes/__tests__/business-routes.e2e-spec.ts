@@ -2266,4 +2266,14 @@ describe("E2E Business tests", () => {
 
     })
   })
+
+  describe("E2E Business Account", () => {
+    describe("Get Business Account by business admin", () => {
+      it("Should get business account", async () => {
+        const result = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_admin_token}`)
+        expect(result.statusCode).toBe(200)
+
+      })
+    })
+  })
 })

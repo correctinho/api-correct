@@ -73,6 +73,7 @@ export async function calculateSplitPrePaidAmount(input: CalculateSplitPrePaidIn
   // 1. Calcular a taxa bruta total da plataforma (Admin Correct)
   const totalPlatformGrossTaxRate = (admin_tax + marketing_tax + marketplace_tax) / 10000;
   const platformGrossAmount = totalAmount * totalPlatformGrossTaxRate;
+  console.log({platformGrossAmount})
 
   // 2. Calcular a contribuição da plataforma para o cashback (20% da taxa bruta)
   const platformCashbackContribution = platformGrossAmount * 0.20;

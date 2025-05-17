@@ -11,6 +11,7 @@ import { companyUserByAdminController } from "../../modules/Company/CompanyUser/
 import { confirmPasswordController } from "../../modules/Company/CompanyUser/usecases/confirm-password";
 import { updateUserController } from "../../modules/Company/CompanyUser/usecases/update-admin-by-admin";
 import { updateAdminController } from "../../modules/Company/CompanyUser/usecases/update-user-by-admin";
+import { getBusinessAccountController } from "../../modules/Payments/Accounts/usecases/Business/get-business-account-by-admin";
 
 
 export const companyUserRouter = Router()
@@ -65,4 +66,10 @@ companyUserRouter.patch("/company-user/delete", companyIsAuth, async (request, r
 //Password confirmation - //TESTED
 companyUserRouter.post("/confirm-password", companyIsAuth, async (request, response) => {
     await confirmPasswordController.handle(request, response)
+})
+
+
+//Get Business Account
+companyUserRouter.get('/business/admin/account', companyIsAuth, async (request, response) => {
+  await getBusinessAccountController.handle(request, response)
 })

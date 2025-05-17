@@ -46,7 +46,7 @@ export class ProcessPaymentByAppUserUsecase {
     //check if user benefit can be paid in this transaction
     const partnerConfig = await this.partnerConfigRepository.findByPartnerId(transaction.favored_business_info_uuid.uuid);
     if (!partnerConfig) throw new CustomError("Partner not found", 404);
-    console.log({partnerConfig})
+
 
     const isBenefitValid = partnerConfig.items_uuid.some((item) => item === userItem.item_uuid.uuid);
     if (!isBenefitValid) throw new CustomError("User item is not valid for this transaction", 403);
@@ -54,13 +54,13 @@ export class ProcessPaymentByAppUserUsecase {
     //*********TO BE IMPLEMENTED*********
     //check if partner is in user block list
     //*********TO BE IMPLEMENTED*********
-
+    console.log({partnerConfig})
 
     const splitInput = {
       totalAmount: transaction.amount,
       admin_tax: partnerConfig.admin_tax,
       marketing_tax: partnerConfig.marketing_tax,
-      marketplace_tax: partnerConfig.market_place_tax,
+      marketplace_tax: transaction.transaction_type === "POS_PAYMENT" ? 0 : partnerConfig.market_place_tax,
       partner_cashback_tax: partnerConfig.cashback_tax,
     }
 
@@ -74,7 +74,6 @@ export class ProcessPaymentByAppUserUsecase {
     //check if benefit is pos ou pre paid
     if (userItem.item_category === "pre_pago") {
       //if it is pre paid, amount is immediately transfered to partner
-      console.log("Chegou aqui ***********")
       try{
 
         const processSplitPrePaidPayment = await this.transactionOrderRepository.processSplitPrePaidPayment(
