@@ -5,5 +5,6 @@ export interface IAppUserItemRepository extends RepositoryInterface<AppUserItemE
   findByItemUuidAndUserInfo(userInfoId: string, itemId: string):Promise<AppUserItemEntity | null>
   findAllUserItems(userInfoId: string): Promise<AppUserItemEntity[] | []>
   findItemByEmployeeAndBusiness(userInfoId: string, business_info_uuid: string, itemId: string):Promise<AppUserItemEntity | null>
+  findDebitUserItem(userInfoId: string): Promise<AppUserItemEntity | null>
 
 }

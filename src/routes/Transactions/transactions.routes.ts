@@ -3,6 +3,7 @@ import { posTransactionController } from "../../modules/Payments/Transactions/us
 import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/company-admin-auth.middlware";
 import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
 import { getPOSTransactionByAppUserController } from "../../modules/Payments/Transactions/useCases/get-pos-transaction-by-appuser";
+import { processPaymentByAppUserController } from "../../modules/Payments/Transactions/useCases/process-payment-by-app-user";
 
 const transactionsRouter = Router()
 
@@ -14,6 +15,11 @@ transactionsRouter.post("/pos-transaction", companyIsAuth, async (request, respo
 // Get POS transaction by app user
 transactionsRouter.get("/pos-transaction/app-user", appUserIsAuth, async (request, response) => {
   await getPOSTransactionByAppUserController.handle(request, response)
+})
+
+//Process payment by app user with pre paid benefit
+transactionsRouter.post("/pos-transaction/processing", appUserIsAuth, async (request, response) => {
+  await  processPaymentByAppUserController.handle(request, response)
 })
 
 export { transactionsRouter }

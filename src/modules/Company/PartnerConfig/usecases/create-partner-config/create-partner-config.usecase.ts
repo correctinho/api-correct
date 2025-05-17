@@ -1,7 +1,7 @@
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../errors/custom.error";
 import { IBranchRepository } from "../../../../branch/repositories/branch.repository";
-import { BusinessAccountEntity } from "../../../CompanyData/entities/business-account.entity";
+import { BusinessAccountEntity } from "../../entities/business-account.entity";
 import { ICompanyDataRepository } from "../../../CompanyData/repositories/company-data.repository";
 import { PartnerCategory, PartnerConfigEntity } from "../../entities/partner-config.entity";
 import { IPartnerConfigRepository } from "../../repositories/partner-config.repository";

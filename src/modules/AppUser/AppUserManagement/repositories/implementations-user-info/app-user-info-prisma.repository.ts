@@ -49,6 +49,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
           updated_at: newDateF(new Date())
         }
       }),
+
       prismaClient.userItem.create({
         data: {
           uuid: randomUUID(),

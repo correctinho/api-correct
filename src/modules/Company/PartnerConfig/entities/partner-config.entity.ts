@@ -22,6 +22,7 @@ export type PartnerConfigProps = {
   sales_type?: SalesType;
   latitude?: number,
   longitude?: number
+  cashback_tax?: number;
 
 };
 
@@ -42,6 +43,7 @@ export class PartnerConfigEntity {
   private _sales_type?: SalesType;
   private _latitude?: number;
   private _longitude?: number;
+  private _cashback_tax?: number;
   private _created_at?: string;
   private _updated_at?: string;
 
@@ -62,6 +64,7 @@ export class PartnerConfigEntity {
     this._description = props.description;
     this._latitude = props.latitude;
     this._longitude = props.longitude;
+    this._cashback_tax = props.cashback_tax ?? 0;
     this._created_at = newDateF(new Date());
     this._updated_at = newDateF(new Date());
     this.validate();
@@ -130,6 +133,10 @@ export class PartnerConfigEntity {
 
   get longitude(): number {
     return this._longitude;
+  }
+
+  get cashback_tax(): number | undefined {
+    return this._cashback_tax;
   }
 
   get created_at(): string | undefined {
@@ -206,6 +213,10 @@ export class PartnerConfigEntity {
     this.validate()
   }
 
+  changeCashbackTax(cashback_tax: number){
+    this._cashback_tax = cashback_tax;
+    this.validate()
+  }
   // Método de validação
   validate() {
     if (!this._business_info_uuid) {

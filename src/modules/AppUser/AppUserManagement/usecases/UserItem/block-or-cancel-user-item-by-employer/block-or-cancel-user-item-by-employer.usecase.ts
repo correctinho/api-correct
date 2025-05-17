@@ -19,7 +19,6 @@ export class BlockOrCanceluserItemByEmployerUsecase {
     //find user item item by id
     const userItem = await this.appUserItemRepository.find(new Uuid(input.user_item_uuid))
     if (!userItem) throw new CustomError("User Item not found", 404)
-
     //check if business admin has access
     if(userItem.business_info_uuid.uuid !== input.business_info_uuid) throw new CustomError("Unauthorized acess", 403);
 

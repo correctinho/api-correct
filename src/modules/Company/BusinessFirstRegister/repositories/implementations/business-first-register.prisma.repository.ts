@@ -165,6 +165,16 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
           longitude: partnerConfig.longitude,
           title: partnerConfig.title,
           created_at: partnerConfig.created_at,
+        },
+
+      }),
+      prismaClient.businessAccount.create({
+        data:{
+          uuid: randomUUID(),
+          balance: 0,
+          business_info_uuid: data.business_info_uuid,
+          status: "active",
+          created_at: partnerConfig.created_at,
         }
       })
     ])

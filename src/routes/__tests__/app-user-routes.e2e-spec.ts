@@ -42,6 +42,7 @@ let list_employees1_info_uuid: string[] = []
 let commonEmployeeUserInfoUuid: string //this is an employee for employers 1 and 2
 let employee_user_info: string
 let employeeAuthToken: string
+
 let employeeAuthToken2: string
 
 let non_employee_user_info: string
@@ -63,6 +64,19 @@ let benefit3_uuid: Uuid
 let benefit4_uuid: Uuid
 let benefit5_uuid: Uuid
 
+//Employe 1 benefits uuid
+let correct_benefit_user1_uuid: string
+let alimentacao_benefit_user1_uuid: string
+let adiantamento_benefit_user1_uuid: string
+let convenio_benefit_user1_uuid: string
+
+//Employe 2 benefits uuid
+let correct_benefit_user2_uuid: string
+let alimentacao_benefit_user2_uuid: string
+let blocked_adiantamento_benefit_user2_uuid: string
+let convenio_benefit_user2_uuid: string
+
+let correct_benefit_user2_balance: number
 
 let branch1_uuid: string
 let branch2_uuid: string
@@ -132,6 +146,7 @@ describe("E2E App User tests", () => {
     }
     //authenticate correct admin
     const result = await request(app).post('/login').send(authenticateAdmin)
+    expect(result.statusCode).toBe(200)
     correctAdminToken = result.body.token
 
     const benefit0 = {
@@ -3201,6 +3216,7 @@ describe("E2E App User tests", () => {
 
   describe("E2E Transactions", () => {
     let transaction1_uuid: string
+
     //first we need to create transactions by partner
     beforeAll(async () => {
       //lets first create partner users
@@ -3235,6 +3251,29 @@ describe("E2E App User tests", () => {
       transaction1_uuid = createTransaction.body.transaction_uuid
       expect(createTransaction.statusCode).toBe(201)
 
+      //Get employee 1 user items
+      const employee1UserItems = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
+      expect(employee1UserItems.statusCode).toBe(200)
+      correct_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Correct').uuid;
+      alimentacao_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Vale Alimentação').uuid;
+      convenio_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Convênio').uuid;
+
+      //Get employee 2 user items
+      const employee2UserItems = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken2}`)
+      expect(employee2UserItems.statusCode).toBe(200)
+      correct_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Correct').uuid;
+      alimentacao_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Vale Alimentação').uuid;
+      blocked_adiantamento_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Adiantamento Salarial').uuid;
+      convenio_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Convênio').uuid;
+
+      //HERE WE ARE GOING TO BLOCK ADIANTAMENTO BENEFIT FOR EMPLOYEE 2 FOR TESTS PURPOSES
+      const blockInput: any = {
+        user_item_uuid: blocked_adiantamento_benefit_user2_uuid,
+        status: 'blocked'
+      }
+      const blockEmployee2Adiantamento = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(blockInput)
+      expect(blockEmployee2Adiantamento.statusCode).toBe(200)
+      expect(blockEmployee2Adiantamento.body.status).toBe('blocked')
 
     })
     describe("E2E Get transaction by app user", () => {
@@ -3283,7 +3322,106 @@ describe("E2E App User tests", () => {
 
       })
     })
+    describe("E2E Process Pre paid Transaction", () => {
+      it("Should throw an error if transaction id is missing", async () => {
+
+        const input = {
+          transactionId: "",
+          benefit_uuid: randomUUID
+        }
+        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Transaction ID is required")
+      })
+      it("Should throw an error if benefit id is missing", async () => {
+
+        const input = {
+          transactionId: randomUUID(),
+          benefit_uuid: ""
+        }
+        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Benefit UUID is required")
+      })
+
+      it("Should throw an error if transaction does not exist", async () => {
+
+        const input = {
+          transactionId: randomUUID(),
+          benefit_uuid: randomUUID()
+        }
+        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+        expect(result.statusCode).toBe(404)
+        expect(result.body.error).toBe("Transaction not found")
+      })
+
+      it("Should throw an error if user does not have this benefit", async () => {
+
+        const input = {
+          transactionId: transaction1_uuid,
+          benefit_uuid: randomUUID()
+        }
+        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+        expect(result.statusCode).toBe(404)
+        expect(result.body.error).toBe("User item not found")
+      })
+      it("Should throw an error if user item is blocked or inactive", async () => {
+
+        const input = {
+          transactionId: transaction1_uuid,
+          benefit_uuid: blocked_adiantamento_benefit_user2_uuid
+        }
+        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+        expect(result.statusCode).toBe(403)
+        expect(result.body.error).toBe("User item is not active")
+      })
+      it("Should throw an error if balance is not enough", async () => {
+        const input = {
+          transactionId: transaction1_uuid,
+          benefit_uuid: correct_benefit_user2_uuid
+        }
+        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+        expect(result.statusCode).toBe(403)
+        expect(result.body.error).toBe("User item balance is not enough")
+      })
+      //BELOW TEST STILL MUST BE IMPLEMENTED
+      // it("Should throw an error if business does not accept user benefit", async () => {
+
+      //   //The partner that created the transaction follows below rules
+      //   //   {
+      //   //   name: "Mercearias",
+      //   //   marketing_tax: 130,
+      //   //   admin_tax: 140,
+      //   //   market_place_tax: 130,
+      //   //   benefits_name: ['Convênio', 'Vale Alimentação', 'Correct']
+      //   // },
+      //   const input = {
+      //     transactionId: transaction1_uuid,
+      //     benefit_uuid: adiantamento_benefit_user1_uuid
+      //   }
+      //   const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+      //   expect(result.statusCode).toBe(403)
+      //   expect(result.body.error).toBe("User item is not valid for this transaction")
+      // })
+      it("Should process pre paid benefit", async () => {
+        console.log("**********")
+        const input = {
+          transactionId: transaction1_uuid,
+          benefit_uuid: alimentacao_benefit_user2_uuid
+        }
+        const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+        console.log(result.body)
+
+        //let's get Correct Benefit user 2 to compare
+        const correctBenefitUser2 = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid })
+        console.log("correct benefit", correctBenefitUser2.body)
+        expect(correctBenefitUser2.statusCode).toBe(200)
+        expect(correctBenefitUser2.body.balance).toBe(160)
 
 
+
+      })
+
+    })
   })
 })

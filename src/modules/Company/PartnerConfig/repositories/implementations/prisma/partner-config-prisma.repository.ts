@@ -3,7 +3,7 @@ import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 import { prismaClient } from "../../../../../../infra/databases/prisma.config";
 import { PartnerCategory, PartnerConfigEntity } from "../../../entities/partner-config.entity";
 import { IPartnerConfigRepository } from "../../partner-config.repository";
-import { BusinessAccountEntity } from "../../../../CompanyData/entities/business-account.entity";
+import { BusinessAccountEntity } from "../../../entities/business-account.entity";
 
 export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
   // async upsert(data: PartnerConfigEntity): Promise<PartnerConfigEntity> {
@@ -69,7 +69,8 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
       title: config.title,
       phone: config.phone,
       description: config.description,
-      sales_type: config.sales_type
+      sales_type: config.sales_type,
+      cashback_tax: config.cashback_tax,
     } as PartnerConfigEntity
   }
 
@@ -95,7 +96,8 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
       title: config.title,
       phone: config.phone,
       description: config.description,
-      sales_type: config.sales_type
+      sales_type: config.sales_type,
+      cashback_tax: config.cashback_tax,
     } as PartnerConfigEntity
   }
   findAll(): Promise<PartnerConfigEntity[]> {
@@ -118,6 +120,7 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
           use_marketing: data.use_marketing,
           market_place_tax: data.market_place_tax,
           use_market_place: data.use_market_place,
+          cashback_tax: data.cashback_tax,
           created_at: data.created_at
         }
 
@@ -219,7 +222,4 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
     })
     return partners
   }
-}
-function randomUUID(): string {
-  throw new Error("Function not implemented.");
 }
