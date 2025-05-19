@@ -51,7 +51,6 @@ export class GetAppUserHistoryByAccountIdUsecase {
       amount: item.amount,
       balance_before: item.balance_before,
       balance_after: item.balance_after,
-      description: item.description ? item.description : "",
       related_transaction_uuid: item.related_transaction_uuid ? item.related_transaction_uuid : "",
       user_info_uuid: item.user_info_uuid,
       created_at: item.created_at,
