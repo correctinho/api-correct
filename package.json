@@ -14,7 +14,8 @@
     "test:benefits": "jest --config jest-e2e.config.ts routes/__tests__/benefit.routes.e2e-spec.ts --runInBand --watch",
     "test": "jest --config jest.unit.config.ts --watch",
     "test:e2e": "jest --config jest-e2e.config.ts --runInBand --watch",
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "postinstall": "prisma generate"
   },
   "devDependencies": {
     "@swc/cli": "^0.4.0",
