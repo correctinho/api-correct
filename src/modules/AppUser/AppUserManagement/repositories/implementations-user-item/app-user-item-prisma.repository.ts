@@ -5,6 +5,44 @@ import { OutputFindAllAppUserItemsDTO } from "../../usecases/UserItem/find-all-b
 import { IAppUserItemRepository } from "../app-user-item-repository";
 
 export class AppUserItemPrismaRepository implements IAppUserItemRepository {
+  async findDebitUserItem(userInfoId: string): Promise<AppUserItemEntity | null> {
+    const userItem = await prismaClient.userItem.findFirst({
+      where: {
+        item_name: "Correct",
+        user_info_uuid: userInfoId,
+      },
+      include: {
+        Item: true,
+        BenefitGroups: true
+      }
+    })
+
+    if (!userItem) return null
+    return {
+      uuid: new Uuid(userItem.uuid),
+      business_info_uuid: new Uuid(userItem.business_info_uuid),
+      user_info_uuid: new Uuid(userItem.user_info_uuid),
+      item_uuid: new Uuid(userItem.item_uuid),
+      item_type: userItem.Item.item_type,
+      item_category: userItem.Item.item_category,
+      img_url: userItem.Item.img_url,
+      item_name: userItem.item_name,
+      balance: userItem.balance,
+      status: userItem.status,
+      blocked_at: userItem.blocked_at,
+      cancelled_at: userItem.cancelled_at,
+      block_reason: userItem.block_reason,
+      cancel_reason: userItem.cancel_reason,
+      cancelling_request_at: userItem.cancelling_request_at,
+      grace_period_end_date: userItem.grace_period_end_date,
+      group_uuid: new Uuid(userItem.BenefitGroups.uuid),
+      group_name: userItem.BenefitGroups.group_name,
+      group_value: userItem.BenefitGroups.value,
+      group_is_default: userItem.BenefitGroups.is_default,
+      created_at: userItem.created_at,
+      updated_at: userItem.updated_at
+    } as AppUserItemEntity
+  }
 
   async findByItemUuidAndUserInfo(userInfoId: string, itemId: string): Promise<AppUserItemEntity | null> {
     const userItem = await prismaClient.userItem.findFirst({
@@ -78,10 +116,10 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
       cancel_reason: userItem.cancel_reason,
       cancelling_request_at: userItem.cancelling_request_at,
       grace_period_end_date: userItem.grace_period_end_date,
-      group_uuid: new Uuid(userItem.BenefitGroups.uuid),
-      group_name: userItem.BenefitGroups.group_name,
-      group_value: userItem.BenefitGroups.value,
-      group_is_default: userItem.BenefitGroups.is_default,
+      group_uuid: userItem.BenefitGroups ? new Uuid(userItem.BenefitGroups.uuid) : null,
+      group_name: userItem.BenefitGroups ? userItem.BenefitGroups.group_name : null,
+      group_value: userItem.BenefitGroups ? userItem.BenefitGroups.value : null,
+      group_is_default: userItem.BenefitGroups ? userItem.BenefitGroups.is_default : null,
       created_at: userItem.created_at,
       updated_at: userItem.updated_at
     } as AppUserItemEntity
@@ -144,7 +182,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
     return {
       uuid: new Uuid(userItem.uuid),
       business_info_uuid: new Uuid(userItem.business_info_uuid),
-      fantasy_name: userItem.Business.fantasy_name,
+      fantasy_name: userItem.Business ? userItem.Business.fantasy_name : null,
       user_info_uuid: new Uuid(userItem.user_info_uuid),
       item_uuid: new Uuid(userItem.item_uuid),
       item_type: userItem.Item.item_type,
@@ -159,10 +197,10 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
       cancel_reason: userItem.cancel_reason,
       cancelling_request_at: userItem.cancelling_request_at,
       grace_period_end_date: userItem.grace_period_end_date,
-      group_uuid: new Uuid(userItem.BenefitGroups.uuid),
-      group_name: userItem.BenefitGroups.group_name,
-      group_value: userItem.BenefitGroups.value,
-      group_is_default: userItem.BenefitGroups.is_default,
+      group_uuid: userItem.BenefitGroups ? new Uuid(userItem.BenefitGroups.uuid) : null,
+      group_name: userItem.BenefitGroups ? userItem.BenefitGroups.group_name : null,
+      group_value: userItem.BenefitGroups ? userItem.BenefitGroups.value : null,
+      group_is_default: userItem.BenefitGroups ? userItem.BenefitGroups.is_default : null,
       created_at: userItem.created_at,
       updated_at: userItem.updated_at
     } as AppUserItemEntity
@@ -188,12 +226,11 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
 
       }
     })
-
     return userItems.map((userItem) => {
       return {
         uuid: new Uuid(userItem.uuid),
-        business_info_uuid: new Uuid(userItem.Business.uuid),
-        fantasy_name: userItem.Business.fantasy_name,
+        business_info_uuid: userItem.Business ? new Uuid(userItem.Business.uuid) : null,
+        fantasy_name: userItem.Business ? userItem.Business.fantasy_name : null,
         user_info_uuid: new Uuid(userItem.user_info_uuid),
         item_uuid: new Uuid(userItem.item_uuid),
         item_type: userItem.Item.item_type,
@@ -208,10 +245,10 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         cancel_reason: userItem.cancel_reason,
         cancelling_request_at: userItem.cancelling_request_at,
         grace_period_end_date: userItem.grace_period_end_date,
-        group_uuid: new Uuid(userItem.BenefitGroups.uuid),
-        group_name: userItem.BenefitGroups.group_name,
-        group_value: userItem.BenefitGroups.value,
-        group_is_default: userItem.BenefitGroups.is_default,
+        group_uuid: userItem.BenefitGroups ? new Uuid(userItem.BenefitGroups.uuid) : null,
+        group_name: userItem.BenefitGroups ? userItem.BenefitGroups.group_name : null,
+        group_value: userItem.BenefitGroups ? userItem.BenefitGroups.value : null,
+        group_is_default: userItem.BenefitGroups ? userItem.BenefitGroups.is_default : null,
         created_at: userItem.created_at,
         updated_at: userItem.updated_at
       }

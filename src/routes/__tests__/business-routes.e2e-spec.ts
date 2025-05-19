@@ -1287,7 +1287,7 @@ describe("E2E Business tests", () => {
         expect(getPartnerAdminDetails.statusCode).toBe(200)
 
         partnerAdminDetails.business_info_uuid = getPartnerAdminDetails.body.business_info_uuid,
-        partnerAdminDetails.is_admin = getPartnerAdminDetails.body.is_admin
+          partnerAdminDetails.is_admin = getPartnerAdminDetails.body.is_admin
         partnerAdminDetails.document = getPartnerAdminDetails.body.document
         partnerAdminDetails.name = getPartnerAdminDetails.body.name
         partnerAdminDetails.email = getPartnerAdminDetails.body.email
@@ -2145,20 +2145,20 @@ describe("E2E Business tests", () => {
       })
 
       it("Should throw an error if business is not found", async () => {
-        const result = await request(app).get("/partner/seller").set('Authorization', `Bearer ${correctSellerToken}`).send({document: '123'})
+        const result = await request(app).get("/partner/seller").set('Authorization', `Bearer ${correctSellerToken}`).send({ document: '123' })
 
         expect(result.statusCode).toBe(404)
         expect(result.body.error).toBe("Business not found")
       })
 
       it("Should throw an error if correct seller did not register this partner", async () => {
-        const result = await request(app).get("/partner/seller").set('Authorization', `Bearer ${correctSellerToken}`).send({document: 'CNPJ'})
+        const result = await request(app).get("/partner/seller").set('Authorization', `Bearer ${correctSellerToken}`).send({ document: 'CNPJ' })
 
         expect(result.statusCode).toBe(401)
         expect(result.body.error).toBe("Unauthorized access")
       })
       it("Should return partner", async () => {
-        const result = await request(app).get("/partner/seller").set('Authorization', `Bearer ${correctSellerToken}`).send({document: 'comercio4'})
+        const result = await request(app).get("/partner/seller").set('Authorization', `Bearer ${correctSellerToken}`).send({ document: 'comercio4' })
 
         expect(result.statusCode).toBe(200)
         expect(result.body.business_document).toBe("comercio4")
@@ -2197,4 +2197,83 @@ describe("E2E Business tests", () => {
     })
   })
 
+  describe("E2E Transactions", () => {
+    describe("Create POS transaction order by partner", () => {
+      it("Should throw an error if business is not active", async () => {
+        //inactive partner
+        const inputToInactivate = {
+          address_uuid: partner_address_uuid,
+          fantasy_name: "Empresa novo nome",
+          document: "comercio",
+          classification: "Classificação",
+          colaborators_number: 5,
+          email: "comercio@comercio.com",
+          phone_1: "215745158",
+          phone_2: "124588965",
+          business_type: "comercio",
+          status: "inactive"
+        }
+        const query = {
+          business_info_uuid: partner_info_uuid
+        }
+        const inactivePartner = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToInactivate)
+        expect(inactivePartner.statusCode).toBe(200)
+
+        const input = {
+          item_uuid: randomUUID(),
+          cycle_end_day: 1,
+          amount: 200
+        }
+        const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
+        expect(result.statusCode).toBe(403)
+        expect(result.body.error).toBe("Business is not active")
+      })
+      it("Should throw an error if business type is Employer", async () => {
+
+        const input = {
+          amount: 200,
+          description: ""
+        }
+        const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${employer_user_token}`).send(input)
+        expect(result.statusCode).toBe(403)
+        expect(result.body.error).toBe("Business type is not allowed")
+      })
+
+      it("Should create a POS transaction", async () => {
+        //ACTIVATE PARTNER TO BE ABLE TO CREATE TRANSACTIONS
+        const inputToInactivate = {
+
+          status: "active"
+        }
+        const query = {
+          business_info_uuid: partner_info_uuid
+        }
+        const activePartner = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToInactivate)
+        expect(activePartner.statusCode).toBe(200)
+
+        //CREATE TRANSACTION
+        const input = {
+          amount: 200,
+          description: "",
+        }
+        const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
+        expect(result.statusCode).toBe(201)
+        expect(result.body.business_info_uuid).toBe(partner_info_uuid)
+        expect(result.body.fee).toBe(1.50) //this is because this partner main branch is branch1, as defined on line 646. And this branch was created to have admin tax as 152
+
+      })
+
+
+    })
+  })
+
+  describe("E2E Business Account", () => {
+    describe("Get Business Account by business admin", () => {
+      it("Should get business account", async () => {
+        const result = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_admin_token}`)
+        expect(result.statusCode).toBe(200)
+
+      })
+    })
+  })
 })

@@ -69,3 +69,22 @@ describe("E2E Create Admin/user tests", () => {
     })
   })
 })
+
+describe("E2E Correct admin account", () => {
+  describe("Get Correct Admin account", () => {
+    it("Should get correct admin account", async () => {
+      const result = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctAdminToken}`)
+      expect(result.statusCode).toBe(200)
+      expect(result.body).toHaveProperty("uuid")
+      expect(result.body).toHaveProperty("balance")
+      expect(result.body).toHaveProperty("status")
+      expect(result.body).toHaveProperty("created_at")
+      expect(result.body).toHaveProperty("updated_at")
+    })
+
+    it("Should throw an error if user is not admin", async () => {
+      const result = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctSellerToken}`)
+      expect(result.statusCode).toBe(401)
+    })
+  })
+})

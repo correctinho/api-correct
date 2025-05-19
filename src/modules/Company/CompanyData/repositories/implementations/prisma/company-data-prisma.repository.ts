@@ -42,8 +42,6 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
     return companyData as CompanyDataEntity
   }
 
-
-
   async findByDocument(document: string): Promise<CompanyDataEntity | null> {
     const companyData = await prismaClient.businessInfo.findUnique({
       where: {

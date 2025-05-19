@@ -16,12 +16,17 @@ export class FindAllUserItemsByEmployerUsecase {
     // Check if app user exists
     const userInfo = await this.appuserInfoRepository.find(new Uuid(user_info_uuid));
     if (!userInfo) throw new CustomError("User not found", 404);
-
     //check if employer is allowed to make this request
     if (!userInfo.business_info_uuids.some(uuid => uuid === business_info_uuid)) throw new CustomError("Unauthorized access", 403);
     const userItems = await this.appUserItemRepository.findAllUserItems(userInfo.uuid.uuid);
     //filter items to show only active items
-    const filteredItems = userItems.filter((userItem: AppUserItemEntity) => userItem.status !== "inactive" && userItem.business_info_uuid.uuid === business_info_uuid);
+    const filteredItems = userItems.filter((userItem: AppUserItemEntity) => {
+      const itemBusinessUuidString = userItem.business_info_uuid?.uuid; // Acesso seguro ao UUID da empresa do item
+
+      return userItem.status !== "inactive" &&
+             itemBusinessUuidString === business_info_uuid && // Comparação segura
+             userItem.item_name !== "Correct";
+  });
     if (userItems.length === 0) return [];
     return filteredItems.map((userItem: AppUserItemEntity) => {
       return {
@@ -37,13 +42,13 @@ export class FindAllUserItemsByEmployerUsecase {
         created_at: userItem.created_at,
         Provider: {
           business_info_uuid: userItem.business_info_uuid ? userItem.business_info_uuid.uuid : null,
-          fantasy_name: userItem.fantasy_name
+          fantasy_name: userItem?.fantasy_name ? userItem.fantasy_name : null,
         },
         Group:{
-          group_uuid: userItem.group_uuid.uuid,
-          group_name: userItem.group_name,
-          group_value: userItem.group_value,
-          group_is_default: userItem.group_is_default
+          group_uuid: userItem.group_uuid ? userItem.group_uuid.uuid : null,
+          group_name: userItem.group_name ? userItem.group_name : null,
+          group_value: userItem.group_value ? userItem.group_value : null,
+          group_is_default: userItem.group_is_default ? userItem.group_is_default : null
         }
       };
     });

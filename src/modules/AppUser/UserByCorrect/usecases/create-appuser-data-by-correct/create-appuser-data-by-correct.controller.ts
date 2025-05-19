@@ -6,6 +6,7 @@ import { IAppUserAuthRepository } from "../../../AppUserManagement/repositories/
 import { CreateAppUserByCorrectUsecaseTest } from "./create-appuser-data-by-correct.usecase";
 import { IBusinessItemDetailsRepository } from "../../../../Company/BusinessItemsDetails/repositories/business-item-details.repository";
 import { IAppUserItemRepository } from "../../../AppUserManagement/repositories/app-user-item-repository";
+import { IBenefitsRepository } from "../../../../benefits/repositories/benefit.repository";
 
 
 export class CreateAppUserByCorrectController {
@@ -14,7 +15,8 @@ export class CreateAppUserByCorrectController {
     private businessRepository: ICompanyDataRepository,
     private appUserAuthRepository: IAppUserAuthRepository,
     private employerItemsRepository: IBusinessItemDetailsRepository,
-    private employeeItemRepository: IAppUserItemRepository
+    private employeeItemRepository: IAppUserItemRepository,
+    private benefitsRepository: IBenefitsRepository
 
   ) { }
 
@@ -34,7 +36,8 @@ export class CreateAppUserByCorrectController {
         this.businessRepository,
         this.appUserAuthRepository,
         this.employerItemsRepository,
-        this.employeeItemRepository
+        this.employeeItemRepository,
+        this.benefitsRepository
       );
 
       // Passa o buffer do arquivo para o caso de uso

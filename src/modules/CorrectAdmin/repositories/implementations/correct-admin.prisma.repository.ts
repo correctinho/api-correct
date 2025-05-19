@@ -1,22 +1,35 @@
+import { randomUUID } from "node:crypto";
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
 import { prismaClient } from "../../../../infra/databases/prisma.config";
 import { OutputFindAdminAuthDTO, OutputFindAdminDTO } from "../../correct-dto/correct.dto";
 import { CorrectAdminEntity } from "../../entities/correct-admin.entity";
 import { ICorrectAdminRepository } from "../correct-admin.repository";
+import { newDateF } from "../../../../utils/date";
 
 
 
 export class CorrectAdminPrismaRepository implements ICorrectAdminRepository {
     async create(data: CorrectAdminEntity): Promise<void> {
-        await prismaClient.correctAdmin.create({
+      const [correctAdmin, correctAccount] = await prismaClient.$transaction([
+        prismaClient.correctAdmin.create({
             data: {
                 name: data.name,
                 email: data.email,
                 userName: data.userName,
                 password: data.password,
-                isAdmin: data.isAdmin
+                isAdmin: data.isAdmin,
+
             }
+        }),
+        prismaClient.correctAccount.create({
+          data:{
+            uuid: randomUUID(),
+            balance: 0,
+            status:'active',
+            created_at: newDateF(new Date())
+          }
         })
+      ])
     }
 
     async update(data: CorrectAdminEntity): Promise<void> {

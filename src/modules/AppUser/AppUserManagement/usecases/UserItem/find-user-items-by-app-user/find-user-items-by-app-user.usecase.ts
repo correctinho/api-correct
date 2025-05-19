@@ -34,8 +34,8 @@ export class FindAllUserItemsByAppUserUsecase {
         created_at: userItem.created_at,
         updated_at: userItem.updated_at,
         Provider: {
-          business_info_uuid: userItem.business_info_uuid.uuid,
-          fantasy_name: userItem.fantasy_name
+          business_info_uuid: userItem.business_info_uuid ? userItem.business_info_uuid.uuid : null,
+          fantasy_name: userItem.fantasy_name ? userItem.fantasy_name : null,
         }
       };
     });

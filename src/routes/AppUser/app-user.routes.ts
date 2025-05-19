@@ -1,4 +1,4 @@
-import { Router, response } from "express";
+import { Router, request, response } from "express";
 import uploadConfig from '../../infra/shared/multer/multer.csv.memory.config'
 import multer from 'multer'
 import { authenticateAppUserController } from "../../modules/AppUser/AppUserManagement/usecases/UserAuth/app-user-authentication";
@@ -103,5 +103,8 @@ appUserRouter.put("/app-user/address", appUserIsAuth, async (request, response) 
 appUserRouter.post("/app-user/document-validation", appUserIsAuth, async (request, response) => {
     await createDocumentsController.handle(request, response)
 })
+
+
+
 
 export { appUserRouter }

@@ -1,4 +1,5 @@
 
+import { BenefitPrismaRepository } from "../../../../benefits/repositories/implementations/benefit.prisma.repository";
 import { BusinessItemDetailsPrismaRepository } from "../../../../Company/BusinessItemsDetails/repositories/implementations/business-item-details.prisma.repository";
 import { CompanyDataPrismaRepository } from "../../../../Company/CompanyData/repositories/implementations/prisma/company-data-prisma.repository";
 import { AppUserAuthPrismaRepository } from "../../../AppUserManagement/repositories/implementations-user-auth/app-user-auth-prisma.repository";
@@ -11,12 +12,14 @@ const businessRepository = new CompanyDataPrismaRepository()
 const appUserAuthRepository = new AppUserAuthPrismaRepository()
 const employerItemsReposutory = new BusinessItemDetailsPrismaRepository()
 const employeeItemRepository = new AppUserItemPrismaRepository()
+const benefitsRepository = new BenefitPrismaRepository()
 const createAppUserByCorrectController = new CreateAppUserByCorrectController(
     appUserInfoRepository,
     businessRepository,
     appUserAuthRepository,
     employerItemsReposutory,
-    employeeItemRepository
+    employeeItemRepository,
+    benefitsRepository
 )
 
 export { createAppUserByCorrectController }

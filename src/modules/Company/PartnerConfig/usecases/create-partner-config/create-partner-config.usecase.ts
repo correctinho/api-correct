@@ -1,6 +1,7 @@
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../errors/custom.error";
 import { IBranchRepository } from "../../../../branch/repositories/branch.repository";
+import { BusinessAccountEntity } from "../../../../Payments/Accounts/entities/business-account.entity";
 import { ICompanyDataRepository } from "../../../CompanyData/repositories/company-data.repository";
 import { PartnerCategory, PartnerConfigEntity } from "../../entities/partner-config.entity";
 import { IPartnerConfigRepository } from "../../repositories/partner-config.repository";
@@ -52,7 +53,16 @@ export class CreatePartnerConfigUsecase{
     //check if business status is valid
     if(findBusiness.status !== 'active') throw new CustomError("Business must be active", 400)
 
-    const register = await this.partnerConfigRepository.createPartnerConfig(entity)
+    //create business account
+    const businessAccountProps = {
+      balance: 0,
+      business_info_uuid: findBusiness.uuid,
+      status: 'active',
+
+    }
+    const businessAccountEntity = new BusinessAccountEntity(businessAccountProps)
+
+    const register = await this.partnerConfigRepository.createPartnerConfig(entity, businessAccountEntity)
 
     return {
       uuid: register.uuid.uuid,

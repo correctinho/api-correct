@@ -11,6 +11,7 @@ import { InputCreateUserInfoDTO, OutputCreateUserInfoDTO } from "../create-user-
 import { AppUserItemEntity } from "../../../entities/app-user-item.entity";
 import { BenefitGroupsEntity } from "../../../../../Company/BenefitGroups/entities/benefit-groups.entity";
 import { IAppUserItemRepository } from "../../../repositories/app-user-item-repository";
+import { IBenefitsRepository } from "../../../../../benefits/repositories/benefit.repository";
 
 let employerActiveItems: OutputFindEmployerItemDetailsDTO[] = []
 
@@ -19,6 +20,7 @@ export class CreateAppUserInfoByEmployerUsecase {
     private appUserInfoRepository: IAppUserInfoRepository,
     private appUserAuthRepository: IAppUserAuthRepository,
     private employerItemsRepository: IBusinessItemDetailsRepository,
+    private benefitsRepository: IBenefitsRepository
 
 
   ) { }
@@ -37,6 +39,12 @@ export class CreateAppUserInfoByEmployerUsecase {
     //check if employer has registered items
     const employerItems = await this.employerItemsRepository.findAllEmployerItems(userInfoEntity.business_info_uuid.uuid)
     if (employerItems.length === 0) throw new CustomError("No items found for employer", 404)
+
+    //get debit benefit
+    const benefit = await this.benefitsRepository.findByName("Correct")
+    if (!benefit) throw new CustomError("Benefit not found", 404)
+    //set debit benefit
+    userInfoEntity.setDebitBenefitUuid(benefit.uuid)
 
     let employeeItemsArray: AppUserItemEntity[] = []
 
