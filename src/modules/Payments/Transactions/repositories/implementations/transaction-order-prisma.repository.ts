@@ -182,7 +182,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
     const totalAmountToDecrement = transactionEntity.amount; // Valor total gasto pelo usuário
     const netAmountToCreditBusiness = splitOutput.partnerNetAmount;
     const netAmountToCreditPlatform = splitOutput.platformNetAmount;
-    const cashbackAmountToCreditUser = splitOutput.userCashbackAmount; // Valor do cashback a ser creditado
+    const cashbackAmountToCreditUser = splitOutput.userCashbackAmount * 100; // Valor do cashback a ser creditado
 
     const result = await prismaClient.$transaction(async (tx) => {
       // 1. Buscar UserItem DEBITADO e verificar saldo atomicamente
@@ -190,7 +190,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         where: { uuid: debitedUserItemId },
         select: { balance: true, user_info_uuid: true } // Buscar saldo e ID do usuário
       });
-      console.log({debitedUserItem})
       if (!debitedUserItem) {
         throw new CustomError(`Debited UserItem with UUID ${debitedUserItemId} not found.`, 404);
       }
@@ -214,7 +213,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         },
         select: { uuid: true, balance: true }
       });
-      console.log({correctUserItem})
 
       if (!correctUserItem) {
         // Importante: O usuário PRECISA ter um item "Correct" para receber cashback
@@ -229,7 +227,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         where: { business_info_uuid: favoredBusinessInfoId }, // Busca pelo ID do BusinessInfo
         select: { uuid: true, balance: true } // Seleciona o UUID e o saldo
       });
-      console.log({currentBusinessAccount})
       if (!currentBusinessAccount) {
         // Se a conta da empresa DEVE existir para a transação, lançar erro
         throw new CustomError(`BusinessAccount associated with BusinessInfo ${favoredBusinessInfoId} not found.`, 404);
@@ -246,7 +243,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         // A conta da plataforma DEVE existir
         throw new CustomError(`CorrectAccount not found. System configuration error.`, 500);
       }
-      console.log({currentCorrectAccount})
       const correctAccountId = currentCorrectAccount.uuid; // <<< Pega o UUID aqui
       const correctBalanceBefore = currentCorrectAccount.balance;
       const correctBalanceAfter = correctBalanceBefore + netAmountToCreditPlatform;
@@ -274,7 +270,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
       // 8. Creditar CASHBACK no UserItem "Correct"
       await tx.userItem.update({
         where: { uuid: correctUserItemId },
-        data: { balance: { increment: cashbackAmountToCreditUser * 100 }, updated_at: transactionEntity.updated_at }
+        data: { balance: { increment: cashbackAmountToCreditUser }, updated_at: transactionEntity.updated_at }
       });
       // 9. Histórico GASTO UserItem DEBITADO
       await tx.userItemHistory.create({
@@ -285,7 +281,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
           balance_before: debitedUserItemBalanceBefore,
           balance_after: debitedUserItemBalanceAfter,
           related_transaction_uuid: transactionId,
-          description: transactionEntity.description ?? `Gasto na transação ${transactionId}`,
         }
       });
 
@@ -298,7 +293,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
           balance_before: correctItemBalanceBeforeCashback,
           balance_after: correctItemBalanceAfterCashback,
           related_transaction_uuid: transactionId,
-          description: transactionEntity.description ?? `Cashback da transação ${transactionId}`,
         }
       });
 
@@ -311,7 +305,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
           balance_before: businessBalanceBefore,
           balance_after: businessBalanceAfter,
           related_transaction_uuid: transactionId,
-          description: transactionEntity.description ?? `Pagamento recebido da transação ${transactionId}`,
         }
       });
 
@@ -324,7 +317,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
           balance_before: correctBalanceBefore,
           balance_after: correctBalanceAfter,
           related_transaction_uuid: transactionId,
-          description: transactionEntity.description ?? `Taxa da plataforma da transação ${transactionId}`,
         }
       });
 
@@ -341,7 +333,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         }
       });
 
-      console.log("Finalizou o split")
 
       // Retornar sucesso e o saldo final do item DEBITADO
       return {

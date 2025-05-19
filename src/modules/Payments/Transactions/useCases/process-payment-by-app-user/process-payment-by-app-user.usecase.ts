@@ -25,7 +25,6 @@ export class ProcessPaymentByAppUserUsecase {
     //get transaction details
     const transaction = await this.transactionOrderRepository.find(new Uuid(data.transactionId));
     if (!transaction) throw new CustomError("Transaction not found", 404);
-    console.log({transaction})
     // Ensure transaction has the favored business info needed
     if (!transaction.favored_business_info_uuid) {
       throw new CustomError("Transaction is missing partner information", 400);
@@ -54,7 +53,6 @@ export class ProcessPaymentByAppUserUsecase {
     //*********TO BE IMPLEMENTED*********
     //check if partner is in user block list
     //*********TO BE IMPLEMENTED*********
-    console.log({partnerConfig})
 
     const splitInput = {
       totalAmount: transaction.amount,
@@ -65,12 +63,10 @@ export class ProcessPaymentByAppUserUsecase {
     }
 
     const splitOutput = await calculateSplitPrePaidAmount(splitInput);
-    console.log({splitOutput})
 
     const transactionEntity = new TransactionEntity(transaction)
 
     transactionEntity.changeUserItemUuid(new Uuid(data.benefit_uuid));
-
     //check if benefit is pos ou pre paid
     if (userItem.item_category === "pre_pago") {
       //if it is pre paid, amount is immediately transfered to partner
@@ -81,6 +77,7 @@ export class ProcessPaymentByAppUserUsecase {
           splitOutput,
           new Uuid(data.appUserInfoID)
         )
+        console.log({processSplitPrePaidPayment})
         return {result: processSplitPrePaidPayment.success, finalBalance: processSplitPrePaidPayment.finalDebitedUserItemBalance}
       }catch(err){
         return err

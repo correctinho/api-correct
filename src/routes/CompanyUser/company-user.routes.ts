@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { request, Router } from "express";
 import { companyUserController } from "../../modules/Company/CompanyUser/usecases/create-company-admin";
 import { authCompanyUserController } from "../../modules/Company/CompanyUser/usecases/authenticate-company-user";
 import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/company-admin-auth.middlware";
@@ -12,6 +12,7 @@ import { confirmPasswordController } from "../../modules/Company/CompanyUser/use
 import { updateUserController } from "../../modules/Company/CompanyUser/usecases/update-admin-by-admin";
 import { updateAdminController } from "../../modules/Company/CompanyUser/usecases/update-user-by-admin";
 import { getBusinessAccountController } from "../../modules/Payments/Accounts/usecases/Business/get-business-account-by-admin";
+import { getBusinessAccountHistoryController } from "../../modules/Payments/Accounts/usecases/account-histories/business-user";
 
 
 export const companyUserRouter = Router()
@@ -72,4 +73,9 @@ companyUserRouter.post("/confirm-password", companyIsAuth, async (request, respo
 //Get Business Account
 companyUserRouter.get('/business/admin/account', companyIsAuth, async (request, response) => {
   await getBusinessAccountController.handle(request, response)
+})
+
+// Get business Account History
+companyUserRouter.get('/business/account/history', companyIsAuth, async (request, response) => {
+  await getBusinessAccountHistoryController.handle(request, response)
 })

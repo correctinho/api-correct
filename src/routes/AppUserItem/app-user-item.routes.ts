@@ -7,6 +7,7 @@ import { blockOrCancelUserItemByEmployer } from "../../modules/AppUser/AppUserMa
 import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
 import { findAllUserItemsByUser } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/find-user-items-by-app-user";
 import { activateUserItemByEmployer } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/activate-user-item-by-employer";
+import { getAppUserItemHistoryController } from "../../modules/Payments/Accounts/usecases/account-histories/app-user";
 
 export const appUserItemRouter = Router()
 
@@ -49,4 +50,11 @@ appUserItemRouter.get("/user-item", appUserIsAuth, async (request, response) => 
 //find all user items by user - NOT TESTED
 appUserItemRouter.get("/user-item/all", appUserIsAuth, async (request, response) => {
   await findAllUserItemsByUser.handle(request, response)
+})
+
+
+/*APP USER ACCOUNTS */
+//get app user item history by app user
+appUserItemRouter.get("/app-user/account/history", appUserIsAuth, async (request, response) => {
+  await getAppUserItemHistoryController.handle(request, response)
 })
