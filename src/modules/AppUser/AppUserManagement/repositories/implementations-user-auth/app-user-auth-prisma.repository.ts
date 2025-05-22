@@ -93,7 +93,7 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
 
         return {
             uuid: new Uuid(appUser.uuid),
-            user_info_uuid: appUser.user_info_uuid ? new Uuid(appUser.user_info_uuid) : null,
+            user_info_uuid:   appUser.user_info_uuid ? new Uuid(appUser.user_info_uuid) : null,
             document: appUser.document,
             email: appUser.email,
             password: appUser.password,
@@ -101,7 +101,7 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
             created_at: appUser.created_at,
             updated_at: appUser.updated_at
 
-        } as AppUserAuthSignUpEntity || null
+        } as AppUserAuthSignUpEntity
     }
 
 
