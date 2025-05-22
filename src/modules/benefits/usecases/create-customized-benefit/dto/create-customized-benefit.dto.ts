@@ -1,4 +1,4 @@
-import { ItemCategory, ItemType } from "../../create-benefit/create-benefit.dto"
+import { ItemCategory, ItemType } from "@prisma/client";
 
 export interface InputCreateCustomizedBenefitDto {
   name: string

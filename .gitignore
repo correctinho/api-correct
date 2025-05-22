@@ -7,3 +7,5 @@ src/tmp
 logs
 
 .rabbmitmq_data/*
+
+/dist
