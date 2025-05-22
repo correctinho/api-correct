@@ -1,5 +1,5 @@
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo"
-import { ItemCategory, ItemType } from "../create-benefit/create-benefit.dto"
+import { ItemCategory, ItemType } from "@prisma/client";
 
 export interface InputUpdateBenefitDTO{
     uuid: Uuid

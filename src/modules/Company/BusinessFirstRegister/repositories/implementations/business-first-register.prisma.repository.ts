@@ -7,6 +7,9 @@ import { IBusinessFirstRegisterRepository } from "../business-first-register.rep
 import { randomUUID } from 'crypto'
 
 export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterRepository {
+  save(data: any, data1: any): Promise<any> {
+    throw new Error("Method not implemented.");
+  }
   async saveEmployer(data: BusinessRegisterEntity, correctUserUuid?: string): Promise<any> {
     const [address, businessInfo, businessItem, correct] = await prismaClient.$transaction([
       prismaClient.address.create({
