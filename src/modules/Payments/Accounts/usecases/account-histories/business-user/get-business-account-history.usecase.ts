@@ -1,6 +1,6 @@
 import { CustomError } from "../../../../../../errors/custom.error";
-import { IAccountsHistoryRepository } from "../../../repositories/accounts-history.repository";
-import { IBusinessAccountRepository } from "../../../repositories/business-account.repository";
+import { IAccountsHistoryRepository } from "../../repositories/accounts-history.repository";
+import { IBusinessAccountRepository } from "../../repositories/business-account.repository";
 import { InputGetBusinessAccountHistoryDTO, OutputGetBusinessAccountHistoryDTO } from "./dto/get-business-account-by-admin.dto";
 
 export class GetBusinessAccountHistoryUsecase {

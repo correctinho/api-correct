@@ -1,6 +1,6 @@
-import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
-import { prismaClient } from "../../../../../infra/databases/prisma.config";
-import { BusinessAccountEntity } from "../../entities/business-account.entity";
+import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
+import { prismaClient } from "../../../../../../infra/databases/prisma.config";
+import { BusinessAccountEntity } from "../../../entities/business-account.entity";
 import { IBusinessAccountRepository } from "../business-account.repository";
 
 export class BusinessAccountPrismaRepository implements IBusinessAccountRepository {

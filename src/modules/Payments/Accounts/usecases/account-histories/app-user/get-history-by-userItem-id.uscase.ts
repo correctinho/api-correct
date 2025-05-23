@@ -1,5 +1,5 @@
 import { CustomError } from "../../../../../../errors/custom.error";
-import { IAccountsHistoryRepository } from "../../../repositories/accounts-history.repository";
+import { IAccountsHistoryRepository } from "../../repositories/accounts-history.repository";
 import { InputGetUserItemHistoryDTO, OutputGetUserItemHistoryDTO } from "./dto/get-history-by-userItem-id.usecase.dto";
 
 export class GetAppUserHistoryByAccountIdUsecase {

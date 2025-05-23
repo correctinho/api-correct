@@ -1,5 +1,5 @@
 import { CustomError } from "../../../../../../errors/custom.error";
-import { ICorrectAdminAccountRepository } from "../../../repositories/correct-admin-account.repository";
+import { ICorrectAdminAccountRepository } from "../../repositories/correct-admin-account.repository";
 import { InputGetCorrectAdminAccountDTO, OutputGetCorrectAdminAccountDTO } from "../dto/correct-admin-accounts.dto";
 
 export class GetCorrectAdminAccountUsecase {

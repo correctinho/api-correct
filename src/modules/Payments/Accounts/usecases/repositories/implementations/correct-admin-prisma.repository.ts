@@ -1,7 +1,6 @@
-import { update } from "lodash";
-import { prismaClient } from "../../../../../infra/databases/prisma.config";
+import { prismaClient } from "../../../../../../infra/databases/prisma.config";
+import { OutputGetCorrectAdminAccountDTO } from "../../correctAdmin/dto/correct-admin-accounts.dto";
 import { ICorrectAdminAccountRepository } from "../correct-admin-account.repository";
-import { OutputGetCorrectAdminAccountDTO } from "../../usecases/correctAdmin/dto/correct-admin-accounts.dto";
 
 export class CorrectAdminAccountPrismaRepository implements ICorrectAdminAccountRepository {
   async find(): Promise<OutputGetCorrectAdminAccountDTO | null> {

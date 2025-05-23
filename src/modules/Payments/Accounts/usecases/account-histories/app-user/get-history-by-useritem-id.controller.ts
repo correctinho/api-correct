@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { IAccountsHistoryRepository } from "../../../repositories/accounts-history.repository";
 import { GetAppUserHistoryByAccountIdUsecase } from "./get-history-by-userItem-id.uscase";
+import { IAccountsHistoryRepository } from "../../repositories/accounts-history.repository";
 
 export class GetAppUserHistoryByAccountIdController {
   constructor(
