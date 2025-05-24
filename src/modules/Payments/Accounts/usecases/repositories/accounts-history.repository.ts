@@ -1,5 +1,5 @@
-import { OutputGetUserItemHistoryDTO } from "../usecases/account-histories/app-user/dto/get-history-by-userItem-id.usecase.dto";
-import { OutputGetBusinessAccountHistoryDTO } from "../usecases/account-histories/business-user/dto/get-business-account-by-admin.dto";
+import { OutputGetUserItemHistoryDTO } from "../account-histories/app-user/dto/get-history-by-userItem-id.usecase.dto"
+import { OutputGetBusinessAccountHistoryDTO } from "../account-histories/business-user/dto/get-business-account-by-admin.dto"
 
 export interface IAccountsHistoryRepository {
   findUserItemHistory(userItemId: string, yearToQuery?: number, monthToQuery?: number): Promise<OutputGetUserItemHistoryDTO[] | []>
