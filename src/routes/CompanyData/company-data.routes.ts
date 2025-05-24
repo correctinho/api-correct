@@ -12,6 +12,7 @@ import { getRegisterPartnerBySeller } from "../../modules/Company/CompanyData/us
 import { getPartnersByCategory } from "../../modules/Company/PartnerConfig/usecases/get-partners-by-category";
 import { setDefinitionsByBusinessAdminController } from "../../modules/Company/PartnerConfig/usecases/set-definitions-by-business-admin";
 import { filterPartnersByAppUser } from "../../modules/Company/PartnerConfig/usecases/filter-partners-by-appuser";
+import { getPartnerConfigByBusinessAdminController } from "../../modules/Company/PartnerConfig/usecases/get-partner-config";
 
 export const companyDataRouter = Router()
 
@@ -64,6 +65,11 @@ companyDataRouter.get("/partner/seller", correctIsAuth, async (request, response
 //create partner config by correct admin
 companyDataRouter.post("/partner/config", correctIsAuth, async (request, response) => {
   await createPartnerConfigController.handle(request, response)
+})
+
+//get partner config by business admin - TESTED
+companyDataRouter.get("/partner/config", companyIsAuth, async (request, response) => {
+  await getPartnerConfigByBusinessAdminController.handle(request, response)
 })
 
 //update partner config preferences by partner - TESTED

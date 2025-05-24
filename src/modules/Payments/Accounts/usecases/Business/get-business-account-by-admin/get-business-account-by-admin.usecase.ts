@@ -1,5 +1,5 @@
 import { CustomError } from "../../../../../../errors/custom.error";
-import { IBusinessAccountRepository } from "../../../repositories/business-account.repository";
+import { IBusinessAccountRepository } from "../../repositories/business-account.repository";
 import { InputGetBusinessAccountDTO, OutputGetBusinessAccountDTO } from "../dto/business-account.dto";
 
 export class GetBusinessAccountByAdminUseCase {

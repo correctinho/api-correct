@@ -1,7 +1,7 @@
-import { prismaClient } from "../../../../../infra/databases/prisma.config";
+import { prismaClient } from "../../../../../../infra/databases/prisma.config";
+import { OutputGetUserItemHistoryDTO } from "../../account-histories/app-user/dto/get-history-by-userItem-id.usecase.dto";
+import { OutputGetBusinessAccountHistoryDTO } from "../../account-histories/business-user/dto/get-business-account-by-admin.dto";
 import { IAccountsHistoryRepository } from "../accounts-history.repository";
-import { OutputGetUserItemHistoryDTO } from "../../usecases/account-histories/app-user/dto/get-history-by-userItem-id.usecase.dto";
-import { OutputGetBusinessAccountHistoryDTO } from "../../usecases/account-histories/business-user/dto/get-business-account-by-admin.dto";
 
 export class AccountsHistoryPrismaRepository implements IAccountsHistoryRepository {
   async findBusinessAccountHistory(business_account_uuid: string, yearToQuery?: number, monthToQuery?: number): Promise<OutputGetBusinessAccountHistoryDTO[] | []> {

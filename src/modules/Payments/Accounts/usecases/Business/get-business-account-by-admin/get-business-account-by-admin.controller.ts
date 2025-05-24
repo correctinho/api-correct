@@ -1,4 +1,4 @@
-import { IBusinessAccountRepository } from "../../../repositories/business-account.repository";
+import { IBusinessAccountRepository } from "../../repositories/business-account.repository";
 import { GetBusinessAccountByAdminUseCase } from "./get-business-account-by-admin.usecase";
 import { Request, Response } from "express";
 

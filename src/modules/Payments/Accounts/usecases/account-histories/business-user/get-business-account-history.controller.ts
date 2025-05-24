@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { IAccountsHistoryRepository } from "../../../repositories/accounts-history.repository";
-import { IBusinessAccountRepository } from "../../../repositories/business-account.repository";
 import { GetBusinessAccountHistoryUsecase } from "./get-business-account-history.usecase";
+import { IAccountsHistoryRepository } from "../../repositories/accounts-history.repository";
+import { IBusinessAccountRepository } from "../../repositories/business-account.repository";
 
 export class GetBusinessAccountHistoryController {
   constructor(

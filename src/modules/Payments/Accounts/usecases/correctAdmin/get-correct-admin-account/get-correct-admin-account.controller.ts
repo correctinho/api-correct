@@ -1,4 +1,5 @@
-import { ICorrectAdminAccountRepository } from "../../../repositories/correct-admin-account.repository";
+
+import { ICorrectAdminAccountRepository } from "../../repositories/correct-admin-account.repository";
 import { GetCorrectAdminAccountUsecase } from "./get-correct-admin-account.usecase";
 import { Request, Response } from "express";
 

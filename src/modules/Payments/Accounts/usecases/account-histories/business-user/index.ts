@@ -1,5 +1,5 @@
-import { AccountsHistoryPrismaRepository } from "../../../repositories/implementations/accounts-history-prisma.repository";
-import { BusinessAccountPrismaRepository } from "../../../repositories/implementations/business-account-prisma.repository";
+import { AccountsHistoryPrismaRepository } from "../../repositories/implementations/accounts-history-prisma.repository";
+import { BusinessAccountPrismaRepository } from "../../repositories/implementations/business-account-prisma.repository";
 import { GetBusinessAccountHistoryController } from "./get-business-account-history.controller";
 
 const accountHistoruRepository = new AccountsHistoryPrismaRepository()
