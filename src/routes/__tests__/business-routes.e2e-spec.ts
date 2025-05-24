@@ -2171,6 +2171,17 @@ describe("E2E Business tests", () => {
   })
 
   describe("E2E Partner Config", () => {
+    describe("Get Partner config definitions by partner", () => {
+      it("Should return partner config definitions", async () => {
+        const result = await request(app).get(`/partner/config`).set('Authorization', `Bearer ${partner_admin_token}`)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.title).toBeNull()
+        expect(result.body.phone).toBeNull()
+        expect(result.body.description).toBeNull()
+        expect(result.body.sales_type).toBeNull()
+
+      })
+    })
     describe("Set partner config definitions by partner", () => {
       it("Should throw an error if any data is sent on the request", async () => {
 

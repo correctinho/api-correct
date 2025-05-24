@@ -98,6 +98,7 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
       description: config.description,
       sales_type: config.sales_type,
       cashback_tax: config.cashback_tax,
+      created_at: config.created_at,
     } as PartnerConfigEntity
   }
   findAll(): Promise<PartnerConfigEntity[]> {
