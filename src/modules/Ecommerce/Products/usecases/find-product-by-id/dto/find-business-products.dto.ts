@@ -9,7 +9,7 @@ export type OutputFindProductDTO = {
   promotional_price: number,
   stock: number,
   is_mega_promotion: boolean,
-  weigth: string,
+  weight: string,
   height: string,
   width: string,
   created_at: string,
