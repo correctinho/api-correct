@@ -14,6 +14,8 @@ export class FindProductByIdUsecase{
     const product = await this.productRepository.find(new Uuid(product_uuid));
     if(!product) throw new CustomError("Product not found", 404);
 
+    console.log(product);
+
     return {
       uuid: product.uuid.uuid,
       category_uuid: product.category_uuid.uuid,
@@ -28,12 +30,13 @@ export class FindProductByIdUsecase{
       weigth: product.weight,
       height: product.height,
       width: product.width,
+      is_active: product.is_active,
       created_at: product.created_at,
       updated_at: product.updated_at,
       images_url: {
-        thumbnail: product.images_url.find(image => image.endsWith('thumbnail.webp')) || '',
-        medium: product.images_url.find(image => image.endsWith('medium.webp')) || '',
-        large: product.images_url.find(image => image.endsWith('large.webp')) || '',
+        thumbnail: product.images_url.filter(image => image.endsWith('thumbnail.webp')),
+        medium: product.images_url.filter(image => image.endsWith('medium.webp')),
+        large: product.images_url.filter(image => image.endsWith('large.webp')),
       }
     }
   }

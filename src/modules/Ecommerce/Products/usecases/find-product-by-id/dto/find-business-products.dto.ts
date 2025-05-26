@@ -13,10 +13,11 @@ export type OutputFindProductDTO = {
   height: string,
   width: string,
   created_at: string,
-  updated_at: string,
+  updated_at: string | null,
+  is_active: boolean,
   images_url: {
-    thumbnail: string,
-    medium: string,
-    large: string
+    thumbnail: string[],
+    medium: string[],
+    large: string[]
   }
 };

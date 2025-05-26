@@ -15,8 +15,8 @@ export type OutputFindBusinessProductDTO = {
   created_at: string,
   updated_at: string,
   images_url: {
-    thumbnail: string,
-    medium: string,
-    large: string
+    thumbnail: string[],
+    medium: string[],
+    large: string[]
   }
 };
