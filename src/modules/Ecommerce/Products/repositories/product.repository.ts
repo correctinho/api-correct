@@ -4,5 +4,5 @@ import { ProductEntity } from '../entities/products.entity';
 
 export interface IProductRepository extends RepositoryInterface<ProductEntity> {
    upsert(entity: ProductEntity): Promise<ProductEntity>;
-   findBusinessProducts(businessInfoUuid: string,): Promise<ProductEntity[] | []>;
+   findBusinessProducts(businessInfoUuid: string): Promise<ProductEntity[] | []>;
 }

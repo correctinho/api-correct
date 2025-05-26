@@ -5,6 +5,7 @@ volumes:
   traefik_data:
   postgres-correct_vol:
     driver: local
+  minio_data: {} # Volume adicionado para o MinIO
 
 networks:
   correct_net:
@@ -16,7 +17,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - 3333:3333
+      - "3333:3333"
     networks:
       - correct_net
     depends_on:
@@ -32,7 +33,7 @@ services:
   postgresdb:
     image: postgres:13.4
     ports:
-      - 5434:5432
+      - "5434:5432"
     networks:
       - correct_net
     volumes:
@@ -55,7 +56,7 @@ services:
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.websecure.address=:443"
       - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
-      - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}"
+      - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}" # Certifique-se de que SSL_EMAIL está definido no seu ambiente ou arquivo .env
       - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
     ports:
       - "80:80"
@@ -63,6 +64,7 @@ services:
     volumes:
       - traefik_data:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock:ro
+
   n8n:
     image: docker.n8n.io/n8nio/n8n
     restart: always
@@ -72,26 +74,40 @@ services:
       - "127.0.0.1:5678:5678"
     labels:
       - traefik.enable=true
-      - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`)
+      - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`) # Certifique-se de que SUBDOMAIN e DOMAIN_NAME estão definidos
       - traefik.http.routers.n8n.tls=true
-      - traefik.http.routers.n8n.entrypoints=web,websecure
+      - traefik.http.routers.n8n.entrypoints=web,websecure # Alterado para web,websecure para abranger ambas entrypoints
       - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
       - traefik.http.middlewares.n8n.headers.SSLRedirect=true
       - traefik.http.middlewares.n8n.headers.STSSeconds=315360000
       - traefik.http.middlewares.n8n.headers.browserXSSFilter=true
       - traefik.http.middlewares.n8n.headers.contentTypeNosniff=true
       - traefik.http.middlewares.n8n.headers.forceSTSHeader=true
-      - traefik.http.middlewares.n8n.headers.SSLHost=${DOMAIN_NAME}
+      - traefik.http.middlewares.n8n.headers.SSLHost=${DOMAIN_NAME} # Certifique-se de que DOMAIN_NAME está definido
       - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
       - traefik.http.middlewares.n8n.headers.STSPreload=true
       - traefik.http.routers.n8n.middlewares=n8n@docker
     environment:
-      - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
+      - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME} # Certifique-se de que SUBDOMAIN e DOMAIN_NAME estão definidos
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
       - NODE_ENV=production
-      - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/
-      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/ # Certifique-se de que SUBDOMAIN e DOMAIN_NAME estão definidos
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE} # Certifique-se de que GENERIC_TIMEZONE está definido
     volumes:
       - n8n_data:/home/node/.n8n
       - ./local-files:/files
+
+  minio: # Novo serviço MinIO
+    image: minio/minio
+    ports:
+      - "9000:9000" # Porta da API do MinIO
+      - "9001:9001" # Porta do Console do MinIO
+    networks:
+      - correct_net
+    volumes:
+      - minio_data:/data # Monta o volume minio_data
+    environment:
+      MINIO_ROOT_USER: correct
+      MINIO_ROOT_PASSWORD: 12345678
+    command: server --console-address :9001 /data
