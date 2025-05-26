@@ -27,10 +27,11 @@ export class FindBusinessProductsUsecase{
       width: product.width,
       created_at: product.created_at,
       updated_at: product.updated_at,
+      is_active: product.is_active,
       images_url: {
-        thumbnail: product.images_url.find(image => image.endsWith('thumbnail.webp')) || '',
-        medium: product.images_url.find(image => image.endsWith('medium.webp')) || '',
-        large: product.images_url.find(image => image.endsWith('large.webp')) || '',
+        thumbnail: product.images_url.filter(image => image.endsWith('thumbnail.webp')),
+        medium: product.images_url.filter(image => image.endsWith('medium.webp')),
+        large: product.images_url.filter(image => image.endsWith('large.webp')),
       }
     }))
   }
