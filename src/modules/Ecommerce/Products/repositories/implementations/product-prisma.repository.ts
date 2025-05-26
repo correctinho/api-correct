@@ -14,7 +14,40 @@ export class ProductPrismaRepository implements IProductRepository {
     throw new Error('Method not implemented.');
   }
   find(id: Uuid): Promise<ProductEntity> {
-    throw new Error('Method not implemented.');
+    const product = prismaClient.products.findUnique({
+      where: {
+        uuid: id.uuid,
+      },
+    });
+    if (!product) return null
+
+    return product.then((prod) => {
+      if (!prod) {
+        throw new Error('Product not found');
+      }
+      return {
+        uuid: new Uuid(prod.uuid),
+        category_uuid: new Uuid(prod.category_uuid),
+        business_info_uuid: new Uuid(prod.business_info_uuid),
+        ean_code: prod.ean_code,
+        brand: prod.brand,
+        name: prod.name,
+        description: prod.description,
+        original_price: prod.original_price,
+        discount: prod.discount,
+        promotional_price: prod.promotional_price,
+        stock: prod.stock,
+        images_url: prod.image_urls,
+        is_mega_promotion: prod.is_mega_promotion,
+        is_active: prod.is_active,
+        weight: prod.weight,
+        height: prod.height,
+        width: prod.width,
+        created_at: prod.created_at,
+        updated_at: prod.updated_at,
+      } as ProductEntity;
+    }
+    );
   }
   findAll(): Promise<ProductEntity[]> {
     throw new Error('Method not implemented.');
