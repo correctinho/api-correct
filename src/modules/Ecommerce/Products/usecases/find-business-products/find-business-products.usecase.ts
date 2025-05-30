@@ -25,9 +25,9 @@ export class FindBusinessProductsUsecase{
       weight: product.weight,
       height: product.height,
       width: product.width,
+      is_active: product.is_active,
       created_at: product.created_at,
       updated_at: product.updated_at,
-      is_active: product.is_active,
       images_url: {
         thumbnail: product.images_url.filter(image => image.endsWith('thumbnail.webp')),
         medium: product.images_url.filter(image => image.endsWith('medium.webp')),
