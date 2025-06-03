@@ -26,3 +26,24 @@ export type FileDTO = {
   buffer: Buffer;
   size: number;
 };
+
+export type OutputCreateProductDTO = {
+  uuid: string;
+  category_uuid: string;
+  ean_code: string | null;
+  name: string;
+  description: string | null;
+  original_price: number;
+  promotional_price: number;
+  discount: number;
+  stock: number;
+  images_url: string[]; // Estas serão as URLs públicas
+  is_mega_promotion: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  weight?: string;
+  height?: string;
+  width?: string;
+  brand: string | null;
+};

@@ -8,7 +8,7 @@ import { ICompanyUserRepository } from '../../../../Company/CompanyUser/reposito
 import { ICategoriesRepository } from '../../../Categories/repositories/categories.repository';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
-import { InputCreateProductDTO } from './dto/create-product.dto';
+import { InputCreateProductDTO, OutputCreateProductDTO } from './dto/create-product.dto';
 
 // Definições de tamanho para as imagens (exemplo)
 const IMAGE_SIZES = {
@@ -18,27 +18,8 @@ const IMAGE_SIZES = {
 };
 const WEBP_QUALITY = 80;
 
-// Output type for the use case
-export type OutputCreateProductDTO = {
-  uuid: string;
-  category_uuid: string;
-  ean_code: string | null;
-  name: string;
-  description: string | null;
-  original_price: number;
-  promotional_price: number;
-  discount: number;
-  stock: number;
-  images_url: string[]; // Estas serão as URLs públicas
-  is_mega_promotion: boolean;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  weight?: string;
-  height?: string;
-  width?: string;
-  brand: string | null;
-};
+
+
 
 export class CreateProductUsecase {
   constructor(
@@ -46,7 +27,7 @@ export class CreateProductUsecase {
     private readonly productRepository: IProductRepository,
     private readonly categoryRepository: ICategoriesRepository,
     private readonly businessUserRepository: ICompanyUserRepository,
-  ) {}
+  ) { }
 
   private parseAndValidateInteger(valueStr: string | undefined | null, fieldName: string, isOptional: boolean = false): number {
     if (valueStr === undefined || valueStr === null || valueStr.trim() === "") {
@@ -116,12 +97,15 @@ export class CreateProductUsecase {
   }
 
   async execute(data: InputCreateProductDTO): Promise<OutputCreateProductDTO> {
-    const promotionalPrice = typeof data.promotional_price === "string" ? this.parseAndValidateInteger(data.promotional_price, 'Promotional price') : data.promotional_price;
+    const promotionalPrice = typeof data.promotional_price !== "number" ? this.parseAndValidateInteger(data.promotional_price, 'Promotional price') : data.promotional_price;
     const discount = typeof data.discount !== "number" ? this.parseAndValidateInteger(data.discount, 'Discount') : data.discount
     const stock = typeof data.stock !== "number" ? this.parseAndValidateInteger(data.stock, 'Stock') : data.stock
     const isMegaPromotion = typeof data.is_mega_promotion !== "boolean" ? this.parseAndValidateBoolean(data.is_mega_promotion, 'Is mega promotion') : data.is_mega_promotion
-    const isActive = data.is_active !== undefined && data.is_active !== null && typeof data.is_active !== "boolean" ? this.parseAndValidateBoolean(data.is_active, 'Is active', true) : true;
-    const originalPrice = typeof data.original_price !== "number" ? this.parseAndValidateInteger(data.original_price, 'Original price') : data.original_price
+    const isActive = typeof data.is_active === 'boolean'
+      ? data.is_active
+      : (data.is_active !== undefined && data.is_active !== null
+        ? this.parseAndValidateBoolean(data.is_active, 'Is active', true)
+        : data.is_active); const originalPrice = typeof data.original_price !== "number" ? this.parseAndValidateInteger(data.original_price, 'Original price') : data.original_price
 
     const businessUserDetails = await this.businessUserRepository.findById(data.business_user_uuid);
     if (!businessUserDetails || !businessUserDetails.business_info_uuid) {
@@ -204,9 +188,9 @@ export class CreateProductUsecase {
       }
 
       productEntity.changeImagesUrl(finalImageUrls); // Define as URLs públicas na entidade do produto
-
+      console.log({ productEntity })
       const savedProduct = await this.productRepository.upsert(productEntity);
-
+      console.log({ savedProduct })
       return {
         uuid: savedProduct.uuid.uuid,
         category_uuid: savedProduct.category_uuid.uuid,
