@@ -467,18 +467,18 @@ describe("E2E Ecommerce tests", () => {
         expect(product.body.is_mega_promotion).toBe(input.is_mega_promotion)
       })
     })
-    // describe("E2E Get All business products", () => {
-    //   it("Should return empty array", async () => {
-    //     const result = await request(app).get(`/ecommerce/business/products/${partner2_info_uuid}`)
-    //     expect(result.statusCode).toBe(200)
-    //     expect(result.body).toEqual([])
-    //   })
-    //   it("Should return an array with one product", async () => {
-    //     const result = await request(app).get(`/ecommerce/business/products/${partner1_info_uuid}`)
-    //     expect(result.statusCode).toBe(200)
-    //     expect(result.body.length).toEqual(1)
-    //   })
-    // })
+    describe("E2E Get All business products", () => {
+      it("Should return empty array", async () => {
+        const result = await request(app).get(`/ecommerce/business/products/${partner2_info_uuid}`)
+        expect(result.statusCode).toBe(200)
+        expect(result.body).toEqual([])
+      })
+      it("Should return an array with one product", async () => {
+        const result = await request(app).get(`/ecommerce/business/products/${partner1_info_uuid}`)
+        expect(result.statusCode).toBe(200)
+        expect(result.body.length).toEqual(3)
+      })
+    })
 
   })
 })
