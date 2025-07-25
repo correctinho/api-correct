@@ -9,11 +9,11 @@ export class GetPartnerDetailsByAppUserController {
 
   async handle(req: Request, res: Response){
     try{
-      const data = req.body
+      const businessInfoUuid = req.query.business_info_uuid as string
 
       const usecase = new GetPartnerDetailsByAppUserUsecase(this.businessInfoRepository)
 
-      const result = await usecase.execute(data)
+      const result = await usecase.execute(businessInfoUuid)
       return res.json(result)
 
     }catch(err: any){

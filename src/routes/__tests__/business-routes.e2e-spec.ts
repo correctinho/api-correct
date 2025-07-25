@@ -1287,7 +1287,7 @@ describe("E2E Business tests", () => {
         expect(getPartnerAdminDetails.statusCode).toBe(200)
 
         partnerAdminDetails.business_info_uuid = getPartnerAdminDetails.body.business_info_uuid,
-          partnerAdminDetails.is_admin = getPartnerAdminDetails.body.is_admin
+        partnerAdminDetails.is_admin = getPartnerAdminDetails.body.is_admin
         partnerAdminDetails.document = getPartnerAdminDetails.body.document
         partnerAdminDetails.name = getPartnerAdminDetails.body.name
         partnerAdminDetails.email = getPartnerAdminDetails.body.email

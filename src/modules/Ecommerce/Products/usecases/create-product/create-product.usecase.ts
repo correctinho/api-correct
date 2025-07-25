@@ -19,8 +19,6 @@ const IMAGE_SIZES = {
 const WEBP_QUALITY = 80;
 
 
-
-
 export class CreateProductUsecase {
   constructor(
     private storage: IStorage,
@@ -30,6 +28,7 @@ export class CreateProductUsecase {
   ) { }
 
   private parseAndValidateInteger(valueStr: string | undefined | null, fieldName: string, isOptional: boolean = false): number {
+    console.log({ valueStr, fieldName, isOptional });
     if (valueStr === undefined || valueStr === null || valueStr.trim() === "") {
       if (isOptional) return 0;
       throw new CustomError(`${fieldName} is required.`, 400);
@@ -97,6 +96,7 @@ export class CreateProductUsecase {
   }
 
   async execute(data: InputCreateProductDTO): Promise<OutputCreateProductDTO> {
+
     const promotionalPrice = typeof data.promotional_price !== "number" ? this.parseAndValidateInteger(data.promotional_price, 'Promotional price') : data.promotional_price;
     const discount = typeof data.discount !== "number" ? this.parseAndValidateInteger(data.discount, 'Discount') : data.discount
     const stock = typeof data.stock !== "number" ? this.parseAndValidateInteger(data.stock, 'Stock') : data.stock
