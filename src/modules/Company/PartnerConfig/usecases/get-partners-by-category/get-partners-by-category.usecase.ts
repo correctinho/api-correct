@@ -8,9 +8,10 @@ export class GetPartnersByCategoryUsecase {
   ) { }
   async execute(data: InputGetPartnersByCategoryDTO) {
     if (!data.partner_category) throw new CustomError("Category is required", 400)
+    if( !data.page) data.page = 1
 
     //Get all partners with specified category
-    const partners = await this.partnerConfigRepository.findPartnersByCategory(data.partner_category, 1, 15)
+    const partners = await this.partnerConfigRepository.findPartnersByCategory(data.partner_category, data.page, 15)
     return partners.map((partner: any) => {
       return {
         offer_product: partner.use_marketing ? true : false,

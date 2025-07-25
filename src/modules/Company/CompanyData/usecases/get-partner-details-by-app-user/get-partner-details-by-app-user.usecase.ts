@@ -8,10 +8,10 @@ export class GetPartnerDetailsByAppUserUsecase {
     private businessInfoRepository: ICompanyDataRepository,
   ) { }
 
-  async execute(data: InputGetPartnerDetailsByAppUserDTO):Promise<OutputGetPartnerDetailsByAppUserResponse> {
-    if (!data.business_info_uuid) throw new CustomError("Business Info Uuid is required", 400);
+  async execute(business_info_uuid: string):Promise<OutputGetPartnerDetailsByAppUserResponse> {
+    if (!business_info_uuid) throw new CustomError("Business Info Uuid is required", 400);
 
-    const partner = await this.businessInfoRepository.findPartnerDetailsByAppUser(data.business_info_uuid)
+    const partner = await this.businessInfoRepository.findPartnerDetailsByAppUser(business_info_uuid)
     if(!partner) throw new CustomError("Partner not found", 404);
     if(partner.business_type === 'empregador') throw new CustomError("Partner not found", 404);
 

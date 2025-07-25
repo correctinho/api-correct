@@ -38,65 +38,66 @@ services:
       - correct_net
     volumes:
       - postgres-correct_vol:/var/lib/postgresql/data
+      - "./logs/api:/log"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: syscorrect-db
 
-  traefik:
-    image: "traefik"
-    restart: always
-    command:
-      - "--api=true"
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
-      - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}" # Certifique-se de que SSL_EMAIL está definido no seu ambiente ou arquivo .env
-      - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - traefik_data:/letsencrypt
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+  # traefik:
+  #   image: "traefik"
+  #   restart: always
+  #   command:
+  #     - "--api=true"
+  #     - "--api.insecure=true"
+  #     - "--providers.docker=true"
+  #     - "--providers.docker.exposedbydefault=false"
+  #     - "--entrypoints.web.address=:80"
+  #     - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+  #     - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+  #     - "--entrypoints.websecure.address=:443"
+  #     - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
+  #     - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}" # Certifique-se de que SSL_EMAIL está definido no seu ambiente ou arquivo .env
+  #     - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - traefik_data:/letsencrypt
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
 
-  n8n:
-    image: docker.n8n.io/n8nio/n8n
-    restart: always
-    networks:
-      - correct_net
-    ports:
-      - "127.0.0.1:5678:5678"
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`) # Certifique-se de que SUBDOMAIN e DOMAIN_NAME estão definidos
-      - traefik.http.routers.n8n.tls=true
-      - traefik.http.routers.n8n.entrypoints=web,websecure # Alterado para web,websecure para abranger ambas entrypoints
-      - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
-      - traefik.http.middlewares.n8n.headers.SSLRedirect=true
-      - traefik.http.middlewares.n8n.headers.STSSeconds=315360000
-      - traefik.http.middlewares.n8n.headers.browserXSSFilter=true
-      - traefik.http.middlewares.n8n.headers.contentTypeNosniff=true
-      - traefik.http.middlewares.n8n.headers.forceSTSHeader=true
-      - traefik.http.middlewares.n8n.headers.SSLHost=${DOMAIN_NAME} # Certifique-se de que DOMAIN_NAME está definido
-      - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
-      - traefik.http.middlewares.n8n.headers.STSPreload=true
-      - traefik.http.routers.n8n.middlewares=n8n@docker
-    environment:
-      - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME} # Certifique-se de que SUBDOMAIN e DOMAIN_NAME estão definidos
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=https
-      - NODE_ENV=production
-      - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/ # Certifique-se de que SUBDOMAIN e DOMAIN_NAME estão definidos
-      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE} # Certifique-se de que GENERIC_TIMEZONE está definido
-    volumes:
-      - n8n_data:/home/node/.n8n
-      - ./local-files:/files
+  # n8n:
+  #   image: docker.n8n.io/n8nio/n8n
+  #   restart: always
+  #   networks:
+  #     - correct_net
+  #   ports:
+  #     - "127.0.0.1:5678:5678"
+  #   labels:
+  #     - traefik.enable=true
+  #     - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`) # Certifique-se de que SUBDOMAIN e DOMAIN_NAME estão definidos
+  #     - traefik.http.routers.n8n.tls=true
+  #     - traefik.http.routers.n8n.entrypoints=web,websecure # Alterado para web,websecure para abranger ambas entrypoints
+  #     - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
+  #     - traefik.http.middlewares.n8n.headers.SSLRedirect=true
+  #     - traefik.http.middlewares.n8n.headers.STSSeconds=315360000
+  #     - traefik.http.middlewares.n8n.headers.browserXSSFilter=true
+  #     - traefik.http.middlewares.n8n.headers.contentTypeNosniff=true
+  #     - traefik.http.middlewares.n8n.headers.forceSTSHeader=true
+  #     - traefik.http.middlewares.n8n.headers.SSLHost=${DOMAIN_NAME} # Certifique-se de que DOMAIN_NAME está definido
+  #     - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
+  #     - traefik.http.middlewares.n8n.headers.STSPreload=true
+  #     - traefik.http.routers.n8n.middlewares=n8n@docker
+  #   environment:
+  #     - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME} # Certifique-se de que SUBDOMAIN e DOMAIN_NAME estão definidos
+  #     - N8N_PORT=5678
+  #     - N8N_PROTOCOL=https
+  #     - NODE_ENV=production
+  #     - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/ # Certifique-se de que SUBDOMAIN e DOMAIN_NAME estão definidos
+  #     - GENERIC_TIMEZONE=${GENERIC_TIMEZONE} # Certifique-se de que GENERIC_TIMEZONE está definido
+  #   volumes:
+  #     - n8n_data:/home/node/.n8n
+  #     - ./local-files:/files
 
   minio: # Novo serviço MinIO
     image: minio/minio
@@ -111,3 +112,13 @@ services:
       MINIO_ROOT_USER: correct
       MINIO_ROOT_PASSWORD: 12345678
     command: server --console-address :9001 /data
+
+  loki:
+    image: grafana/loki:2.8.2
+    ports:
+      - "3100:3100"
+    networks:
+      - correct_net
+    command:
+      -config.file=/etc/loki/local-config.yaml
+      -print-config-stderr=true

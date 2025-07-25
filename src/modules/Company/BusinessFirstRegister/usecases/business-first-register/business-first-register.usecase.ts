@@ -26,6 +26,7 @@ export class CreateBusinessRegisterUsecase {
 
   async execute(data: InputBusinessFirstRegisterDTO) {
     const register = await BusinessRegisterEntity.create(data)
+    console.log("Register data: ", register)
     const findBusiness = await this.companyDataRepository.findByDocument(register.document)
     if (findBusiness) throw new CustomError("Business already registered", 409)
 
@@ -37,7 +38,7 @@ export class CreateBusinessRegisterUsecase {
     if (register.business_type === 'autonomo_comercio' || register.business_type === 'comercio') {
       //Set address geo code (latitude longitude)
       //const geoCode = await geocodeAddress(data.line2, data.line1, data.postal_code)
-      const geoCode: any = 0
+      //const geoCode: any = 0
       //In this case, we need to set partnerConfig, which involves taxes
       const partneConfigData = {
         business_info_uuid: new Uuid(register.business_info_uuid),
@@ -49,13 +50,14 @@ export class CreateBusinessRegisterUsecase {
         use_marketing: data.partnerConfig.use_marketing,
         market_place_tax: 0,
         use_market_place: data.partnerConfig.use_market_place,
-        latitude: geoCode.lat ? geoCode.lat : null,
-        longitude: geoCode.long ? geoCode.long : null,
+        // latitude: geoCode.lat ? geoCode.lat : null,
+        // longitude: geoCode.long ? geoCode.long : null,
         title: data.partnerConfig.title ? data.partnerConfig.title : null
       }
       const partnerConfigEntity = PartnerConfigEntity.create(partneConfigData)
       //now we need to set taxes accordding to main branch selected
       //check if main branch is one of the branches list.
+
 
       const mainBranch = register.branches_uuid.find(branch => branch === data.partnerConfig.main_branch)
       if (!mainBranch) throw new CustomError("Invalid main branch", 400)
@@ -66,7 +68,6 @@ export class CreateBusinessRegisterUsecase {
       //this main branch details is included in branches array
       //In this case, we need to check which one is the main branch
       const mainBranchDetails = branches.find(branch => branch.uuid === data.partnerConfig.main_branch)
-
       //now that we have main branch details, we will get all defined taxes according to main branch
       //these taxes will be defined according to user preferences
       if (partnerConfigEntity.use_marketing) partnerConfigEntity.changeMarketingTax(mainBranchDetails.marketing_tax)
@@ -78,7 +79,6 @@ export class CreateBusinessRegisterUsecase {
       //now it's important to define which benefits will be accepted by partner. It's defined according to main branch
       //Basically, we need to populate partnerConfigEntity.items_uuid with the benefits that comes from mainBranch detals
       partnerConfigEntity.changeItemsUuid(mainBranchDetails.benefits_uuid)
-
       response = await this.businessRegisterRepository.savePartner(register, partnerConfigEntity, data.correct_user_uuid)
     } else if (register.business_type === 'empregador') {
       await this.verifyItems(register.items_uuid)
@@ -103,7 +103,6 @@ export class CreateBusinessRegisterUsecase {
   private async verifyBranches(branches_uuid: string[]) {
     for (const branch of branches_uuid) {
       const findBranch = await this.branchRepository.getByID(branch)
-
       if (!findBranch) throw new CustomError("Branch not found", 404);
       branches.push(findBranch)
 
