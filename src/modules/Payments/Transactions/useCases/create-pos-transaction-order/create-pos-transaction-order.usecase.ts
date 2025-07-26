@@ -6,6 +6,7 @@ import { TransactionEntity } from "../../entities/transaction-order.entity";
 import { ITransactionOrderRepository } from "../../repositories/transaction-order.repository";
 import { InputCreatePOSTransactionByBusinessDTO, OutputCreatePOSTransactionByBusinessDTO } from "../../transactions-dto/transactions.dto";
 
+//**********CREATE POINT OF SALE(POS) TRANSACTION*********** */
 export class CreatePOSTransactionOrderUsecase {
   constructor(
     private businessInfoRepository: ICompanyDataRepository,
@@ -35,6 +36,8 @@ export class CreatePOSTransactionOrderUsecase {
 
     const transactionEntity = TransactionEntity.create(data)
 
+    //calculate cashback
+    transactionEntity.calculateCashback(partnerConfig.cashback_tax)
     transactionEntity.changeBusinessInfoUuid(new Uuid(data.business_info_uuid))
     transactionEntity.changeFeeAmount(fee)
 
@@ -52,4 +55,5 @@ export class CreatePOSTransactionOrderUsecase {
     const fee = admin_tax + marketing_tax
     return fee
   }
+
 }
