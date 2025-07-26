@@ -1,4 +1,4 @@
-import { TransactionType } from "@prisma/client"
+import { TransactionType, UserItemStatus } from "@prisma/client"
 
 export type InputCreatePOSTransactionByBusinessDTO = {
   amount: number
@@ -25,15 +25,14 @@ export type InputGetTransactionByAppUserDTO = {
 
 export type OutputGetTransactionByAppUserDTO = {
   transaction_uuid: string,
-  user_item_uuid: string,
-  favored_user_uuid: string,
-  favored_business_info_uuid: string,
+  fantasy_name: string,
   amount: number,
-  fee_amount: number,
-  cashback: number,
-  description: string,
-  status: string,
-  transaction_type: string,
   created_at: string,
-  updated_at: string
+  availableItems: AvailableUserItemDetails[]
+}
+export interface AvailableUserItemDetails {
+  item_uuid: string;
+  item_name: string;
+  balance: number;
+  status: UserItemStatus;
 }

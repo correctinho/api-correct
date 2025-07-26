@@ -5,15 +5,10 @@ import { AppUserItemEntity } from "../../../../AppUser/AppUserManagement/entitie
 import { IAppUserItemRepository } from "../../../../AppUser/AppUserManagement/repositories/app-user-item-repository";
 import { IPartnerConfigRepository } from "../../../../Company/PartnerConfig/repositories/partner-config.repository";
 import { ITransactionOrderRepository } from "../../repositories/transaction-order.repository";
-import { InputGetTransactionByAppUserDTO, OutputGetTransactionByAppUserDTO } from "../../transactions-dto/transactions.dto";
+import { AvailableUserItemDetails, InputGetTransactionByAppUserDTO, OutputGetTransactionByAppUserDTO } from "../../transactions-dto/transactions.dto";
 import { ICompanyDataRepository } from "../../../../Company/CompanyData/repositories/company-data.repository";
 
-interface AvailableUserItemDetails {
-  item_uuid: string;
-  item_name: string;
-  balance: number;
-  status: UserItemStatus; // Incluir o status pode ser útil para a UI
-}
+
 
 export class GetPOSTransactionByAppUserUsecase {
   constructor(
@@ -23,19 +18,23 @@ export class GetPOSTransactionByAppUserUsecase {
     private businessInfoRepository: ICompanyDataRepository
   ) { }
 
-  async execute(data: InputGetTransactionByAppUserDTO): Promise<any> {
+  async execute(data: InputGetTransactionByAppUserDTO): Promise<OutputGetTransactionByAppUserDTO> {
     if (!data.transactionId) {
       throw new CustomError("Transaction ID is required", 400);
     }
 
     //get transaction details
     const transaction = await this.transactionOrderRepository.find(new Uuid(data.transactionId));
+    console.log({transaction})
     if (!transaction) throw new CustomError("Transaction not found", 404);
     // Ensure transaction has the favored business info needed
     if (!transaction.favored_business_info_uuid) {
       throw new CustomError("Transaction is missing partner information", 400);
     }
 
+    if(transaction.status !== 'pending') {
+      throw new CustomError("Invalid transaction status - Please, request a new transaction", 400);
+    }
 
     //check user available benefits for this transaction
     // For this, we need to compare partner benefits with user items
@@ -54,11 +53,13 @@ export class GetPOSTransactionByAppUserUsecase {
 
     const compareUserItems = await this.compareUserItemsWithPartnerConfig(userItems, partnerConfig.items_uuid);
 
-
     return {
+      transaction_uuid: transaction.uuid.uuid,
       fantasy_name:businessInfo.fantasy_name,
+      amount: transaction.amount,
+      created_at: transaction.created_at,
       availableItems: compareUserItems
-    }
+    } as OutputGetTransactionByAppUserDTO
   }
 
   private async compareUserItemsWithPartnerConfig(userItems: AppUserItemEntity[], partnerConfigItems: string[]): Promise<AvailableUserItemDetails[]> {

@@ -3171,7 +3171,7 @@ describe("E2E App User tests", () => {
         const input = {
           city: "Campo Grande"
         }
-        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({ partner_category: 'saude' }).send(input)
+        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({ partner_category: 'saude', city: 'Campo Grande' })
         expect(result.statusCode).toBe(200)
         expect(result.body.length).toBe(2)
       })
@@ -3181,7 +3181,7 @@ describe("E2E App User tests", () => {
         const input = {
           city: "Corumbá"
         }
-        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({ partner_category: 'comercio' }).send(input)
+        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({ partner_category: 'comercio', city: 'Corumbá' })
         expect(result.statusCode).toBe(200)
         expect(result.body.length).toBe(3)
       })
@@ -3190,7 +3190,7 @@ describe("E2E App User tests", () => {
           city: "Corumbá",
           main_branch: branch4_uuid
         }
-        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({ partner_category: 'comercio' }).send(input)
+        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({ partner_category: 'comercio', city: "Corumbá", main_branch: branch4_uuid })
         expect(result.statusCode).toBe(200)
         expect(result.body.length).toBe(3)
       })
@@ -3199,7 +3199,7 @@ describe("E2E App User tests", () => {
           city: "Campo Grande",
           search: "Mercado"
         }
-        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({ partner_category: 'saude' }).send(input)
+        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({ partner_category: 'saude', city: "Campo Grande", main_branch: branch4_uuid })
 
         expect(result.statusCode).toBe(200)
         expect(result.body.length).toBe(2)
@@ -3209,7 +3209,8 @@ describe("E2E App User tests", () => {
           city: "Campo Grande",
           item_uuid: benefit1_uuid.uuid
         }
-        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({ partner_category: 'saude' }).send(input)
+        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({ partner_category: 'saude', city: "Campo Grande",
+          item_uuid: benefit1_uuid.uuid })
         expect(result.statusCode).toBe(200)
 
       })
@@ -3361,7 +3362,7 @@ describe("E2E App User tests", () => {
           }
 
 
-          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
 
           expect(result.statusCode).toBe(404)
           expect(result.body.error).toBe("Transaction not found")
@@ -3371,7 +3372,7 @@ describe("E2E App User tests", () => {
             transactionId: transaction1_uuid
           }
 
-          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
           expect(result.statusCode).toBe(200)
           expect(result.body.availableItems.length).toBe(3)
           expect(result.body.fantasy_name).toBe("Empresa teste 3")
@@ -3382,7 +3383,7 @@ describe("E2E App User tests", () => {
             transactionId: transaction1_uuid
           }
 
-          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${non_employee_token}`).send(input)
+          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${non_employee_token}`).query(input)
           expect(result.statusCode).toBe(200)
           expect(result.body.availableItems.length).toBe(1)
           expect(result.body.fantasy_name).toBe("Empresa teste 3")

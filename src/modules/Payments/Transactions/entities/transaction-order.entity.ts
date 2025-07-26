@@ -249,6 +249,15 @@ export class TransactionEntity {
     this._cashback = cashback;
     this.validate();
   }
+
+  calculateCashback(partner_offers: number): void {
+    if (partner_offers < 0) {
+      throw new CustomError("Offers cannot be negative", 400);
+    }
+    // Example calculation logic, adjust as needed
+    this._cashback = (partner_offers + 20) * 100;
+    this.validate();
+  }
   // --- Validation Logic ---
   private validate(): void {
     // Basic mandatory field checks
