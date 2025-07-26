@@ -20,6 +20,7 @@ export class GetPOSTransactionByAppUserController {
     try {
 
       const data = req.body
+      data.transactionId = req.query.transactionId as string
       data.appUserId = req.appUser.appUserId
       data.appUserInfoID = req.appUser.user_info_uuid
 
