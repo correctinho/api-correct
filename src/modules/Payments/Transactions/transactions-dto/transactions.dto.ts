@@ -31,6 +31,7 @@ export type OutputGetTransactionByAppUserDTO = {
   availableItems: AvailableUserItemDetails[]
 }
 export interface AvailableUserItemDetails {
+  user_benefit_uuid: string;
   item_uuid: string;
   item_name: string;
   balance: number;
