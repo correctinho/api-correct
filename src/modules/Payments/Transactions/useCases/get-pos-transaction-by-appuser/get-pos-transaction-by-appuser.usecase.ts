@@ -25,7 +25,6 @@ export class GetPOSTransactionByAppUserUsecase {
 
     //get transaction details
     const transaction = await this.transactionOrderRepository.find(new Uuid(data.transactionId));
-    console.log({transaction})
     if (!transaction) throw new CustomError("Transaction not found", 404);
     // Ensure transaction has the favored business info needed
     if (!transaction.favored_business_info_uuid) {
@@ -79,6 +78,7 @@ export class GetPOSTransactionByAppUserUsecase {
       if (acceptedItemSet.has(itemUuid) && validStatuses.has(itemStatus)) {
         // Se ambas as condições forem verdadeiras, cria o objeto com os dados solicitados
         availableItems.push({
+          user_benefit_uuid: item.uuid.uuid,
           item_uuid: itemUuid,
           item_name: item.item_name,
           balance: item.balance,
