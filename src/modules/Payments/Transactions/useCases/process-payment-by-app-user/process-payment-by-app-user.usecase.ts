@@ -78,7 +78,7 @@ export class ProcessPaymentByAppUserUsecase {
           new Uuid(data.appUserInfoID)
         )
         console.log({processSplitPrePaidPayment})
-        return {result: processSplitPrePaidPayment.success, finalBalance: processSplitPrePaidPayment.finalDebitedUserItemBalance, cashback: splitOutput.userCashbackAmount / 100}
+        return {result: processSplitPrePaidPayment.success, finalBalance: processSplitPrePaidPayment.finalDebitedUserItemBalance, cashback: splitOutput.userCashbackAmount }
       }catch(err){
         return err
       }
