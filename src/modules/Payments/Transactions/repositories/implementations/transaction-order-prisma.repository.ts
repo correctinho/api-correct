@@ -173,7 +173,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
     transactionEntity: TransactionEntity,
     splitOutput: CalculateSplitPrePaidOutput,
     userInfoUuid: Uuid
-  ): Promise<{ success: boolean; finalDebitedUserItemBalance: number}> {
+  ): Promise<{ success: boolean; finalDebitedUserItemBalance: number, user_cashback_amount: number }> {
     // Extrair IDs e valores necessários para clareza
     const debitedUserItemId = transactionEntity.user_item_uuid?.uuid; // UUID do benefício que está sendo debitado
     const transactionId = transactionEntity.uuid.uuid;
@@ -337,13 +337,14 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
       // Retornar sucesso e o saldo final do item DEBITADO
       return {
         success: true,
-        finalDebitedUserItemBalance: debitedUserItemBalanceAfter
+        finalDebitedUserItemBalance: debitedUserItemBalanceAfter,
+        user_cashback_amount: cashbackAmountToCreditUser
       };
 
 
     }); // Fim do $transaction
 
-    return result; // Retorna o resultado da transação
+    return { success: result.success, finalDebitedUserItemBalance: result.finalDebitedUserItemBalance, user_cashback_amount: cashbackAmountToCreditUser}; // Retorna o resultado da transação
   }
   async save(entity: TransactionEntity): Promise<TransactionEntity> {
     const transaction = await prismaClient.transactions.create({

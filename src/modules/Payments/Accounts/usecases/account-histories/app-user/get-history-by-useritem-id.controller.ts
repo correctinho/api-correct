@@ -11,6 +11,9 @@ export class GetAppUserHistoryByAccountIdController {
     try {
       const data = req.body
       data.user_info_uuid = req.appUser.user_info_uuid
+      data.user_item_uuid = req.query.user_item_uuid as string
+      data.year = req.query.year ? parseInt(req.query.year as string) : undefined;
+      data.month = req.query.month ? parseInt(req.query.month as string) : undefined;
       const usecase = new GetAppUserHistoryByAccountIdUsecase(this.accountHistoryRepository)
 
       const result = await usecase.execute(data)
