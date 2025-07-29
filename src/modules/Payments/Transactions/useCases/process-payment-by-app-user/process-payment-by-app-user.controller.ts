@@ -23,7 +23,7 @@ export class ProcessPaymentByAppUserController {
       );
 
       const result = await usecase.execute(data);
-
+      console.log({result})
       return res.status(200).json(result);
     } catch (err: any) {
       const statusCode = err.statusCode || 500; // Default para 500 se não houver statusCode
