@@ -10,7 +10,7 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
     transactionEntity: TransactionEntity,
     splitOutput: CalculateSplitPrePaidOutput,
     userInfoUuid: Uuid
-     ): Promise<{ success: boolean; finalDebitedUserItemBalance: number }>
+     ): Promise<{ success: boolean; finalDebitedUserItemBalance: number, user_cashback_amount: number }>;
   findCorrectAccount (): Promise<any>;
   findBusinessAccountByBusinessInfoId (id: string): Promise<any>;
 }
