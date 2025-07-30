@@ -35,3 +35,4 @@ declare global {
     }
   }
 }
+declare module '@sparticuz/chromium';

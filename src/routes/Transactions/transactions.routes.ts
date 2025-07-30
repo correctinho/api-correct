@@ -1,9 +1,11 @@
-import { Router } from "express";
+import { request, Router } from "express";
 import { posTransactionController } from "../../modules/Payments/Transactions/useCases/create-pos-transaction-order";
 import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/company-admin-auth.middlware";
 import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
-import { getPOSTransactionByAppUserController } from "../../modules/Payments/Transactions/useCases/get-pos-transaction-by-appuser";
 import { processPaymentByAppUserController } from "../../modules/Payments/Transactions/useCases/process-payment-by-app-user";
+import { getPOSTransactionByAppUserController } from "../../modules/Payments/Transactions/useCases/get-pos-transaction-by-appuser";
+import { geTransactionReceiptController } from "../../modules/Payments/Transactions/useCases/get-transaction-receipt";
+import { generateReceiptPDFController } from "../../modules/Payments/Transactions/useCases/get-transaction-receipt/generate-receipt-pdf";
 
 const transactionsRouter = Router()
 
@@ -20,6 +22,16 @@ transactionsRouter.get("/pos-transaction/app-user", appUserIsAuth, async (reques
 //Process payment by app user with pre paid benefit
 transactionsRouter.post("/pos-transaction/processing", appUserIsAuth, async (request, response) => {
   await  processPaymentByAppUserController.handle(request, response)
+})
+
+//Generate transaction details for receipt
+transactionsRouter.get("/transaction/receipt", async (request, response) => {
+  await geTransactionReceiptController.handle(request, response)
+})
+
+//generate receipt pdf
+transactionsRouter.get("/transaction/:transactionId/download", async (request, response) => {
+  await generateReceiptPDFController.handle(request, response)
 })
 
 export { transactionsRouter }
