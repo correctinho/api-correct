@@ -15,7 +15,6 @@ import QRCode from 'qrcode'; // Importa a biblioteca para gerar QR Code
 // Usando 'require' conforme seu código, para compatibilidade com o ambiente
 const chromium = require('@sparticuz/chromium');
 
-
 export class GenerateReceiptPdfUsecase {
     private getTransactionReceiptUsecase: GetTransactionReceiptUsecase;
 
