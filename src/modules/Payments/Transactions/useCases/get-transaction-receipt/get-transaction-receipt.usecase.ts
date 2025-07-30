@@ -20,7 +20,6 @@ export class GetTransactionReceiptUsecase {
     if (!transactionId) {
       throw new CustomError("Transaction ID is required", 400);
     }
-
     //get transaction details
     const transaction = await this.transactionOrderRepository.find(new Uuid(transactionId));
     if (!transaction) throw new CustomError("Transaction not found", 404);

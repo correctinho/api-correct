@@ -16,8 +16,8 @@ export class GetTransactionReceiptController {
   async handle(req: Request, res: Response) {
     try {
 
-      const data = req.body
-      data.transactionId = req.query.transactionId as string
+      
+      const transactionId = req.query.transactionId as string
 
       const usecase = new GetTransactionReceiptUsecase(
         this.transactionOrderRepository,
@@ -25,9 +25,10 @@ export class GetTransactionReceiptController {
         this.appUserItemRepository,
         this.appUserInfoRepository
       )
-      const result = await usecase.execute(data);
+      const result = await usecase.execute(transactionId);
       return res.status(200).json(result);
     } catch (err: any) {
+      console.log({err})
       return res.status(err.statusCode).json({
         error: err.message,
       });
