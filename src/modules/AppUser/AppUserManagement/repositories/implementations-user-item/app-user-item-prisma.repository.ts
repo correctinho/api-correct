@@ -181,7 +181,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
     if (!userItem) return null
     return {
       uuid: new Uuid(userItem.uuid),
-      business_info_uuid: new Uuid(userItem.business_info_uuid),
+      business_info_uuid: userItem.business_info_uuid ? new Uuid(userItem.business_info_uuid) : null,
       fantasy_name: userItem.Business ? userItem.Business.fantasy_name : null,
       user_info_uuid: new Uuid(userItem.user_info_uuid),
       item_uuid: new Uuid(userItem.item_uuid),

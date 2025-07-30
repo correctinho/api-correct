@@ -9,6 +9,42 @@ import { CalculateSplitPrePaidOutput } from "../../../../../paymentSplit/prePaid
 import { CustomError } from "../../../../../errors/custom.error";
 
 export class TransactionOrderPrismaRepository implements ITransactionOrderRepository {
+  async generateTransactionReceiptDetails(transactionId: string): Promise<any> {
+    const transaction = await prismaClient.transactions.findUnique({
+      where: {
+        uuid: transactionId
+      }, 
+      include:{
+        UserInfo:{
+          select:{
+            full_name: true
+          }
+        },
+        BusinessInfo: {
+          select: {
+            fantasy_name: true
+          }
+        }
+      }
+    })
+
+    if (!transaction) return null
+
+    return {
+      uuid: new Uuid(transaction.uuid),
+      user_item_uuid: transaction.user_item_uuid ? new Uuid(transaction.user_item_uuid) : null,
+      favored_user_uuid: transaction.favored_user_uuid ? new Uuid(transaction.favored_user_uuid) : null,
+      favored_business_info_uuid: transaction.favored_business_info_uuid ? new Uuid(transaction.favored_business_info_uuid) : null,
+      amount: transaction.amount,
+      fee_amount: transaction.fee_amount,
+      cashback: transaction.cashback,
+      description: transaction.description,
+      status: transaction.status,
+      transaction_type: transaction.transaction_type,
+      created_at: transaction.created_at,
+      updated_at: transaction.updated_at
+    } as TransactionEntity
+  }
   async findBusinessAccountByBusinessInfoId(id: string): Promise<any> {
     const businessAccount = await prismaClient.businessAccount.findFirst({
       where: {
