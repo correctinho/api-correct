@@ -17,23 +17,23 @@ export class BranchPrismaRepository implements IBranchRepository {
     return branch as BranchEntity
   }
   async create(data: BranchEntity): Promise<BranchEntity> {
+    const branchDataToSave = data.toJSON();
     const [branch, branchBenefit] = await prismaClient.$transaction([
       //create branch
       prismaClient.branchInfo.create({
         data: {
-          uuid: data.uuid,
-          name: data.name,
-          marketing_tax: data.marketing_tax,
-          market_place_tax: data.market_place_tax,
-          admin_tax: data.admin_tax,
+          uuid: branchDataToSave.uuid,
+          name: branchDataToSave.name,
+          marketing_tax: branchDataToSave.marketing_tax,
+          market_place_tax: branchDataToSave.market_place_tax,
+          admin_tax: branchDataToSave.admin_tax,
           created_at: newDateF(new Date()),
-          updated_at: newDateF(new Date()),
         },
       }),
 
       prismaClient.branchItem.createMany({
         data: data.benefits_uuid.map(itemUuid => ({
-          branchInfo_uuid: data.uuid,
+          branchInfo_uuid: branchDataToSave.uuid,
           item_uuid: itemUuid,
           created_at: newDateF(new Date())
         })),

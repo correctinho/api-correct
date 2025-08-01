@@ -1,19 +1,33 @@
-import { TransactionType, UserItemStatus } from "@prisma/client"
+import { TransactionStatus, TransactionType, UserItemStatus } from "@prisma/client"
 
 export type InputCreatePOSTransactionByBusinessDTO = {
-  amount: number
   business_info_uuid: string
-  description?: string | null
-  item_uuid?: string
+  business_user_uuid: string
   partner_user_uuid: string
   transaction_type: TransactionType
+  original_price: number           // valor real da venda
+  discount_percentage: number       // desconto fornecido
+  net_price: number     // valor calculado
 }
 
 export type OutputCreatePOSTransactionByBusinessDTO = {
   transaction_uuid: string,
-  business_info_uuid: string,
-  fee: number,
-  created_at: string
+  user_item_uuid?: string,
+  favored_user_uuid?: string,
+  favored_business_info_uuid?: string,
+  original_price: number,
+  discount_percentage: number,
+  net_price: number,
+  fee_percentage?: number, // Optional: Defaults to 0
+  fee_amount: number,
+  cashback?: number,
+  description?: string | null,
+  transaction_status: TransactionStatus
+  transaction_type: TransactionType,
+  favored_partner_user_uuid: string,
+  paid_at?: string | null,
+  created_at: string,
+  updated_at?: string | null
 }
 
 

@@ -40,7 +40,7 @@ export class ProcessPaymentByAppUserUsecase {
     if (userItem.status === "inactive" || userItem.status === "blocked") throw new CustomError("User item is not active", 403);
 
     //check if user has enough balance
-    if (userItem.balance < transaction.amount) throw new CustomError("User item balance is not enough", 403);
+    if (userItem.balance < transaction.net_price) throw new CustomError("User item balance is not enough", 403);
 
     //check if user benefit can be paid in this transaction
     const partnerConfig = await this.partnerConfigRepository.findByPartnerId(transaction.favored_business_info_uuid.uuid);
@@ -55,7 +55,7 @@ export class ProcessPaymentByAppUserUsecase {
     //*********TO BE IMPLEMENTED*********
 
     const splitInput = {
-      totalAmount: transaction.amount,
+      totalAmount: transaction.net_price,
       admin_tax: partnerConfig.admin_tax,
       marketing_tax: partnerConfig.marketing_tax,
       marketplace_tax: transaction.transaction_type === "POS_PAYMENT" ? 0 : partnerConfig.market_place_tax,

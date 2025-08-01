@@ -15,45 +15,60 @@ export class CreatePOSTransactionOrderUsecase {
   ) { }
 
   async execute(data: InputCreatePOSTransactionByBusinessDTO): Promise<OutputCreatePOSTransactionByBusinessDTO> {
-    // Get business info
+    data.transaction_type = 'POS_PAYMENT';
+
+    if (!data.original_price) throw new CustomError("Original price is required", 400);
+    if (data.discount_percentage === undefined || data.discount_percentage === null) throw new CustomError("Discount percentage is required", 400); if (!data.net_price) throw new CustomError("Net price is required", 400);
+
+    if (data.original_price === 0) throw new CustomError("Original price cannot be zero", 400);
+
+    // Get partner info
     const businessInfo = await this.businessInfoRepository.findById(data.business_info_uuid)
     if (!businessInfo) throw new CustomError("Business not found", 400)
 
     // Check if business is active
     if (businessInfo.status !== 'active') throw new CustomError("Business is not active", 403)
 
-    //check business type
+    //check business type is not employer
     if (businessInfo.business_type === 'empregador') throw new CustomError("Business type is not allowed", 403)
 
     //Get partner config details
     const partnerConfig = await this.partnerConfigRepository.findByPartnerId(businessInfo.uuid)
     if (!partnerConfig) throw new CustomError("Partner config not found", 400)
 
-    // Calculate fee
-    const fee = await this.calculateFee(partnerConfig.admin_tax, partnerConfig.marketing_tax)
-
-    data.transaction_type = 'POS_PAYMENT'
-
     const transactionEntity = TransactionEntity.create(data)
+    // Calculate fee
+    transactionEntity.calculateFeePercentage(partnerConfig.admin_tax, partnerConfig.marketing_tax)
+    transactionEntity.calculateFee()
 
-    //calculate cashback
-    transactionEntity.calculateCashback(partnerConfig.cashback_tax)
-    transactionEntity.changeBusinessInfoUuid(new Uuid(data.business_info_uuid))
-    transactionEntity.changeFeeAmount(fee)
 
-    const transaction = await this.transactionOrderRepository.save(transactionEntity)
+    //set favored partner business info uuid
+    transactionEntity.changeFavoredBusinessInfoUuid(new Uuid(data.business_info_uuid))
 
+    //set partner user uuid
+    transactionEntity.changePartnerUserUuid(new Uuid(data.partner_user_uuid))
+
+    transactionEntity.changeDescription("Transação do ponto de venda (POS)")
+    const transaction = await this.transactionOrderRepository.savePOSTransaction(transactionEntity)
     return {
       transaction_uuid: transaction.uuid.uuid,
-      business_info_uuid: transaction.favored_business_info_uuid.uuid,
-      fee: transaction.fee_amount / 100,
-      created_at: transaction.created_at
+      user_item_uuid: transaction.user_item_uuid ? transaction.user_item_uuid.uuid : null,
+      favored_user_uuid: transaction.favored_user_uuid ? transaction.favored_user_uuid.uuid : null,
+      favored_business_info_uuid: transaction.favored_business_info_uuid ? transaction.favored_business_info_uuid.uuid : null,
+      original_price: transaction.original_price / 100,
+      discount_percentage: transaction.discount_percentage / 10000,
+      net_price: transaction.net_price / 100,
+      fee_percentage: transaction.fee_percentage / 10000,
+      fee_amount: transaction.fee_amount / 100,
+      cashback: transaction.cashback / 100,
+      description: transaction.description,
+      transaction_status: transaction.status,
+      transaction_type: transaction.transaction_type,
+      favored_partner_user_uuid: transaction.favored_partner_user_uuid ? transaction.favored_partner_user_uuid.uuid : null,
+      paid_at: transaction.paid_at,
+      created_at: transaction.created_at,
+      updated_at: transaction.updated_at ? transaction.updated_at : null
     }
-  }
-
-  private async calculateFee(admin_tax: number, marketing_tax: number) {
-    const fee = admin_tax + marketing_tax
-    return fee
   }
 
 }

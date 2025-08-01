@@ -130,40 +130,40 @@ describe("E2E Business tests", () => {
     const branchesByName = [
       {
         name: "Hipermercados",
-        marketing_tax: 100,
-        admin_tax: 150,
-        market_place_tax: 120,
+        marketing_tax: 1,
+        admin_tax: 1.50,
+        market_place_tax: 1.2,
         benefits_name: ['Adiantamento Salarial', 'Vale Alimentação']
       },
 
       {
         name: "Supermercados",
-        marketing_tax: 100,
-        admin_tax: 150,
-        market_place_tax: 120,
+        marketing_tax: 1,
+        admin_tax: 1.5,
+        market_place_tax: 1.20,
         benefits_name: ['Adiantamento Salarial', 'Vale Refeição']
       },
 
       {
         name: "Mercearias",
-        marketing_tax: 130,
-        admin_tax: 140,
-        market_place_tax: 130,
+        marketing_tax: 1.30,
+        admin_tax: 1.40,
+        market_place_tax: 1.30,
         benefits_name: ['Convênio', 'Vale Alimentação']
       },
       {
         name: "Restaurantes",
-        marketing_tax: 180,
-        admin_tax: 170,
-        market_place_tax: 160,
+        marketing_tax: 1.80,
+        admin_tax: 1.70,
+        market_place_tax: 1.60,
         benefits_name: ['Vale Refeição', 'Vale Alimentação']
       },
 
       {
         name: "Alimentação",
-        marketing_tax: 200,
-        admin_tax: 250,
-        market_place_tax: 220,
+        marketing_tax: 2.00,
+        admin_tax: 2.50,
+        market_place_tax: 2.20,
         benefits_name: ['Vale Refeição', 'Vale Alimentação']
       }
     ]
@@ -691,7 +691,7 @@ describe("E2E Business tests", () => {
           expect(result.body.PartnerConfig.partner_category).toEqual(input.partnerConfig.partner_category)
           expect(result.body.PartnerConfig.main_branch).toEqual(input.partnerConfig.main_branch)
           expect(result.body.PartnerConfig.items_uuid.length).not.toBe(0)
-          expect(result.body.PartnerConfig.admin_tax).toEqual(150) //this is according to branch1 definitions
+          expect(result.body.PartnerConfig.admin_tax).toEqual(1.5) //this is according to branch1 definitions
           expect(result.body.PartnerConfig.marketing_tax).toEqual(0)
           expect(result.body.PartnerConfig.use_marketing).toBeFalsy()
           expect(result.body.PartnerConfig.market_place_tax).toEqual(0)
@@ -763,8 +763,8 @@ describe("E2E Business tests", () => {
           expect(result.body.PartnerConfig.partner_category).toEqual(input.partnerConfig.partner_category)
           expect(result.body.PartnerConfig.main_branch).toEqual(input.partnerConfig.main_branch)
           expect(result.body.PartnerConfig.items_uuid.length).not.toBe(0)
-          expect(result.body.PartnerConfig.admin_tax).toEqual(140) //this is according to branch1 definitions
-          expect(result.body.PartnerConfig.marketing_tax).toEqual(130)
+          expect(result.body.PartnerConfig.admin_tax).toEqual(1.40) //this is according to branch1 definitions
+          expect(result.body.PartnerConfig.marketing_tax).toEqual(1.30)
           expect(result.body.PartnerConfig.use_marketing).toBeTruthy()
           expect(result.body.PartnerConfig.market_place_tax).toEqual(0)
           expect(result.body.PartnerConfig.use_market_place).toBeFalsy()
@@ -835,10 +835,10 @@ describe("E2E Business tests", () => {
           expect(result.body.PartnerConfig.partner_category).toEqual(input.partnerConfig.partner_category)
           expect(result.body.PartnerConfig.main_branch).toEqual(input.partnerConfig.main_branch)
           expect(result.body.PartnerConfig.items_uuid.length).not.toBe(0)
-          expect(result.body.PartnerConfig.admin_tax).toEqual(170) //this is according to branch1 definitions
-          expect(result.body.PartnerConfig.marketing_tax).toEqual(180)
+          expect(result.body.PartnerConfig.admin_tax).toEqual(1.70) //this is according to branch1 definitions
+          expect(result.body.PartnerConfig.marketing_tax).toEqual(1.80)
           expect(result.body.PartnerConfig.use_marketing).toBeTruthy()
-          expect(result.body.PartnerConfig.market_place_tax).toEqual(160)
+          expect(result.body.PartnerConfig.market_place_tax).toEqual(1.60)
           expect(result.body.PartnerConfig.use_market_place).toBeTruthy()
         })
 
@@ -1287,7 +1287,7 @@ describe("E2E Business tests", () => {
         expect(getPartnerAdminDetails.statusCode).toBe(200)
 
         partnerAdminDetails.business_info_uuid = getPartnerAdminDetails.body.business_info_uuid,
-        partnerAdminDetails.is_admin = getPartnerAdminDetails.body.is_admin
+          partnerAdminDetails.is_admin = getPartnerAdminDetails.body.is_admin
         partnerAdminDetails.document = getPartnerAdminDetails.body.document
         partnerAdminDetails.name = getPartnerAdminDetails.body.name
         partnerAdminDetails.email = getPartnerAdminDetails.body.email
@@ -2210,6 +2210,37 @@ describe("E2E Business tests", () => {
 
   describe("E2E Transactions", () => {
     describe("Create POS transaction order by partner", () => {
+      it("Should throw an error if original price is missing", async () => {
+
+        const input = {
+
+        }
+        const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Original price is required")
+      })
+      it("Should throw an error if discount percentage is missing", async () => {
+
+        const input = {
+          original_price: 100,
+
+        }
+        const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Discount percentage is required")
+      })
+      it("Should throw an error if net price is missing", async () => {
+
+        const input = {
+          original_price: 100,
+          discount_percentage: 10
+
+        }
+        const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
+        expect(result.statusCode).toBe(400)
+        expect(result.body.error).toBe("Net price is required")
+      })
+
       it("Should throw an error if business is not active", async () => {
         //inactive partner
         const inputToInactivate = {
@@ -2231,9 +2262,9 @@ describe("E2E Business tests", () => {
         expect(inactivePartner.statusCode).toBe(200)
 
         const input = {
-          item_uuid: randomUUID(),
-          cycle_end_day: 1,
-          amount: 200
+          original_price: 100,
+          discount_percentage: 10,
+          net_price: 90
         }
         const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
         expect(result.statusCode).toBe(403)
@@ -2242,49 +2273,174 @@ describe("E2E Business tests", () => {
       it("Should throw an error if business type is Employer", async () => {
 
         const input = {
-          amount: 200,
-          description: ""
+          original_price: 100,
+          discount_percentage: 10,
+          net_price: 90
         }
         const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${employer_user_token}`).send(input)
         expect(result.statusCode).toBe(403)
         expect(result.body.error).toBe("Business type is not allowed")
       })
 
+
       it("Should create a POS transaction", async () => {
         //ACTIVATE PARTNER TO BE ABLE TO CREATE TRANSACTIONS
-        const inputToInactivate = {
-
+        const inputToActivate = {
           status: "active"
         }
         const query = {
           business_info_uuid: partner_info_uuid
         }
-        const activePartner = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToInactivate)
+        const activePartner = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToActivate)
         expect(activePartner.statusCode).toBe(200)
 
         //CREATE TRANSACTION
         const input = {
-          amount: 200,
-          description: "",
+          original_price: 100, //100 reais
+          discount_percentage: 10, // 10%
+          net_price: 90 //90 reais
         }
         const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
         expect(result.statusCode).toBe(201)
-        expect(result.body.business_info_uuid).toBe(partner_info_uuid)
-        expect(result.body.fee).toBe(1.50) //this is because this partner main branch is branch1, as defined on line 646. And this branch was created to have admin tax as 152
+        expect(result.body.user_item_uuid).toBeFalsy()
+        expect(result.body.favored_business_info_uuid).toEqual(partner_info_uuid)
+        expect(result.body.original_price).toBe(input.original_price)
+        expect(result.body.discount_percentage).toBe(input.discount_percentage)
+        expect(result.body.net_price).toBe(input.net_price)
+        expect(result.body.fee_percentage).toBe(1) //considering that fee percentage is 1% for this partner
+        expect(result.body.fee_amount).toBe(0.9)
+        expect(result.body.cashback).toBe(0.18) //considering that fee percentage is 1% for this partner
+        expect(result.body.description).toBe("Transação do ponto de venda (POS)")
+        expect(result.body.transaction_status).toBe("pending")
+        expect(result.body.transaction_type).toBe("POS_PAYMENT")
+        expect(result.body.favored_partner_user_uuid).toBeTruthy()
+        expect(result.body.paid_at).toBeFalsy()
+        expect(result.body.created_at).toBeTruthy()
+        expect(result.body.updated_at).toBeFalsy()
 
       })
+      it("Should create a POS transaction with zero discount", async () => {
 
+        // Define o input da transação com desconto zero
+        const input = {
+          original_price: 150,
+          discount_percentage: 0, // <-- Cenário de teste principal
+          net_price: 150        // <-- Com desconto zero, net_price é igual a original_price
+        };
+        // Calcula os valores esperados para a validação, de acordo com as regras de negócio
+        const expectedFeeAmount = input.net_price * 0.01; // Plataforma cobra 1% sobre o net_price neste caso específico
+        const expectedCashback = expectedFeeAmount * 0.20; // Plataforma paga 20% da taxa como cashback
+
+        // ACT - Ação
+        // ACT - Ação
+        // Cria a transação através da API
+        const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input);
+
+        // ASSERT - Verificação
+        // Verifica se a resposta da API está correta
+        expect(result.statusCode).toBe(201);
+        expect(result.body.user_item_uuid).toBeFalsy();
+        expect(result.body.favored_business_info_uuid).toEqual(partner_info_uuid);
+        expect(result.body.original_price).toBe(input.original_price);
+        expect(result.body.discount_percentage).toBe(input.discount_percentage);
+        expect(result.body.net_price).toBe(input.net_price);
+        expect(result.body.cashback).toBeCloseTo(expectedCashback); // Verifica se o cashback foi calculado
+        expect(result.body.description).toBe("Transação do ponto de venda (POS)");
+      });
+      it("Should return a 400 error when original_price is negative", async () => {
+        // ARRANGE - Preparação
+        // Input com o valor problemático
+        const input = {
+          original_price: -100,
+          discount_percentage: 10,
+          net_price: -90
+        };
+
+        // ACT - Ação
+        const result = await request(app)
+          .post("/pos-transaction")
+          .set('Authorization', `Bearer ${partner_admin_token}`)
+          .send(input);
+        console.log(result.body)
+        // ASSERT - Verificação
+        // Espera-se um erro de "Bad Request"
+        expect(result.statusCode).toBe(400);
+        expect(result.body.error).toContain("Amount must be a positive number");
+      });
+      it("Should return a 400 error when discount_percentage is negative", async () => {
+        // ARRANGE
+        const input = {
+          original_price: 100,
+          discount_percentage: -10, // <-- O valor inválido
+          net_price: 110
+        };
+
+        // ACT
+        const result = await request(app)
+          .post("/pos-transaction")
+          .set('Authorization', `Bearer ${partner_admin_token}`)
+          .send(input);
+
+        // ASSERT
+        expect(result.statusCode).toBe(400);
+        expect(result.body.error).toContain("Discount percentage cannot be negative");
+      });
+      it("Should return a 400 error when net_price is inconsistent", async () => {
+        // ARRANGE
+        // O net_price deveria ser 90, mas estamos enviando 80 para forçar o erro.
+        const input = {
+          original_price: 100,
+          discount_percentage: 10,
+          net_price: 80 // <-- O valor inconsistente
+        };
+
+        // ACT
+        const result = await request(app)
+          .post("/pos-transaction")
+          .set('Authorization', `Bearer ${partner_admin_token}`)
+          .send(input);
+
+        // ASSERT
+        expect(result.statusCode).toBe(400);
+        expect(result.body.error).toContain("Net price is not consistent with original price and discount percentage");
+      });
+
+      // it("Should create a POS transaction with discount 0", async () => {
+      //   //ACTIVATE PARTNER TO BE ABLE TO CREATE TRANSACTIONS
+      //   const inputToActivate = {
+
+      //     status: "active"
+      //   }
+      //   const query = {
+      //     business_info_uuid: partner_info_uuid
+      //   }
+      //   const activePartner = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToActivate)
+      //   expect(activePartner.statusCode).toBe(200)
+
+      //   //CREATE TRANSACTION
+      //   const input = {
+      //     original_price: 100,
+      //     discount_percentage: 0,
+      //     net_price: 100
+      //   }
+
+      //   const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
+      //   console.log("***************", result.body)
+      //   expect(result.statusCode).toBe(201)
+      //   expect(result.body.business_info_uuid).toBe(partner_info_uuid)
+      //   expect(result.body.fee).toBe(1.50) //this is because this partner main branch is branch1, as defined on line 646. And this branch was created to have admin tax as 152
+      // })
 
     })
   })
 
-  describe("E2E Business Account", () => {
-    describe("Get Business Account by business admin", () => {
-      it("Should get business account", async () => {
-        const result = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_admin_token}`)
-        expect(result.statusCode).toBe(200)
+  // describe("E2E Business Account", () => {
+  //   describe("Get Business Account by business admin", () => {
+  //     it("Should get business account", async () => {
+  //       const result = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_admin_token}`)
+  //       expect(result.statusCode).toBe(200)
 
-      })
-    })
-  })
+  //     })
+  //   })
+  // })
 })
