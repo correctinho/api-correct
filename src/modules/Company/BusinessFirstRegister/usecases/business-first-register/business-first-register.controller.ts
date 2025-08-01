@@ -29,7 +29,6 @@ export class CreateBusinessRegisterController {
       return res.status(201).json(result)
 
     } catch (err: any) {
-      console.error(err)
       return res.status(err.statusCode).json({
         error: err.message
       })

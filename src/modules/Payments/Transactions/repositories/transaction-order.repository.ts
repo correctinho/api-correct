@@ -5,7 +5,7 @@ import { AppUserItemEntity } from "../../../AppUser/AppUserManagement/entities/a
 import { TransactionEntity } from "../entities/transaction-order.entity";
 
 export interface ITransactionOrderRepository extends RepositoryInterface<TransactionEntity>  {
-  save (entity: TransactionEntity): Promise<TransactionEntity>;
+  savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity>;
   processSplitPrePaidPayment(
     transactionEntity: TransactionEntity,
     splitOutput: CalculateSplitPrePaidOutput,

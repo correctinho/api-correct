@@ -35,7 +35,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
       user_item_uuid: transaction.user_item_uuid ? new Uuid(transaction.user_item_uuid) : null,
       favored_user_uuid: transaction.favored_user_uuid ? new Uuid(transaction.favored_user_uuid) : null,
       favored_business_info_uuid: transaction.favored_business_info_uuid ? new Uuid(transaction.favored_business_info_uuid) : null,
-      amount: transaction.amount,
+      original_price: transaction.original_price,
       fee_amount: transaction.fee_amount,
       cashback: transaction.cashback,
       description: transaction.description,
@@ -59,152 +59,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
     const correctAccount = await prismaClient.correctAccount.findFirst()
     return correctAccount
   }
-  // async processSplitPrePaidPayment(transactionEntity: TransactionEntity, userItemEntity: AppUserItemEntity): Promise<any> {
-  //   const [userItem, businessAccount] = await prismaClient.$transaction([
-  //     //remove the amount from user item
-  //     prismaClient.userItem.update({
-  //       where: {
-  //         uuid: transactionEntity.user_item_uuid.uuid
-  //       },
-  //       data: {
-  //         balance: {
-  //           decrement: transactionEntity.amount
-  //         },
-  //         updated_at: transactionEntity.updated_at
-  //       }
-  //     }),
-  //     //add net amount to business account
-  //     prismaClient.businessAccount.update({
-  //       where: {
-  //         uuid: transactionEntity.favored_business_info_uuid.uuid
-  //       },
-  //       data: {
-  //         balance: {
-  //           increment: transactionEntity.business_account_amount
-  //         },
-  //         updated_at: transactionEntity.updated_at
-  //       }
-  //     }),
-  //     //add net amount to correct account
-  //     prismaClient.correctAccount.update({
-  //       where: {
-  //         uuid: transactionEntity.correct_account_uuid.uuid
-  //       },
-  //       data: {
-  //         balance: {
-  //           increment: transactionEntity.platform_net_amount
-  //         },
-  //         updated_at: transactionEntity.updated_at
-  //       }
-  //     }),
-  //     //update the transaction status
-  //     prismaClient.transactions.update({
-  //       where: {
-  //         uuid: transactionEntity.uuid.uuid
-  //       },
-  //       data: {
-  //         status: transactionEntity.status,
-  //         updated_at: transactionEntity.updated_at
-  //       },
-  //     }),
-  //     //create user item history
-  //     prismaClient.userItemHistory.create({
-  //       data: {
-  //         uuid: randomUUID(),
-  //         user_item_uuid: transactionEntity.user_item_uuid.uuid,
-  //         event_type: "ITEM_SPENT",
-  //         amount: transactionEntity.amount,
-  //         balance_before: userItemEntity.balance,
-  //         balance_after: userItemEntity.balance - transactionEntity.amount,
-  //         related_transaction_uuid: transactionEntity.uuid.uuid,
-  //         description: transactionEntity.description,
-  //         created_at: transactionEntity.created_at,
-  //       },
-  //     }),
-  //     //set cashback to user debit benefit
-  //     prismaClient.userItem.update({
-  //       where: {
-  //         uuid: transactionEntity.user_debit_benefit_uuid.uuid
-  //       },
-  //       data: {
-  //         balance: {
-  //           increment: transactionEntity.cashback
-  //         },
-  //         updated_at: transactionEntity.updated_at
-  //       }
-  //     }),
-  //     //create cashback history
-  //     prismaClient.userItemHistory.create({
-  //       data:{
-  //         uuid: randomUUID(),
-  //         user_item_uuid: transactionEntity.user_debit_benefit_uuid.uuid,
-  //         event_type: "CASHBACK_RECEIVED",
-  //         amount: transactionEntity.cashback,
-  //         balance_before: transactionEntity.user_debit_benefit_balance,
-  //         balance_after: transactionEntity.user_debit_benefit_balance + transactionEntity.cashback,
-  //         related_transaction_uuid: transactionEntity.uuid.uuid,
-  //         description: transactionEntity.description,
-  //         created_at: transactionEntity.created_at,
-  //       }
-  //     }),
-  //     //create business account history
-  //     prismaClient.businessAccountHistory.create({
-  //       data: {
-  //         uuid: randomUUID(),
-  //         business_account_uuid: transactionEntity.business_account_uuid.uuid,
-  //         amount: transactionEntity.business_account_amount,
-  //         balance_before: transactionEntity.business_account_balance,
-  //         balance_after: transactionEntity.business_account_balance + transactionEntity.business_account_amount,
-  //         related_transaction_uuid: transactionEntity.uuid.uuid,
-  //         event_type: "PAYMENT_RECEIVED",
-  //         description: transactionEntity.description,
-  //         created_at: transactionEntity.created_at,
-  //       }
-  //     }),
-  //     //create correct account history
-  //     prismaClient.correctAccountHistory.create({
-  //       data: {
-  //         uuid: randomUUID(),
-  //         correct_account_uuid: transactionEntity.correct_account_uuid.uuid,
-  //         event_type: "PLATFORM_FEE_COLLECTED",
-  //         amount: transactionEntity.platform_net_amount,
-  //         balance_before: transactionEntity.correct_account_balance,
-  //         balance_after: transactionEntity.correct_account_balance + transactionEntity.platform_net_amount,
-  //         description: transactionEntity.description,
-  //         related_transaction_uuid: transactionEntity.uuid.uuid,
-  //         created_at: transactionEntity.created_at,
-  //       }
-  //     })
-
-  //   ])
-  // }
-  // async processPrePaidPayment(entity: TransactionEntity): Promise<TransactionEntity> {
-  //   const transaction = await prismaClient.transactions.update({
-  //     where: {
-  //       uuid: entity.uuid.uuid
-  //     },
-  //     data: {
-  //       user_item_uuid: entity.user_item_uuid.uuid,
-  //       description: entity.description,
-  //       updated_at: entity.updated_at,
-  //     }
-  //   })
-  //   return {
-  //     uuid: new Uuid(transaction.uuid),
-  //     user_item_uuid: transaction.user_item_uuid ? new Uuid(transaction.user_item_uuid) : null,
-  //     favored_user_uuid: transaction.favored_user_uuid ? new Uuid(transaction.favored_user_uuid) : null,
-  //     favored_business_info_uuid: transaction.favored_business_info_uuid ? new Uuid(transaction.favored_business_info_uuid) : null,
-  //     amount: transaction.amount,
-  //     fee_amount: transaction.fee_amount,
-  //     cashback: transaction.cashback,
-  //     description: transaction.description,
-  //     status: transaction.status,
-  //     transaction_type: transaction.transaction_type,
-  //     created_at: transaction.created_at,
-  //     updated_at: transaction.updated_at
-  //   } as TransactionEntity
-  // }
-
+  
   async processSplitPrePaidPayment(
     transactionEntity: TransactionEntity,
     splitOutput: CalculateSplitPrePaidOutput,
@@ -215,7 +70,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
     const transactionId = transactionEntity.uuid.uuid;
 
     const favoredBusinessInfoId = transactionEntity.favored_business_info_uuid?.uuid;
-    const totalAmountToDecrement = transactionEntity.amount; // Valor total gasto pelo usuário
+    const totalAmountToDecrement = transactionEntity.net_price; // Valor total gasto pelo usuário
     const netAmountToCreditBusiness = splitOutput.partnerNetAmount;
     const netAmountToCreditPlatform = splitOutput.platformNetAmount;
     const cashbackAmountToCreditUser = splitOutput.userCashbackAmount * 100; // Valor do cashback a ser creditado
@@ -382,22 +237,28 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
 
     return { success: result.success, finalDebitedUserItemBalance: result.finalDebitedUserItemBalance, user_cashback_amount: cashbackAmountToCreditUser}; // Retorna o resultado da transação
   }
-  async save(entity: TransactionEntity): Promise<TransactionEntity> {
+  
+  async savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity> {
+    const dataToSave = entity.toJSON()
+    
     const transaction = await prismaClient.transactions.create({
       data: {
-        uuid: entity.uuid.uuid,
-        user_item_uuid: entity.user_item_uuid ? entity.user_item_uuid.uuid : null,
-        favored_user_uuid: entity.favored_user_uuid ? entity.favored_user_uuid.uuid : null,
-        favored_business_info_uuid: entity.favored_business_info_uuid ? entity.favored_business_info_uuid.uuid : null,
-        amount: entity.amount,
-        fee_amount: entity.fee_amount,
-        cashback: entity.cashback,
-        description: entity.description,
-        status: entity.status,
-        transaction_type: entity.transaction_type,
-        partner_user_uuid: entity.partner_user_uuid ? entity.partner_user_uuid.uuid : null,
-        created_at: entity.created_at,
-        updated_at: entity.updated_at
+        uuid: dataToSave.uuid,
+        user_item_uuid: null,
+        favored_user_uuid: null,
+        favored_business_info_uuid: dataToSave.favored_business_info_uuid,
+        original_price: dataToSave.original_price,
+        discount_percentage: dataToSave.discount_percentage,
+        net_price: dataToSave.net_price,
+        fee_percentage: dataToSave.fee_percentage,
+        fee_amount: dataToSave.fee_amount,
+        cashback: dataToSave.cashback,
+        description: dataToSave.description,
+        status: dataToSave.status,
+        transaction_type: dataToSave.transaction_type,
+        favored_partner_user_uuid: dataToSave.favored_partner_user_uuid,
+        paid_at: null,
+        created_at: dataToSave.created_at,
       }
     })
 
@@ -406,12 +267,17 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
       user_item_uuid: transaction.user_item_uuid ? new Uuid(transaction.user_item_uuid) : null,
       favored_user_uuid: transaction.favored_user_uuid ? new Uuid(transaction.favored_user_uuid) : null,
       favored_business_info_uuid: transaction.favored_business_info_uuid ? new Uuid(transaction.favored_business_info_uuid) : null,
-      amount: transaction.amount,
+      original_price: transaction.original_price,
+      discount_percentage: transaction.discount_percentage,
+      net_price: transaction.net_price,
+      fee_percentage: transaction.fee_percentage,
       fee_amount: transaction.fee_amount,
       cashback: transaction.cashback,
       description: transaction.description,
       status: transaction.status,
       transaction_type: transaction.transaction_type,
+      favored_partner_user_uuid: transaction.favored_partner_user_uuid ? new Uuid(transaction.favored_partner_user_uuid) : null,
+      paid_at: transaction.paid_at,
       created_at: transaction.created_at,
       updated_at: transaction.updated_at
     } as TransactionEntity
@@ -437,7 +303,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
       user_item_uuid: transaction.user_item_uuid ? new Uuid(transaction.user_item_uuid) : null,
       favored_user_uuid: transaction.favored_user_uuid ? new Uuid(transaction.favored_user_uuid) : null,
       favored_business_info_uuid: transaction.favored_business_info_uuid ? new Uuid(transaction.favored_business_info_uuid) : null,
-      amount: transaction.amount,
+      original_price: transaction.original_price,
       fee_amount: transaction.fee_amount,
       cashback: transaction.cashback,
       description: transaction.description,

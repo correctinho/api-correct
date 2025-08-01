@@ -3,7 +3,7 @@ import { app } from '../../app'
 import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto'
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo';
 import { BranchDTO } from '../../modules/benefits/usecases/get-benefit-by-id/get-benefit.dto';
-import {randomUUID} from 'crypto'
+import { randomUUID } from 'crypto'
 const inputNewAdmin = {
   name: "Admin Correct",
   email: "admincorrect@correct.com.br",
@@ -19,9 +19,9 @@ const authenticateAdmin = {
 let authToken: string;
 
 beforeAll(async () => {
-    //create correct admin
-    const createCorrectAdmin = await request(app).post('/admin').send(inputNewAdmin)
-    expect(createCorrectAdmin.statusCode).toBe(201)
+  //create correct admin
+  const createCorrectAdmin = await request(app).post('/admin').send(inputNewAdmin)
+  expect(createCorrectAdmin.statusCode).toBe(201)
 
   // Autenticação do admin e obtenção do token
   const loginResponse = await request(app).post('/login').send(authenticateAdmin);
@@ -236,7 +236,7 @@ describe("E2E Benefit tests", () => {
 
     })
   })
-  })
+})
 
 
 describe("E2E Branch tests", () => {
@@ -244,40 +244,40 @@ describe("E2E Branch tests", () => {
   const branchesByName = [
     {
       name: "Hipermercados",
-      marketing_tax: 100,
-      admin_tax: 150,
-      market_place_tax: 120,
+      marketing_tax: 1.00,
+      admin_tax: 1.50,
+      market_place_tax: 1.20,
       benefits_name: ['Adiantamento Salarial', 'Vale Alimentação']
     },
 
     {
       name: "Supermercados",
-      marketing_tax: 100,
-      admin_tax: 150,
-      market_place_tax: 120,
+      marketing_tax: 1.00,
+      admin_tax: 1.50,
+      market_place_tax: 1.20,
       benefits_name: ['Adiantamento Salarial', 'Vale Refeição']
     },
 
     {
       name: "Mercearias",
-      marketing_tax: 130,
-      admin_tax: 140,
-      market_place_tax: 130,
+      marketing_tax: 1.30,
+      admin_tax: 1.40,
+      market_place_tax: 1.30,
       benefits_name: ['Convênio', 'Vale Alimentação']
     },
     {
       name: "Restaurantes",
-      marketing_tax: 180,
-      admin_tax: 170,
-      market_place_tax: 160,
+      marketing_tax: 1.80,
+      admin_tax: 1.70,
+      market_place_tax: 1.60,
       benefits_name: ['Vale Refeição', 'Vale Alimentação']
     },
 
     {
       name: "Alimentação",
-      marketing_tax: 200,
-      admin_tax: 250,
-      market_place_tax: 220,
+      marketing_tax: 2.00,
+      admin_tax: 2.50,
+      market_place_tax: 2.20,
       benefits_name: ['Vale Refeição', 'Vale Alimentação']
     }
   ]
@@ -320,12 +320,12 @@ describe("E2E Branch tests", () => {
     it("Should throw an error if branch is already registered", async () => {
       const input = [
         {
-        name: "Alimentação",
-        marketing_tax: 200,
-        admin_tax: 250,
-        market_place_tax: 220,
-        benefits_name: ['Vale Refeição', 'Vale Alimentação']
-      }
+          name: "Alimentação",
+          marketing_tax: 2.00,
+          admin_tax: 2.50,
+          market_place_tax: 2.20,
+          benefits_name: ['Vale Refeição', 'Vale Alimentação']
+        }
       ]
       const result = await request(app)
         .post(`/branch`)
@@ -339,12 +339,12 @@ describe("E2E Branch tests", () => {
     it("Should throw an error if branch is already registered", async () => {
       const input = [
         {
-        name: "Qualquer um",
-        marketing_tax: 200,
-        admin_tax: 250,
-        market_place_tax: 220,
-        benefits_name: ['Vale Refeição23', 'Vale Alimentação']
-      }
+          name: "Qualquer um",
+          marketing_tax: 200,
+          admin_tax: 250,
+          market_place_tax: 220,
+          benefits_name: ['Vale Refeição23', 'Vale Alimentação']
+        }
       ]
       const result = await request(app)
         .post(`/branch`)
@@ -363,7 +363,7 @@ describe("E2E Branch tests", () => {
         .get(`/benefit/11181561815`)
 
       expect(result.statusCode).toBe(404);
-       expect(result.body.error).toEqual("Benefit not found")
+      expect(result.body.error).toEqual("Benefit not found")
     });
     it("Should be able to get a benefit by ID", async () => {
       const result = await request(app)
