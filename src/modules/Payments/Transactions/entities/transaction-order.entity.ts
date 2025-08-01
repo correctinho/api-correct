@@ -276,7 +276,7 @@ export class TransactionEntity {
     const discountAmount = Math.round((this._original_price * this._discount_percentage) / 1000000);
 
     if (this._net_price !== this._original_price - discountAmount) {
-      throw new CustomError("Final price (net_price) is not consistent with original price and discount percentage", 400);
+      throw new CustomError("Net price is not consistent with original price and discount percentage", 400);
     }
 
     // Validation for recipient based on type (when status indicates completion/processing)
@@ -317,6 +317,10 @@ export class TransactionEntity {
       // Depending on rules, you might throw an error here for non-pending statuses
       // throw new CustomError("Source user item (user_item_uuid) cannot be null for non-pending transactions", 400);
     }
+    const discountAmountInCents = Math.round((this._original_price * this._discount_percentage) / 1000000);
+
+    
+
 
 
   }
@@ -340,7 +344,7 @@ export class TransactionEntity {
       transaction_type: this._transaction_type,
       favored_partner_user_uuid: this._favored_partner_user_uuid ? this._favored_partner_user_uuid.uuid : null,
       created_at: this._created_at,
-      };
+    };
   }
   // --- Static factory method (optional but good practice) ---
   static create(command: TransactionCreateCommand): TransactionEntity {

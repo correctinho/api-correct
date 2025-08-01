@@ -2319,6 +2319,57 @@ describe("E2E Business tests", () => {
         expect(result.body.updated_at).toBeFalsy()
 
       })
+      it("Should correctly calculate fee and cashback for a high-value transaction", async () => {
+        // ARRANGE - Preparação
+        const input = {
+          original_price: 50000,
+          discount_percentage: 10,
+          net_price: 45000 // 10% de desconto em 50.000
+        };
+
+        // Calcula os valores esperados para a validação
+        const expectedFeeAmount = 45000 * 0.01; // 1% de 45.000 = 450
+        const expectedCashback = expectedFeeAmount * 0.20; // 20% de 450 = 90
+
+        // ACT - Ação
+        const result = await request(app)
+          .post("/pos-transaction")
+          .set('Authorization', `Bearer ${partner_admin_token}`)
+          .send(input);
+
+        // ASSERT - Verificação
+        expect(result.statusCode).toBe(201);
+        expect(result.body.net_price).toBe(input.net_price);
+        expect(result.body.fee_amount).toBe(expectedFeeAmount);
+        expect(result.body.cashback).toBe(expectedCashback);
+      });
+      it("Should correctly round the fee amount when calculation results in a fraction", async () => {
+        // ARRANGE
+        const input = {
+          original_price: 99.55,
+          discount_percentage: 0,
+          net_price: 99.55
+        };
+
+        // Lógica de cálculo esperada:
+        // net_price em centavos = 9955
+        // fee_amount (1%) = 9955 * 0.01 = 99.55. O sistema deve truncar para 99 centavos.
+        // cashback (20%) = 99 * 0.20 = 19.8. O sistema deve arredondar para 20 centavos.
+        const expectedFeeAmount = 0.99;
+        const expectedCashback = 0.20;
+
+        // ACT
+        const result = await request(app)
+          .post("/pos-transaction")
+          .set('Authorization', `Bearer ${partner_admin_token}`)
+          .send(input);
+
+        // ASSERT
+        expect(result.statusCode).toBe(201);
+        expect(result.body.fee_amount).toBe(expectedFeeAmount);
+        expect(result.body.cashback).toBe(expectedCashback);
+      });
+      
       it("Should create a POS transaction with zero discount", async () => {
 
         // Define o input da transação com desconto zero
@@ -2361,7 +2412,6 @@ describe("E2E Business tests", () => {
           .post("/pos-transaction")
           .set('Authorization', `Bearer ${partner_admin_token}`)
           .send(input);
-        console.log(result.body)
         // ASSERT - Verificação
         // Espera-se um erro de "Bad Request"
         expect(result.statusCode).toBe(400);
@@ -2405,42 +2455,18 @@ describe("E2E Business tests", () => {
         expect(result.body.error).toContain("Net price is not consistent with original price and discount percentage");
       });
 
-      // it("Should create a POS transaction with discount 0", async () => {
-      //   //ACTIVATE PARTNER TO BE ABLE TO CREATE TRANSACTIONS
-      //   const inputToActivate = {
-
-      //     status: "active"
-      //   }
-      //   const query = {
-      //     business_info_uuid: partner_info_uuid
-      //   }
-      //   const activePartner = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToActivate)
-      //   expect(activePartner.statusCode).toBe(200)
-
-      //   //CREATE TRANSACTION
-      //   const input = {
-      //     original_price: 100,
-      //     discount_percentage: 0,
-      //     net_price: 100
-      //   }
-
-      //   const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
-      //   console.log("***************", result.body)
-      //   expect(result.statusCode).toBe(201)
-      //   expect(result.body.business_info_uuid).toBe(partner_info_uuid)
-      //   expect(result.body.fee).toBe(1.50) //this is because this partner main branch is branch1, as defined on line 646. And this branch was created to have admin tax as 152
-      // })
+     
 
     })
   })
 
-  // describe("E2E Business Account", () => {
-  //   describe("Get Business Account by business admin", () => {
-  //     it("Should get business account", async () => {
-  //       const result = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_admin_token}`)
-  //       expect(result.statusCode).toBe(200)
+  describe("E2E Business Account", () => {
+    describe("Get Business Account by business admin", () => {
+      it("Should get business account", async () => {
+        const result = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_admin_token}`)
+        expect(result.statusCode).toBe(200)
 
-  //     })
-  //   })
-  // })
+      })
+    })
+  })
 })
