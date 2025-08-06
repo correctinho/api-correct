@@ -2374,7 +2374,6 @@ describe("E2E App User tests", () => {
 
         })
         it("Should activate employee item without balance", async () => {
-          console.log("TESTANDO AQUI****************")
           for (const uuid of list_employees1_info_uuid) {
             for (const item_uuid of item_uuid_employer_list) {
               const input = {
@@ -3488,7 +3487,6 @@ describe("E2E App User tests", () => {
         //   expect(result.body.error).toBe("User item is not valid for this transaction")
         // })
         it("Should process pre paid benefit", async () => {
-          console.log("****PROCESS PRE PAID******")
           // original_price: 99.55,
           // discount_percentage: 0,
           // net_price: 99.55
@@ -3523,7 +3521,6 @@ describe("E2E App User tests", () => {
 
           //Get Business Account to check
           const partnerAccount = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_auth_token3}`)
-          console.log(partnerAccount.body)
           expect(partnerAccount.statusCode).toBe(200)
           partner3CurrentBalance = inputTransaction1.net_price - expected_fee_amount
           expect(partnerAccount.body.balance).toBe(partner3CurrentBalance)
@@ -3531,87 +3528,83 @@ describe("E2E App User tests", () => {
         })
 
       })
-      // describe("E2E Accounts history", () => {
-      //   //THIS TESTS WILL BE FOR RECOVERING HISTORIES CREATED ON PREVIOUS TRANSACTIONS
-      //   describe("E2E App User Item Histories", () => {
-      //     it("Should throw an error if user item uuid is missing", async () => {
-      //       const input = {
+      describe("E2E Accounts history", () => {
+        //THIS TESTS WILL BE FOR RECOVERING HISTORIES CREATED ON PREVIOUS TRANSACTIONS
+        describe("E2E App User Item Histories", () => {
+          it("Should throw an error if user item uuid is missing", async () => {
+            const input = {
 
-      //       }
-      //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-      //       expect(result.statusCode).toBe(400)
-      //       expect(result.body.error).toBe("Item Id is required")
-      //     })
-      //     it("Should throw an error if month provided is less than 1", async () => {
-      //       const input = {
-      //         user_item_uuid: correct_benefit_user2_uuid,
-      //         month: 0
-      //       }
-      //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-      //       expect(result.statusCode).toBe(400)
-      //       expect(result.body.error).toBe("Mês inválido. Por favor, forneça um valor entre 1 e 12.")
-      //     })
-      //     it("Should throw an error if month provided is more than 12", async () => {
-      //       const input = {
-      //         user_item_uuid: correct_benefit_user2_uuid,
-      //         month: 13
-      //       }
-      //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-      //       expect(result.statusCode).toBe(400)
-      //       expect(result.body.error).toBe("Mês inválido. Por favor, forneça um valor entre 1 e 12.")
-      //     })
-      //     it("Should throw an error if user item does not belong to requesting user", async () => {
-      //       const input = {
-      //         user_item_uuid: correct_benefit_user2_uuid,
-      //       }
-      //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-      //       expect(result.statusCode).toBe(403)
-      //       expect(result.body.error).toBe("Unauthorized access")
-      //     })
-      //     it("Should return history of cashback received from ", async () => {
-      //       const input = {
-      //         user_item_uuid: correct_benefit_user2_uuid,
-      //       }
-      //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-      //       console.log("user debit account: ", result.body)
-      //       expect(result.statusCode).toBe(200)
-      //       expect(result.body[0].amount).toBe(108)
-      //       expect(result.body[0].balance_before).toBe(0)
-      //       expect(result.body[0].balance_after).toBe(108) //Be AWARE - If something changes on previous tests, this might cause error
-      //       expect(result.body[0].event_type).toBe("CASHBACK_RECEIVED")
-      //       expect(result.body[0].related_transaction_uuid).toBe(transaction1_uuid)
-      //     })
-      //     it("Should return history of user item used to be paid on transaction 1 ", async () => {
-      //       const input = {
-      //         user_item_uuid: alimentacao_benefit_user2_uuid,
-      //       }
-      //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-      //       console.log("user alimentação account: ", result.body)
-      //       expect(result.statusCode).toBe(200)
-      //       expect(result.body[0].amount).toBe(-200)
-      //       expect(result.body[0].balance_before).toBe(200)
-      //       expect(result.body[0].balance_after).toBe(0) //Be AWARE - If something changes on previous tests, this might cause error
-      //       expect(result.body[0].event_type).toBe("ITEM_SPENT")
-      //       expect(result.body[0].related_transaction_uuid).toBe(transaction1_uuid)
-      //     })
-      //   })
-      //   describe("E2E Business account histories", () => {
-      //     it("Should return no history (Empty array)", async () => {
-      //       const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token2}`)
-      //       console.log("******************")
-      //       console.log("partner 2: ", result.body)
-      //       expect(result.statusCode).toBe(200)
-      //       expect(result.body.length).toBe(0)
-      //     })
-      //     it("Should return business account history)", async () => {
-      //       const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token3}`)
-      //       console.log("partner 3: ", result.body)
+            }
+            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+            expect(result.statusCode).toBe(400)
+            expect(result.body.error).toBe("Item Id is required")
+          })
+          it("Should throw an error if month provided is less than 1", async () => {
+            const input = {
+              user_item_uuid: correct_benefit_user2_uuid,
+              month: 0
+            }
+            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input)
+            expect(result.statusCode).toBe(400)
+            expect(result.body.error).toBe("Mês inválido. Por favor, forneça um valor entre 1 e 12.")
+          })
+          it("Should throw an error if month provided is more than 12", async () => {
+            const input = {
+              user_item_uuid: correct_benefit_user2_uuid,
+              month: 13
+            }
+            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input)
+            expect(result.statusCode).toBe(400)
+            expect(result.body.error).toBe("Mês inválido. Por favor, forneça um valor entre 1 e 12.")
+          })
+          it("Should throw an error if user item does not belong to requesting user", async () => {
+            const input = {
+              user_item_uuid: correct_benefit_user2_uuid,
+            }
+            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
+            expect(result.statusCode).toBe(403)
+            expect(result.body.error).toBe("Unauthorized access")
+          })
+          it("Should return history of cashback received from ", async () => {
+            const input = {
+              user_item_uuid: correct_benefit_user2_uuid,
+            }
+            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input)
+            expect(result.statusCode).toBe(200)
+            expect(result.body[0].amount).toBe(expected_cashback)
+            expect(result.body[0].balance_before).toBe(0)
+            expect(result.body[0].balance_after).toBe(expected_cashback) // must be cashback received
+            expect(result.body[0].event_type).toBe("CASHBACK_RECEIVED")
+            expect(result.body[0].related_transaction_uuid).toBe(transaction1_uuid)
+          })
+          it("Should return history of user item used to be paid on transaction 1 ", async () => {
+            const input = {
+              user_item_uuid: alimentacao_benefit_user2_uuid,
+            }
+            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input)
+            
+            expect(result.statusCode).toBe(200)
+            expect(result.body[0].amount).toBe(-9955 / 100) //99.55 according to transaction1
+            expect(result.body[0].balance_before).toBe(200)
+            expect(result.body[0].balance_after).toEqual(+result.body[0].balance_before - 99.55) //Be AWARE - If something changes on previous tests, this might cause error
+            expect(result.body[0].event_type).toBe("ITEM_SPENT")
+            expect(result.body[0].related_transaction_uuid).toBe(transaction1_uuid)
+          })
+        })
+        describe("E2E Business account histories", () => {
+          it("Should return no history (Empty array)", async () => {
+            const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token2}`)
+            expect(result.statusCode).toBe(200)
+            expect(result.body.length).toBe(0)
+          })
+          it("Should return business account history)", async () => {
+            const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token3}`)
 
-      //       expect(result.statusCode).toBe(200)
-      //       expect(result.body.length).toBe(1)
-      //     })
-      //   })
-      // })
+            expect(result.statusCode).toBe(200)
+            expect(result.body.length).toBe(1)
+          })
+        })
+      })
     })
   })
 })
