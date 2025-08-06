@@ -33,6 +33,8 @@ export class ProcessPaymentByAppUserUsecase {
     //check if user has the benefit
     const userItem = await this.userItemRepository.find(new Uuid(data.benefit_uuid));
     if (!userItem) throw new CustomError("User item not found", 404);
+
+   
     //double validation if user item is from the same user
     if (userItem.user_info_uuid.uuid !== data.appUserInfoID) throw new CustomError("User item is not from this user", 403);
 
@@ -46,7 +48,6 @@ export class ProcessPaymentByAppUserUsecase {
     const partnerConfig = await this.partnerConfigRepository.findByPartnerId(transaction.favored_business_info_uuid.uuid);
     if (!partnerConfig) throw new CustomError("Partner not found", 404);
 
-
     const isBenefitValid = partnerConfig.items_uuid.some((item) => item === userItem.item_uuid.uuid);
     if (!isBenefitValid) throw new CustomError("User item is not valid for this transaction", 403);
 
@@ -54,31 +55,29 @@ export class ProcessPaymentByAppUserUsecase {
     //check if partner is in user block list
     //*********TO BE IMPLEMENTED*********
 
-    const splitInput = {
-      totalAmount: transaction.net_price,
-      admin_tax: partnerConfig.admin_tax,
-      marketing_tax: partnerConfig.marketing_tax,
-      marketplace_tax: transaction.transaction_type === "POS_PAYMENT" ? 0 : partnerConfig.market_place_tax,
-      partner_cashback_tax: partnerConfig.cashback_tax,
-    }
+    // const splitInput = {
+    //   totalAmount: transaction.net_price,
+    //   admin_tax: partnerConfig.admin_tax,
+    //   marketing_tax: partnerConfig.marketing_tax,
+    //   marketplace_tax: transaction.transaction_type === "POS_PAYMENT" ? 0 : partnerConfig.market_place_tax,
+    //   partner_cashback_tax: partnerConfig.cashback_tax,
+    // }
 
-    const splitOutput = await calculateSplitPrePaidAmount(splitInput);
+    // const splitOutput = await calculateSplitPrePaidAmount(splitInput);
 
-    const transactionEntity = new TransactionEntity(transaction)
-
+    // console.log({userItem})
+    const transactionEntity = TransactionEntity.hydrate(transaction);
     transactionEntity.changeUserItemUuid(new Uuid(data.benefit_uuid));
     //check if benefit is pos ou pre paid
     if (userItem.item_category === "pre_pago") {
       //if it is pre paid, amount is immediately transfered to partner
       try{
 
-        const processSplitPrePaidPayment = await this.transactionOrderRepository.processSplitPrePaidPayment(
+        const processSplitPrePaidPayment = await this.transactionOrderRepository.processSplitPrePaidPaymentTest(
           transactionEntity,
-          splitOutput,
           new Uuid(data.appUserInfoID)
         )
-        console.log({processSplitPrePaidPayment})
-        return {result: processSplitPrePaidPayment.success, finalBalance: processSplitPrePaidPayment.finalDebitedUserItemBalance, cashback: processSplitPrePaidPayment.user_cashback_amount}
+        return {result: processSplitPrePaidPayment.success, finalBalance: processSplitPrePaidPayment.finalDebitedUserItemBalance / 100, cashback: processSplitPrePaidPayment.user_cashback_amount / 100}
       }catch(err){
         return err
       }

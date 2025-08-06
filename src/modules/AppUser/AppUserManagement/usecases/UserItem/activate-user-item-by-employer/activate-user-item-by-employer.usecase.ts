@@ -17,9 +17,7 @@ export class ActivateUserItemByEmployerUsecase {
     // const employeeItem = await this.appUserItemRepository.findItemByEmployeeAndBusiness(input.user_info_uuid, input.business_info_uuid, input.item_uuid)
     const employeeItem = await this.appUserItemRepository.findByItemUuidAndUserInfo(input.user_info_uuid, input.item_uuid)
     if (!employeeItem) throw new CustomError("Employee item not found", 404);
-
     const employeeItemEntity = new AppUserItemEntity(employeeItem)
-    //console.log({employeeItemEntity})
     //Check if business admin is allowed to manipulate item
     if (employeeItem.business_info_uuid.uuid !== input.business_info_uuid) throw new CustomError("Unauthorized access", 403);
 

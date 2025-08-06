@@ -208,39 +208,39 @@ describe("E2E App User tests", () => {
     const branchesByName = [
       {
         name: "Hipermercados",
-        marketing_tax: 100,
-        admin_tax: 150,
-        market_place_tax: 120,
+        marketing_tax: 1.00,
+        admin_tax: 1.50,
+        market_place_tax: 1.20,
         benefits_name: ['Adiantamento Salarial', 'Vale Alimentação', 'Correct']
       },
 
       {
         name: "Supermercados",
-        marketing_tax: 100,
-        admin_tax: 150,
-        market_place_tax: 120,
+        marketing_tax: 1.00,
+        admin_tax: 1.50,
+        market_place_tax: 1.20,
         benefits_name: ['Adiantamento Salarial', 'Vale Refeição', 'Correct']
       },
 
       {
         name: "Mercearias",
-        marketing_tax: 130,
-        admin_tax: 140,
-        market_place_tax: 130,
+        marketing_tax: 1.30,
+        admin_tax: 1.40,
+        market_place_tax: 1.30,
         benefits_name: ['Convênio', 'Vale Alimentação', 'Correct']
       },
       {
         name: "Restaurantes",
-        marketing_tax: 180,
-        admin_tax: 170,
-        market_place_tax: 160,
+        marketing_tax: 1.80,
+        admin_tax: 1.70,
+        market_place_tax: 1.60,
         benefits_name: ['Vale Refeição', 'Vale Alimentação', 'Correct']
       },
 
       {
         name: "Alimentação",
-        marketing_tax: 200,
-        admin_tax: 250,
+        marketing_tax: 2.00,
+        admin_tax: 2.50,
         market_place_tax: 220,
         benefits_name: ['Vale Refeição', 'Vale Alimentação', 'Correct']
       }
@@ -2374,6 +2374,7 @@ describe("E2E App User tests", () => {
 
         })
         it("Should activate employee item without balance", async () => {
+          console.log("TESTANDO AQUI****************")
           for (const uuid of list_employees1_info_uuid) {
             for (const item_uuid of item_uuid_employer_list) {
               const input = {
@@ -3209,8 +3210,10 @@ describe("E2E App User tests", () => {
           city: "Campo Grande",
           item_uuid: benefit1_uuid.uuid
         }
-        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({ partner_category: 'saude', city: "Campo Grande",
-          item_uuid: benefit1_uuid.uuid })
+        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({
+          partner_category: 'saude', city: "Campo Grande",
+          item_uuid: benefit1_uuid.uuid
+        })
         expect(result.statusCode).toBe(200)
 
       })
@@ -3218,384 +3221,397 @@ describe("E2E App User tests", () => {
 
   })
 
-  // describe("E2E Transactions", () => {
-  //   describe("E2E POS transactions", () => {
-  //     let inputTransaction1: {
-  //       amount: number
-  //       description: string
-  //     }
-  //     let transaction1_uuid: string
-  //     let correctAdminCurrentBalance: number
-  //     let employee2CurrentDebitBalance: number
-  //     let partner3CurrentBalance: number
-  //     //first we need to create transactions by partner
-  //     beforeAll(async () => {
-  //       //lets first create partner users
-  //       const inputPartner2 = {
-  //         password: "123456",
-  //         business_info_uuid: partner_info_uuid2,
-  //         email: "comercio2@comercio.com",
-  //         name: "partner2"
-  //       }
-  //       const inputPartner3 = {
-  //         password: "123456",
-  //         business_info_uuid: partner_info_uuid3,
-  //         email: "comercio3@comercio.com",
-  //         name: "Nome do admin partner"
-  //       }
+  describe("E2E Transactions", () => {
+    describe("E2E POS transactions", () => {
+      let inputTransaction1: {
+        original_price: number,
+        discount_percentage: number,
+        net_price: number
 
-  //       const input2 = {
-  //       line1: "Rua",
-  //       line2: "72B",
-  //       line3: "",
-  //       neighborhood: "Bairro Teste",
-  //       postal_code: "5484248423",
-  //       city: "Campo Grande",
-  //       state: "Estado teste",
-  //       country: "País teste",
-  //       fantasy_name: "Mercado Empresa teste 2",
-  //       document: "comercio2",
-  //       classification: "Classificação",
-  //       colaborators_number: 5,
-  //       email: "comercio2@comercio.com",
-  //       phone_1: "215745158",
-  //       phone_2: "124588965",
-  //       business_type: "comercio",
-  //       branches_uuid: [branch1_uuid, branch3_uuid, branch4_uuid],
-  //       partnerConfig: {
-  //         main_branch: branch1_uuid,
-  //         partner_category: ['saude'],
-  //         use_marketing: false,
-  //         use_market_place: false
-  //       }
-  //     }
-  //       //WE NEED TO ACTIVATE PARTNER 2 BEFORE CREATING AN USER
-  //       const inputActivatePartner2 = {
-  //         status: "active"
-  //       }
-  //       const queryToActivatePartner2 = {
-  //         business_info_uuid: partner_info_uuid2
-  //       }
+      }
+      let transaction1_uuid: string
+      let correctAdminCurrentBalance: number
+      let employee2CurrentDebitBalance: number
+      let partner3CurrentBalance: number
 
-  //       const activatePartner2 =  await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(queryToActivatePartner2).send(inputActivatePartner2)
-  //       expect(activatePartner2.statusCode).toBe(200)
+      //*********TRANSACTION1 FEES AND CASHBACK**** */
+      let expected_fee_amount: number
+      let expected_cashback: number
 
-  //       const createPartner2 = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputPartner2)
-  //       expect(createPartner2.statusCode).toBe(201)
-  //       partner_user_uuid2 = createPartner2.body.uuid
+      //first we need to create transactions by partner
+      beforeAll(async () => {
+        //lets first create partner users
+        const inputPartner2 = {
+          password: "123456",
+          business_info_uuid: partner_info_uuid2,
+          email: "comercio2@comercio.com",
+          name: "partner2"
+        }
+        const inputPartner3 = {
+          password: "123456",
+          business_info_uuid: partner_info_uuid3,
+          email: "comercio3@comercio.com",
+          name: "Nome do admin partner"
+        }
 
-  //       const createPartner3 = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputPartner3)
-  //       expect(createPartner3.statusCode).toBe(201)
-  //       partner_user_uuid3 = createPartner3.body.uuid
+        const input2 = {
+          line1: "Rua",
+          line2: "72B",
+          line3: "",
+          neighborhood: "Bairro Teste",
+          postal_code: "5484248423",
+          city: "Campo Grande",
+          state: "Estado teste",
+          country: "País teste",
+          fantasy_name: "Mercado Empresa teste 2",
+          document: "comercio2",
+          classification: "Classificação",
+          colaborators_number: 5,
+          email: "comercio2@comercio.com",
+          phone_1: "215745158",
+          phone_2: "124588965",
+          business_type: "comercio",
+          branches_uuid: [branch1_uuid, branch3_uuid, branch4_uuid],
+          partnerConfig: {
+            main_branch: branch1_uuid,
+            partner_category: ['saude'],
+            use_marketing: false,
+            use_market_place: false
+          }
+        }
+        //WE NEED TO ACTIVATE PARTNER 2 BEFORE CREATING AN USER
+        const inputActivatePartner2 = {
+          status: "active"
+        }
+        const queryToActivatePartner2 = {
+          business_info_uuid: partner_info_uuid2
+        }
 
-  //       //NOW WE NEED TO AUTHENTICATE THIS NEW USER SO HE CAN CREATE TRANSACTIONS
-  //       const authenticateAdminPartner2 = {
-  //         business_document: "comercio2",
-  //         password: inputPartner2.password,
-  //         email: inputPartner2.email
-  //       }
+        const activatePartner2 = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(queryToActivatePartner2).send(inputActivatePartner2)
+        expect(activatePartner2.statusCode).toBe(200)
 
-  //       const authenticateAdminPartner3 = {
-  //         business_document: "comercio3",
-  //         password: inputPartner3.password,
-  //         email: inputPartner3.email
-  //       }
-  //       //authenticate partners admin
-  //       const adminPartner2Auth = await request(app).post('/business/admin/login').send(authenticateAdminPartner2)
-  //       expect(adminPartner2Auth.statusCode).toBe(200)
+        const createPartner2 = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputPartner2)
+        expect(createPartner2.statusCode).toBe(201)
+        partner_user_uuid2 = createPartner2.body.uuid
 
-  //       const adminPartner3Auth = await request(app).post('/business/admin/login').send(authenticateAdminPartner3)
-  //       expect(adminPartner3Auth.statusCode).toBe(200)
+        const createPartner3 = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputPartner3)
+        expect(createPartner3.statusCode).toBe(201)
+        partner_user_uuid3 = createPartner3.body.uuid
 
-  //       partner_auth_token2 = adminPartner2Auth.body.token
-  //       partner_auth_token3 = adminPartner3Auth.body.token
+        //NOW WE NEED TO AUTHENTICATE THIS NEW USER SO HE CAN CREATE TRANSACTIONS
+        const authenticateAdminPartner2 = {
+          business_document: "comercio2",
+          password: inputPartner2.password,
+          email: inputPartner2.email
+        }
 
-  //       //NOW WE NEED TO CREATE AN TRANSACTION
-  //       inputTransaction1 = {
-  //         amount: 200,
-  //         description: "",
-  //       }
-  //       const createTransaction = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_auth_token3}`).send(inputTransaction1)
-  //       transaction1_uuid = createTransaction.body.transaction_uuid
-  //       expect(createTransaction.statusCode).toBe(201)
+        const authenticateAdminPartner3 = {
+          business_document: "comercio3",
+          password: inputPartner3.password,
+          email: inputPartner3.email
+        }
+        //authenticate partners admin
+        const adminPartner2Auth = await request(app).post('/business/admin/login').send(authenticateAdminPartner2)
+        expect(adminPartner2Auth.statusCode).toBe(200)
 
-  //       //Get employee 1 user items
-  //       const employee1UserItems = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
-  //       expect(employee1UserItems.statusCode).toBe(200)
-  //       correct_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Correct').uuid;
-  //       alimentacao_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Vale Alimentação').uuid;
-  //       convenio_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Convênio').uuid;
+        const adminPartner3Auth = await request(app).post('/business/admin/login').send(authenticateAdminPartner3)
+        expect(adminPartner3Auth.statusCode).toBe(200)
 
-  //       //Get employee 2 user items
-  //       const employee2UserItems = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken2}`)
-  //       expect(employee2UserItems.statusCode).toBe(200)
-  //       correct_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Correct').uuid;
-  //       alimentacao_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Vale Alimentação').uuid;
-  //       blocked_adiantamento_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Adiantamento Salarial').uuid;
-  //       convenio_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Convênio').uuid;
+        partner_auth_token2 = adminPartner2Auth.body.token
+        partner_auth_token3 = adminPartner3Auth.body.token
 
-  //       //HERE WE ARE GOING TO BLOCK ADIANTAMENTO BENEFIT FOR EMPLOYEE 2 FOR TESTS PURPOSES
-  //       const blockInput: any = {
-  //         user_item_uuid: blocked_adiantamento_benefit_user2_uuid,
-  //         status: 'blocked'
-  //       }
-  //       const blockEmployee2Adiantamento = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(blockInput)
-  //       expect(blockEmployee2Adiantamento.statusCode).toBe(200)
-  //       expect(blockEmployee2Adiantamento.body.status).toBe('blocked')
+        //NOW WE NEED TO CREATE AN TRANSACTION
+        inputTransaction1 = {
+          original_price: 99.55,
+          discount_percentage: 0,
+          net_price: 99.55
 
-  //     })
+        }
+        const createTransaction = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_auth_token3}`).send(inputTransaction1)
+        transaction1_uuid = createTransaction.body.transaction_uuid
+        expect(createTransaction.statusCode).toBe(201)
 
-  //     describe("E2E Get transaction by app user", () => {
-  //       it("Should throw an error if transaction id is missing", async () => {
-  //         const input = {
-  //           transactionId: ''
-  //         }
+        expected_fee_amount = createTransaction.body.fee_amount // fee em reais
+        expected_cashback = createTransaction.body.cashback
 
-  //         const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+        //Get employee 1 user items
+        const employee1UserItems = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
+        expect(employee1UserItems.statusCode).toBe(200)
+        correct_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Correct').uuid;
+        alimentacao_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Vale Alimentação').uuid;
+        convenio_benefit_user1_uuid = employee1UserItems.body.find((item: any) => item.item_name === 'Convênio').uuid;
 
-  //         expect(result.statusCode).toBe(400)
-  //         expect(result.body.error).toBe("Transaction ID is required")
-  //       })
-  //       it("Should throw an error if transaction is not found", async () => {
-  //         const input = {
-  //           transactionId: randomUUID()
-  //         }
+        //Get employee 2 user items
+        const employee2UserItems = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken2}`)
+        expect(employee2UserItems.statusCode).toBe(200)
+        correct_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Correct').uuid;
+        alimentacao_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Vale Alimentação').uuid;
+        blocked_adiantamento_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Adiantamento Salarial').uuid;
+        convenio_benefit_user2_uuid = employee2UserItems.body.find((item: any) => item.item_name === 'Convênio').uuid;
 
+        //HERE WE ARE GOING TO BLOCK ADIANTAMENTO BENEFIT FOR EMPLOYEE 2 FOR TESTS PURPOSES
+        const blockInput: any = {
+          user_item_uuid: blocked_adiantamento_benefit_user2_uuid,
+          status: 'blocked'
+        }
+        const blockEmployee2Adiantamento = await request(app).patch("/user-item/employer").set('Authorization', `Bearer ${employer_user_token}`).send(blockInput)
+        expect(blockEmployee2Adiantamento.statusCode).toBe(200)
+        expect(blockEmployee2Adiantamento.body.status).toBe('blocked')
 
-  //         const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
+      })
 
-  //         expect(result.statusCode).toBe(404)
-  //         expect(result.body.error).toBe("Transaction not found")
-  //       })
-  //       it("Should return available items to be selected by employee", async () => {
-  //         const input = {
-  //           transactionId: transaction1_uuid
-  //         }
+      describe("E2E Get transaction by app user", () => {
+        it("Should throw an error if transaction id is missing", async () => {
+          const input = {
+            transactionId: ''
+          }
 
-  //         const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
-  //         expect(result.statusCode).toBe(200)
-  //         expect(result.body.availableItems.length).toBe(3)
-  //         expect(result.body.fantasy_name).toBe("Empresa teste 3")
-  //       })
+          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
 
-  //       it("Should return only Correct Item", async () => {
-  //         const input = {
-  //           transactionId: transaction1_uuid
-  //         }
+          expect(result.statusCode).toBe(400)
+          expect(result.body.error).toBe("Transaction ID is required")
+        })
+        it("Should throw an error if transaction is not found", async () => {
+          const input = {
+            transactionId: randomUUID()
+          }
 
-  //         const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${non_employee_token}`).query(input)
-  //         expect(result.statusCode).toBe(200)
-  //         expect(result.body.availableItems.length).toBe(1)
-  //         expect(result.body.fantasy_name).toBe("Empresa teste 3")
+          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
 
+          expect(result.statusCode).toBe(404)
+          expect(result.body.error).toBe("Transaction not found")
+        })
+        it("Should return available items to be selected by employee", async () => {
+          const input = {
+            transactionId: transaction1_uuid
+          }
 
-  //       })
-  //     })
-  //     // describe("E2E Process Pre paid Transaction", () => {
-  //     //   it("Should throw an error if transaction id is missing", async () => {
+          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
+          expect(result.statusCode).toBe(200)
+          expect(result.body.availableItems.length).toBe(3)
+          expect(result.body.fantasy_name).toBe("Empresa teste 3")
+        })
 
-  //     //     const input = {
-  //     //       transactionId: "",
-  //     //       benefit_uuid: randomUUID
-  //     //     }
-  //     //     const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-  //     //     expect(result.statusCode).toBe(400)
-  //     //     expect(result.body.error).toBe("Transaction ID is required")
-  //     //   })
-  //     //   it("Should throw an error if benefit id is missing", async () => {
+        it("Should return only Correct Item", async () => {
+          const input = {
+            transactionId: transaction1_uuid
+          }
 
-  //     //     const input = {
-  //     //       transactionId: randomUUID(),
-  //     //       benefit_uuid: ""
-  //     //     }
-  //     //     const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-  //     //     expect(result.statusCode).toBe(400)
-  //     //     expect(result.body.error).toBe("Benefit UUID is required")
-  //     //   })
-
-  //     //   it("Should throw an error if transaction does not exist", async () => {
-
-  //     //     const input = {
-  //     //       transactionId: randomUUID(),
-  //     //       benefit_uuid: randomUUID()
-  //     //     }
-  //     //     const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-  //     //     expect(result.statusCode).toBe(404)
-  //     //     expect(result.body.error).toBe("Transaction not found")
-  //     //   })
-
-  //     //   it("Should throw an error if user does not have this benefit", async () => {
-
-  //     //     const input = {
-  //     //       transactionId: transaction1_uuid,
-  //     //       benefit_uuid: randomUUID()
-  //     //     }
-  //     //     const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-  //     //     expect(result.statusCode).toBe(404)
-  //     //     expect(result.body.error).toBe("User item not found")
-  //     //   })
-  //     //   it("Should throw an error if user item is blocked or inactive", async () => {
-
-  //     //     const input = {
-  //     //       transactionId: transaction1_uuid,
-  //     //       benefit_uuid: blocked_adiantamento_benefit_user2_uuid
-  //     //     }
-  //     //     const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-  //     //     expect(result.statusCode).toBe(403)
-  //     //     expect(result.body.error).toBe("User item is not active")
-  //     //   })
-  //     //   it("Should throw an error if balance is not enough", async () => {
-  //     //     const input = {
-  //     //       transactionId: transaction1_uuid,
-  //     //       benefit_uuid: correct_benefit_user2_uuid
-  //     //     }
-  //     //     const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-  //     //     expect(result.statusCode).toBe(403)
-  //     //     expect(result.body.error).toBe("User item balance is not enough")
-  //     //   })
-  //     //   //BELOW TEST STILL MUST BE IMPLEMENTED
-  //     //   // it("Should throw an error if business does not accept user benefit", async () => {
-
-  //     //   //   //The partner that created the transaction follows below rules
-  //     //   //   //   {
-  //     //   //   //   name: "Mercearias",
-  //     //   //   //   marketing_tax: 130,
-  //     //   //   //   admin_tax: 140,
-  //     //   //   //   market_place_tax: 130,
-  //     //   //   //   benefits_name: ['Convênio', 'Vale Alimentação', 'Correct']
-  //     //   //   // },
-  //     //   //   const input = {
-  //     //   //     transactionId: transaction1_uuid,
-  //     //   //     benefit_uuid: adiantamento_benefit_user1_uuid
-  //     //   //   }
-  //     //   //   const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-  //     //   //   expect(result.statusCode).toBe(403)
-  //     //   //   expect(result.body.error).toBe("User item is not valid for this transaction")
-  //     //   // })
-  //     //   // it("Should process pre paid benefit", async () => {
-  //     //   //   console.log("**********")
-  //     //   //   const input = {
-  //     //   //     transactionId: transaction1_uuid,
-  //     //   //     benefit_uuid: alimentacao_benefit_user2_uuid
-  //     //   //   }
-  //     //   //   const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-  //     //   //   console.log("transaction process", result.body)
-  //     //   //   expect(result.statusCode).toBe(200)
-  //     //   //   expect(result.body.result).toBeTruthy()
-
-  //     //   //   //get correct admin account to check if tax was applied
-  //     //   //   const correctAdminAccount = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctAdminToken}`)
-  //     //   //   console.log("correct admin account", correctAdminAccount.body)
-  //     //   //   //At this point, we expect the balance to be 200 (transaction value) - 130 / 100 (admin tax) - 140 (market place tax) - 20% of Total (cashback to user)
-  //     //   //   const fee = (130 + 140) / 100
-  //     //   //   const expectedGrossBalance = (fee / 100) * inputTransaction1.amount
-  //     //   //   const expectedNetBalance = expectedGrossBalance - (0.2 * expectedGrossBalance)
-  //     //   //   correctAdminCurrentBalance = +correctAdminAccount.body.balance
-  //     //   //   expect(correctAdminAccount.statusCode).toBe(200)
-  //     //   //   expect(correctAdminAccount.body.balance).toBe(expectedNetBalance * 100)
-  //     //   //   expect(correctAdminCurrentBalance).toEqual(expectedNetBalance * 100)
-  //     //   //   expect(correctAdminAccount.body.updated_at).toBeTruthy()
-
-  //     //   //   //let's get Correct Benefit user 2 to compare
-  //     //   //   const correctBenefitUser2 = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid })
-  //     //   //   console.log("user correct benefit", correctBenefitUser2.body)
-  //     //   //   expect(correctBenefitUser2.statusCode).toBe(200)
-  //     //   //   expect(correctBenefitUser2.body.balance).toBe(0.2 * expectedGrossBalance * 100)
-  //     //   //   employee2CurrentDebitBalance = +correctBenefitUser2.body.balance
-  //     //   //   expect(employee2CurrentDebitBalance).toEqual(correctBenefitUser2.body.balance)
-
-  //     //   //   //Get Business Account to check
-  //     //   //   const partnerAccount = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_auth_token3}`)
-  //     //   //   expect(partnerAccount.statusCode).toBe(200)
-  //     //   //   console.log("partner account", partnerAccount.body)
-  //     //   //   partner3CurrentBalance = inputTransaction1.amount - inputTransaction1.amount * fee / 100
-  //     //   //   expect(partnerAccount.body.balance).toBe(partner3CurrentBalance * 100)
+          const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${non_employee_token}`).query(input)
+          expect(result.statusCode).toBe(200)
+          expect(result.body.availableItems.length).toBe(1)
+          expect(result.body.fantasy_name).toBe("Empresa teste 3")
 
 
-  //     //   // })
+        })
+      })
+      describe("E2E Process Pre paid Transaction", () => {
+        it("Should throw an error if transaction id is missing", async () => {
 
-  //     // })
-  //     // describe("E2E Accounts history", () => {
-  //     //   //THIS TESTS WILL BE FOR RECOVERING HISTORIES CREATED ON PREVIOUS TRANSACTIONS
-  //     //   describe("E2E App User Item Histories", () => {
-  //     //     it("Should throw an error if user item uuid is missing", async () => {
-  //     //       const input = {
 
-  //     //       }
-  //     //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-  //     //       expect(result.statusCode).toBe(400)
-  //     //       expect(result.body.error).toBe("Item Id is required")
-  //     //     })
-  //     //     it("Should throw an error if month provided is less than 1", async () => {
-  //     //       const input = {
-  //     //         user_item_uuid: correct_benefit_user2_uuid,
-  //     //         month: 0
-  //     //       }
-  //     //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-  //     //       expect(result.statusCode).toBe(400)
-  //     //       expect(result.body.error).toBe("Mês inválido. Por favor, forneça um valor entre 1 e 12.")
-  //     //     })
-  //     //     it("Should throw an error if month provided is more than 12", async () => {
-  //     //       const input = {
-  //     //         user_item_uuid: correct_benefit_user2_uuid,
-  //     //         month: 13
-  //     //       }
-  //     //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-  //     //       expect(result.statusCode).toBe(400)
-  //     //       expect(result.body.error).toBe("Mês inválido. Por favor, forneça um valor entre 1 e 12.")
-  //     //     })
-  //     //     it("Should throw an error if user item does not belong to requesting user", async () => {
-  //     //       const input = {
-  //     //         user_item_uuid: correct_benefit_user2_uuid,
-  //     //       }
-  //     //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-  //     //       expect(result.statusCode).toBe(403)
-  //     //       expect(result.body.error).toBe("Unauthorized access")
-  //     //     })
-  //     //     it("Should return history of cashback received from ", async () => {
-  //     //       const input = {
-  //     //         user_item_uuid: correct_benefit_user2_uuid,
-  //     //       }
-  //     //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-  //     //       console.log("user debit account: ", result.body)
-  //     //       expect(result.statusCode).toBe(200)
-  //     //       expect(result.body[0].amount).toBe(108)
-  //     //       expect(result.body[0].balance_before).toBe(0)
-  //     //       expect(result.body[0].balance_after).toBe(108) //Be AWARE - If something changes on previous tests, this might cause error
-  //     //       expect(result.body[0].event_type).toBe("CASHBACK_RECEIVED")
-  //     //       expect(result.body[0].related_transaction_uuid).toBe(transaction1_uuid)
-  //     //     })
-  //     //     it("Should return history of user item used to be paid on transaction 1 ", async () => {
-  //     //       const input = {
-  //     //         user_item_uuid: alimentacao_benefit_user2_uuid,
-  //     //       }
-  //     //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-  //     //       console.log("user alimentação account: ", result.body)
-  //     //       expect(result.statusCode).toBe(200)
-  //     //       expect(result.body[0].amount).toBe(-200)
-  //     //       expect(result.body[0].balance_before).toBe(200)
-  //     //       expect(result.body[0].balance_after).toBe(0) //Be AWARE - If something changes on previous tests, this might cause error
-  //     //       expect(result.body[0].event_type).toBe("ITEM_SPENT")
-  //     //       expect(result.body[0].related_transaction_uuid).toBe(transaction1_uuid)
-  //     //     })
-  //     //   })
-  //     //   describe("E2E Business account histories", () => {
-  //     //     it("Should return no history (Empty array)", async () => {
-  //     //       const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token2}`)
-  //     //       console.log("******************")
-  //     //       console.log("partner 2: ", result.body)
-  //     //       expect(result.statusCode).toBe(200)
-  //     //       expect(result.body.length).toBe(0)
-  //     //     })
-  //     //     it("Should return business account history)", async () => {
-  //     //       const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token3}`)
-  //     //       console.log("partner 3: ", result.body)
+          const input = {
+            transactionId: "",
+            benefit_uuid: randomUUID
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(400)
+          expect(result.body.error).toBe("Transaction ID is required")
+        })
+        it("Should throw an error if benefit id is missing", async () => {
 
-  //     //       expect(result.statusCode).toBe(200)
-  //     //       expect(result.body.length).toBe(1)
-  //     //     })
-  //     //   })
-  //     // })
-  //   })
-  // })
+          const input = {
+            transactionId: randomUUID(),
+            benefit_uuid: ""
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(400)
+          expect(result.body.error).toBe("Benefit UUID is required")
+        })
+
+        it("Should throw an error if transaction does not exist", async () => {
+
+          const input = {
+            transactionId: randomUUID(),
+            benefit_uuid: randomUUID()
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(404)
+          expect(result.body.error).toBe("Transaction not found")
+        })
+
+        it("Should throw an error if user does not have this benefit", async () => {
+
+          const input = {
+            transactionId: transaction1_uuid,
+            benefit_uuid: randomUUID()
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(404)
+          expect(result.body.error).toBe("User item not found")
+        })
+        it("Should throw an error if user item is blocked or inactive", async () => {
+
+          const input = {
+            transactionId: transaction1_uuid,
+            benefit_uuid: blocked_adiantamento_benefit_user2_uuid
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+          expect(result.statusCode).toBe(403)
+          expect(result.body.error).toBe("User item is not active")
+        })
+        it("Should throw an error if balance is not enough", async () => {
+          const input = {
+            transactionId: transaction1_uuid,
+            benefit_uuid: correct_benefit_user2_uuid
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+          expect(result.statusCode).toBe(403)
+          expect(result.body.error).toBe("User item balance is not enough")
+        })
+        //BELOW TEST STILL MUST BE IMPLEMENTED
+        // it("Should throw an error if business does not accept user benefit", async () => {
+
+        //   //The partner that created the transaction follows below rules
+        //   //   {
+        //   //   name: "Mercearias",
+        //   //   marketing_tax: 130,
+        //   //   admin_tax: 140,
+        //   //   market_place_tax: 130,
+        //   //   benefits_name: ['Convênio', 'Vale Alimentação', 'Correct']
+        //   // },
+        //   const input = {
+        //     transactionId: transaction1_uuid,
+        //     benefit_uuid: adiantamento_benefit_user1_uuid
+        //   }
+        //   const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+        //   expect(result.statusCode).toBe(403)
+        //   expect(result.body.error).toBe("User item is not valid for this transaction")
+        // })
+        it("Should process pre paid benefit", async () => {
+          console.log("****PROCESS PRE PAID******")
+          // original_price: 99.55,
+          // discount_percentage: 0,
+          // net_price: 99.55
+
+          const input = {
+            transactionId: transaction1_uuid,
+            benefit_uuid: alimentacao_benefit_user2_uuid
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+          expect(result.body.cashback).toBeCloseTo(expected_cashback)
+
+          expect(result.statusCode).toBe(200)
+          expect(result.body.result).toBeTruthy()
+
+          //get correct admin account to check if tax was applied
+          const correctAdminAccount = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctAdminToken}`)
+          //At this point, we expect the balance to be 99.55 (transaction value) - 130 / 100 (admin tax) - 140 (market place tax) - 20% of Total (cashback to user)
+          const fee = (130 + 140) / 100 //2.7%
+          const expectedGrossBalance = (fee / 100) * inputTransaction1.net_price
+          const expectedNetBalance = expectedGrossBalance - (0.2 * expectedGrossBalance)
+          correctAdminCurrentBalance = correctAdminAccount.body.balance
+          expect(correctAdminAccount.statusCode).toBe(200)
+          expect(correctAdminAccount.body.balance).toBe(expected_fee_amount)
+          expect(correctAdminAccount.body.updated_at).toBeTruthy()
+
+          //let's get Correct Benefit user 2 to compare
+          const correctBenefitUser2 = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid })
+          expect(correctBenefitUser2.statusCode).toBe(200)
+          expect(correctBenefitUser2.body.balance).toBe(expected_cashback)
+          employee2CurrentDebitBalance = +correctBenefitUser2.body.balance
+          expect(employee2CurrentDebitBalance).toEqual(correctBenefitUser2.body.balance)
+
+          //Get Business Account to check
+          const partnerAccount = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_auth_token3}`)
+          console.log(partnerAccount.body)
+          expect(partnerAccount.statusCode).toBe(200)
+          partner3CurrentBalance = inputTransaction1.net_price - expected_fee_amount
+          expect(partnerAccount.body.balance).toBe(partner3CurrentBalance)
+
+        })
+
+      })
+      // describe("E2E Accounts history", () => {
+      //   //THIS TESTS WILL BE FOR RECOVERING HISTORIES CREATED ON PREVIOUS TRANSACTIONS
+      //   describe("E2E App User Item Histories", () => {
+      //     it("Should throw an error if user item uuid is missing", async () => {
+      //       const input = {
+
+      //       }
+      //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+      //       expect(result.statusCode).toBe(400)
+      //       expect(result.body.error).toBe("Item Id is required")
+      //     })
+      //     it("Should throw an error if month provided is less than 1", async () => {
+      //       const input = {
+      //         user_item_uuid: correct_benefit_user2_uuid,
+      //         month: 0
+      //       }
+      //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+      //       expect(result.statusCode).toBe(400)
+      //       expect(result.body.error).toBe("Mês inválido. Por favor, forneça um valor entre 1 e 12.")
+      //     })
+      //     it("Should throw an error if month provided is more than 12", async () => {
+      //       const input = {
+      //         user_item_uuid: correct_benefit_user2_uuid,
+      //         month: 13
+      //       }
+      //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+      //       expect(result.statusCode).toBe(400)
+      //       expect(result.body.error).toBe("Mês inválido. Por favor, forneça um valor entre 1 e 12.")
+      //     })
+      //     it("Should throw an error if user item does not belong to requesting user", async () => {
+      //       const input = {
+      //         user_item_uuid: correct_benefit_user2_uuid,
+      //       }
+      //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+      //       expect(result.statusCode).toBe(403)
+      //       expect(result.body.error).toBe("Unauthorized access")
+      //     })
+      //     it("Should return history of cashback received from ", async () => {
+      //       const input = {
+      //         user_item_uuid: correct_benefit_user2_uuid,
+      //       }
+      //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+      //       console.log("user debit account: ", result.body)
+      //       expect(result.statusCode).toBe(200)
+      //       expect(result.body[0].amount).toBe(108)
+      //       expect(result.body[0].balance_before).toBe(0)
+      //       expect(result.body[0].balance_after).toBe(108) //Be AWARE - If something changes on previous tests, this might cause error
+      //       expect(result.body[0].event_type).toBe("CASHBACK_RECEIVED")
+      //       expect(result.body[0].related_transaction_uuid).toBe(transaction1_uuid)
+      //     })
+      //     it("Should return history of user item used to be paid on transaction 1 ", async () => {
+      //       const input = {
+      //         user_item_uuid: alimentacao_benefit_user2_uuid,
+      //       }
+      //       const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+      //       console.log("user alimentação account: ", result.body)
+      //       expect(result.statusCode).toBe(200)
+      //       expect(result.body[0].amount).toBe(-200)
+      //       expect(result.body[0].balance_before).toBe(200)
+      //       expect(result.body[0].balance_after).toBe(0) //Be AWARE - If something changes on previous tests, this might cause error
+      //       expect(result.body[0].event_type).toBe("ITEM_SPENT")
+      //       expect(result.body[0].related_transaction_uuid).toBe(transaction1_uuid)
+      //     })
+      //   })
+      //   describe("E2E Business account histories", () => {
+      //     it("Should return no history (Empty array)", async () => {
+      //       const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token2}`)
+      //       console.log("******************")
+      //       console.log("partner 2: ", result.body)
+      //       expect(result.statusCode).toBe(200)
+      //       expect(result.body.length).toBe(0)
+      //     })
+      //     it("Should return business account history)", async () => {
+      //       const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token3}`)
+      //       console.log("partner 3: ", result.body)
+
+      //       expect(result.statusCode).toBe(200)
+      //       expect(result.body.length).toBe(1)
+      //     })
+      //   })
+      // })
+    })
+  })
 })

@@ -52,7 +52,6 @@ export class CreateAppUserInfoByEmployerUsecase {
 
     for (const employerItem of employerActiveItems) {
       const group = (employerItem.BenefitGroups.find(group => group.is_default === true))
-
       const employeeItemEntityData = {
         uuid: new Uuid(),
         user_info_uuid: userInfoEntity.uuid,

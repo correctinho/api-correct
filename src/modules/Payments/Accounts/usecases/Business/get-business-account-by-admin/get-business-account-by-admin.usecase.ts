@@ -22,7 +22,7 @@ export class GetBusinessAccountByAdminUseCase {
     return {
       uuid: businessAccount.uuid,
       business_info_uuid: businessAccount.business_info_uuid,
-      balance: businessAccount.balance,
+      balance: businessAccount.balance / 100,
       status: businessAccount.status,
       created_at: businessAccount.created_at,
       updated_at: businessAccount.updated_at,

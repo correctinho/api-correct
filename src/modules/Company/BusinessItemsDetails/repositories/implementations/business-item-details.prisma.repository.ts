@@ -79,46 +79,48 @@ export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetails
     return result as OutputFindEmployerItemDetailsDTO
   }
   async createOrUpdateItemAndGroup(itemEntity: BusinessItemsDetailsEntity, groupEntity: BenefitGroupsEntity) {
+    const dataItemEntity = itemEntity.toJSON()
+    const benefitGroupEntity = groupEntity.toJSON()
     const [employerItem, group] = await prismaClient.$transaction([
       prismaClient.employerItemDetails.upsert({
         where:{
-          uuid: itemEntity.uuid.uuid
+          uuid: dataItemEntity.uuid
         },
         create: {
-          uuid: itemEntity.uuid.uuid,
-          item_uuid: itemEntity.item_uuid.uuid,
-          business_info_uuid: itemEntity.business_info_uuid.uuid,
-          cycle_end_day: itemEntity.cycle_end_day,
-          cycle_start_day: itemEntity.cycle_start_day,
-          is_active: itemEntity.is_active,
-          created_at: itemEntity.created_at
+          uuid: dataItemEntity.uuid,
+          item_uuid: dataItemEntity.item_uuid,
+          business_info_uuid: dataItemEntity.business_info_uuid,
+          cycle_end_day: dataItemEntity.cycle_end_day,
+          cycle_start_day: dataItemEntity.cycle_start_day,
+          is_active: dataItemEntity.is_active,
+          created_at: dataItemEntity.created_at
         },
         update:{
-          cycle_end_day: itemEntity.cycle_end_day,
-          cycle_start_day: itemEntity.cycle_start_day,
-          is_active: itemEntity.is_active,
-          updated_at: itemEntity.updated_at
+          cycle_end_day: dataItemEntity.cycle_end_day,
+          cycle_start_day: dataItemEntity.cycle_start_day,
+          is_active: dataItemEntity.is_active,
+          updated_at: dataItemEntity.updated_at
         }
       }),
       prismaClient.benefitGroups.upsert({
         where:{
-          uuid: groupEntity.uuid.uuid
+          uuid: benefitGroupEntity.uuid.uuid
         },
         create: {
-          uuid: groupEntity.uuid.uuid,
-          group_name: groupEntity.group_name,
-          employer_item_details_uuid: groupEntity.employer_item_details_uuid.uuid,
-          value: groupEntity.value,
-          business_info_uuid: groupEntity.business_info_uuid.uuid,
-          is_default: groupEntity.is_default,
-          created_at: groupEntity.created_at
+          uuid: benefitGroupEntity.uuid.uuid,
+          group_name: benefitGroupEntity.group_name,
+          employer_item_details_uuid: benefitGroupEntity.employer_item_details_uuid.uuid,
+          value: benefitGroupEntity.value,
+          business_info_uuid: benefitGroupEntity.business_info_uuid.uuid,
+          is_default: benefitGroupEntity.is_default,
+          created_at: benefitGroupEntity.created_at
         },
         update:{
-          group_name: groupEntity.group_name,
-          value: groupEntity.value,
-          business_info_uuid: groupEntity.business_info_uuid.uuid,
-          is_default: groupEntity.is_default,
-          updated_at: groupEntity.updated_at
+          group_name: benefitGroupEntity.group_name,
+          value: benefitGroupEntity.value,
+          business_info_uuid: benefitGroupEntity.business_info_uuid.uuid,
+          is_default: benefitGroupEntity.is_default,
+          updated_at: benefitGroupEntity.updated_at
         }
       })
 
