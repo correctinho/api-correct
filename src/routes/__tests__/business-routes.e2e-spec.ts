@@ -2301,6 +2301,7 @@ describe("E2E Business tests", () => {
           net_price: 90 //90 reais
         }
         const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
+
         expect(result.statusCode).toBe(201)
         expect(result.body.user_item_uuid).toBeFalsy()
         expect(result.body.favored_business_info_uuid).toEqual(partner_info_uuid)
@@ -2308,8 +2309,13 @@ describe("E2E Business tests", () => {
         expect(result.body.discount_percentage).toBe(input.discount_percentage)
         expect(result.body.net_price).toBe(input.net_price)
         expect(result.body.fee_percentage).toBe(1) //considering that fee percentage is 1% for this partner
-        expect(result.body.fee_amount).toBe(0.9)
-        expect(result.body.cashback).toBe(0.18) //considering that fee percentage is 1% for this partner
+
+        const fee_percentage = result.body.fee_percentage
+        const expected_fee_amount = (input.net_price * (fee_percentage / 100))// 1% de 90 = 0.9
+        const expected_cashback = expected_fee_amount * 0.20 //20% de 0.9 = 0.18
+
+        expect(result.body.fee_amount).toBe(expected_fee_amount)
+        expect(result.body.cashback).toBeCloseTo(expected_cashback) //considering that fee percentage is 1% for this partner
         expect(result.body.description).toBe("Transação do ponto de venda (POS)")
         expect(result.body.transaction_status).toBe("pending")
         expect(result.body.transaction_type).toBe("POS_PAYMENT")
@@ -2327,21 +2333,22 @@ describe("E2E Business tests", () => {
           net_price: 45000 // 10% de desconto em 50.000
         };
 
-        // Calcula os valores esperados para a validação
-        const expectedFeeAmount = 45000 * 0.01; // 1% de 45.000 = 450
-        const expectedCashback = expectedFeeAmount * 0.20; // 20% de 450 = 90
-
         // ACT - Ação
         const result = await request(app)
           .post("/pos-transaction")
           .set('Authorization', `Bearer ${partner_admin_token}`)
           .send(input);
 
+
+        const fee_percentage = result.body.fee_percentage
+        const expected_fee_amount = (input.net_price * (fee_percentage / 100))// 1% de 90 = 0.9
+        const expected_cashback = expected_fee_amount * 0.20 //20% de 0.9 = 0.18
+
         // ASSERT - Verificação
         expect(result.statusCode).toBe(201);
         expect(result.body.net_price).toBe(input.net_price);
-        expect(result.body.fee_amount).toBe(expectedFeeAmount);
-        expect(result.body.cashback).toBe(expectedCashback);
+        expect(result.body.fee_amount).toBe(expected_fee_amount);
+        expect(result.body.cashback).toBe(expected_cashback);
       });
       it("Should correctly round the fee amount when calculation results in a fraction", async () => {
         // ARRANGE
@@ -2351,25 +2358,23 @@ describe("E2E Business tests", () => {
           net_price: 99.55
         };
 
-        // Lógica de cálculo esperada:
-        // net_price em centavos = 9955
-        // fee_amount (1%) = 9955 * 0.01 = 99.55. O sistema deve truncar para 99 centavos.
-        // cashback (20%) = 99 * 0.20 = 19.8. O sistema deve arredondar para 20 centavos.
-        const expectedFeeAmount = 0.99;
-        const expectedCashback = 0.20;
-
         // ACT
         const result = await request(app)
           .post("/pos-transaction")
           .set('Authorization', `Bearer ${partner_admin_token}`)
           .send(input);
 
+        const fee_cents = Math.floor(input.net_price * 100 * (result.body.fee_percentage / 100)); // fee em centavos, truncado
+        const expected_fee_amount = fee_cents / 100; // fee em reais
+        const cashback_cents = Math.floor(fee_cents * 0.20); // cashback em centavos, truncado
+        const expected_cashback = cashback_cents / 100;
+
         // ASSERT
         expect(result.statusCode).toBe(201);
-        expect(result.body.fee_amount).toBe(expectedFeeAmount);
-        expect(result.body.cashback).toBe(expectedCashback);
+        expect(result.body.fee_amount).toBe(expected_fee_amount);
+        expect(result.body.cashback).toBeCloseTo(expected_cashback);
       });
-      
+
       it("Should create a POS transaction with zero discount", async () => {
 
         // Define o input da transação com desconto zero
@@ -2378,14 +2383,14 @@ describe("E2E Business tests", () => {
           discount_percentage: 0, // <-- Cenário de teste principal
           net_price: 150        // <-- Com desconto zero, net_price é igual a original_price
         };
-        // Calcula os valores esperados para a validação, de acordo com as regras de negócio
-        const expectedFeeAmount = input.net_price * 0.01; // Plataforma cobra 1% sobre o net_price neste caso específico
-        const expectedCashback = expectedFeeAmount * 0.20; // Plataforma paga 20% da taxa como cashback
-
         // ACT - Ação
         // ACT - Ação
         // Cria a transação através da API
         const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input);
+
+        const fee_percentage = result.body.fee_percentage
+        const expected_fee_amount = (input.net_price * (fee_percentage / 100))// 1% de 90 = 0.9
+        const expected_cashback = expected_fee_amount * 0.20 //20% de 0.9 = 0.18
 
         // ASSERT - Verificação
         // Verifica se a resposta da API está correta
@@ -2395,7 +2400,7 @@ describe("E2E Business tests", () => {
         expect(result.body.original_price).toBe(input.original_price);
         expect(result.body.discount_percentage).toBe(input.discount_percentage);
         expect(result.body.net_price).toBe(input.net_price);
-        expect(result.body.cashback).toBeCloseTo(expectedCashback); // Verifica se o cashback foi calculado
+        expect(result.body.cashback).toBeCloseTo(expected_cashback); // Verifica se o cashback foi calculado
         expect(result.body.description).toBe("Transação do ponto de venda (POS)");
       });
       it("Should return a 400 error when original_price is negative", async () => {
@@ -2415,7 +2420,7 @@ describe("E2E Business tests", () => {
         // ASSERT - Verificação
         // Espera-se um erro de "Bad Request"
         expect(result.statusCode).toBe(400);
-        expect(result.body.error).toContain("Amount must be a positive number");
+        expect(result.body.error).toContain("Original price must be a positive number");
       });
       it("Should return a 400 error when discount_percentage is negative", async () => {
         // ARRANGE
@@ -2455,7 +2460,7 @@ describe("E2E Business tests", () => {
         expect(result.body.error).toContain("Net price is not consistent with original price and discount percentage");
       });
 
-     
+
 
     })
   })

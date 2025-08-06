@@ -17,23 +17,20 @@ export class FindUserItemByIdUsecase {
 
     const userItem = await this.appUserItemRepository.find(new Uuid(user_item_uuid))
     if (!userItem) throw new CustomError("User Item not found", 404)
-
     //If this situation happens, it means that it the employee is making this request
     if (user_info_uuid && userItem.user_info_uuid?.uuid !== user_info_uuid) throw new CustomError("Unauthorized access for user", 403)
-
     //If this situation happens, it means that it the employer is making this request
     if (business_user_business_info_uuid) {
-      if(userItem.business_info_uuid.uuid !== business_user_business_info_uuid) throw new CustomError("Unauthorized Access for business admin", 403)
+      if (userItem.business_info_uuid.uuid !== business_user_business_info_uuid) throw new CustomError("Unauthorized Access for business admin", 403)
     }
-
-    if(userItem.status === 'inactive') throw new CustomError("User item not found", 404)
+    if (userItem.status === 'inactive') throw new CustomError("User item not found", 404)
     return {
       uuid: userItem.uuid.uuid,
       user_info_uuid: userItem.user_info_uuid.uuid,
       item_uuid: userItem.item_uuid.uuid,
       img_url: userItem.img_url ? userItem.img_url : null,
       item_name: userItem.item_name,
-      balance: userItem.balance,
+      balance: userItem.balance / 100,
       status: userItem.status,
       blocked_at: userItem.blocked_at ? userItem.blocked_at : null,
       cancelled_at: userItem.cancelled_at ? userItem.cancelled_at : null,
@@ -43,10 +40,12 @@ export class FindUserItemByIdUsecase {
       grace_period_end_date: userItem.grace_period_end_date ? userItem.grace_period_end_date : null,
       created_at: userItem.created_at,
       updated_at: userItem.updated_at,
-      Provider: {
-        business_info_uuid: userItem.business_info_uuid.uuid,
-        fantasy_name: userItem.fantasy_name
-      }
+      Provider: userItem.business_info_uuid
+        ? {
+          business_info_uuid: userItem.business_info_uuid.uuid,
+          fantasy_name: userItem.fantasy_name
+        }
+        : null
     }
   }
 }

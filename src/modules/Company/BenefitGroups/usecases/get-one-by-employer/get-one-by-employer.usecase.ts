@@ -27,7 +27,7 @@ export class GetOneBenefitGroupsByEmployerUsecase {
       uuid: findOne.uuid.uuid,
       group_name: findOne.group_name,
       employer_item_details_uuid: findOne.employer_item_details_uuid.uuid,
-      value: findOne.value / 100,
+      value: findOne.value,
       business_info_uuid: findOne.business_info_uuid.uuid,
       is_default: findOne.is_default,
       created_at: findOne.created_at,

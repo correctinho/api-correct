@@ -37,7 +37,7 @@ export class BenefitGroupsEntity {
     this._uuid = props.uuid ?? new Uuid();
     this._group_name = props.group_name
     this._employer_item_details_uuid = props.employer_item_details_uuid
-    this._value = props.value
+    this._value = props.value * 100
     this._employee_uuid = props.employee_uuid
     this._is_default = props.is_default ?? false
     this._business_info_uuid = props.business_info_uuid
@@ -58,7 +58,7 @@ export class BenefitGroupsEntity {
   }
 
   get value(): number {
-    return this._value
+    return this._value / 100
   }
 
   get employee_uuid(): Uuid {
@@ -99,7 +99,7 @@ export class BenefitGroupsEntity {
   }
 
   changeValue(value: number) {
-    this._value = value
+    this._value = value * 100
     this.validate()
   }
 
@@ -116,6 +116,20 @@ export class BenefitGroupsEntity {
   changeIsDefault(is_default: boolean){
     this._is_default = is_default
     this.validate()
+  }
+
+  toJSON() {
+    return {
+      uuid: this._uuid,
+      group_name: this._group_name,
+      employer_item_details_uuid: this._employer_item_details_uuid,
+      value: this._value,
+      employee_uuid: this._employee_uuid,
+      is_default: this._is_default,
+      business_info_uuid: this._business_info_uuid,
+      created_at: this._created_at,
+      updated_at: this._updated_at
+    }
   }
 
   validate() {

@@ -79,7 +79,7 @@ export class CreateEmployerItemByCorrectUsecase {
         uuid: result.defaultGroup.uuid,
         group_name: result.defaultGroup.group_name,
         employer_item_details_uuid: result.defaultGroup.employer_item_details_uuid,
-        value: result.defaultGroup.value,
+        value: result.defaultGroup.value / 100,
         business_info_uuid: result.defaultGroup.business_info_uuid,
         is_default: result.defaultGroup.is_default,
         created_at: result.defaultGroup.created_at,

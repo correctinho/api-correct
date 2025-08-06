@@ -14,4 +14,9 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
   findCorrectAccount (): Promise<any>;
   findBusinessAccountByBusinessInfoId (id: string): Promise<any>;
   generateTransactionReceiptDetails (transactionId: string): Promise<any>
+  processSplitPrePaidPaymentTest(
+    transactionEntity: TransactionEntity,
+    userInfoUuid: Uuid
+     ): Promise<{ success: boolean; finalDebitedUserItemBalance: number, user_cashback_amount: number }>;
+
 }

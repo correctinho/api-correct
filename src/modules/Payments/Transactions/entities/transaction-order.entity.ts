@@ -21,6 +21,7 @@ export type TransactionProps = {
   // business_account_amount?: number // Optional: Amount in cents for business account to be incremented
   fee_percentage?: number; // Optional: Defaults to 0
   fee_amount?: number; // Optional: Defaults to 0
+  partner_credit_amount: number; // valor que deve ser creditado ao parceiro
   cashback?: number; // Optional: Defaults to 0
   description?: string | null; // Optional
   status: TransactionStatus; // Mandatory
@@ -34,26 +35,18 @@ export type TransactionProps = {
 
 // Type for data needed to create a new transaction (example)
 export type TransactionCreateCommand = {
-  user_item_uuid?: Uuid | null;
-  favored_user_uuid?: Uuid | null;
-  favored_business_info_uuid?: Uuid | null
-  user_debit_benefit_uuid?: Uuid | null;
-  user_debit_benefit_balance?: number;
+  // --- Dados essenciais vindos da API ---
   original_price: number;
   discount_percentage: number;
   net_price: number;
-  // business_account_uuid?: Uuid | null;
-  // business_account_balance?: number;
-  business_account_amount?: number
-  fee_amount?: number;
-  cashback?: number;
-  description?: string | null;
-  status?: TransactionStatus; // Often starts as 'pending'
-  // correct_account_uuid?: Uuid | null;
-  // correct_account_balance?: number; // Optional: current balance in cents for correct account
-  item_uuid?: string
-  transaction_type?: TransactionType;
 
+  // --- Dados de contexto/relacionamento ---
+  user_item_uuid?: Uuid | null;
+  favored_user_uuid?: Uuid | null;
+  favored_business_info_uuid?: Uuid | null;
+  transaction_type?: TransactionType;
+  description?: string | null;
+  // ... e outros campos que vêm da requisição inicial
 };
 
 export class TransactionEntity {
@@ -67,6 +60,7 @@ export class TransactionEntity {
   private _original_price: number;
   private _discount_percentage: number;
   private _net_price: number; // Optional: discount value
+  private _partner_credit_amount: number; //valor que deve ser creditado ao parceiro
   // private _business_account_uuid?: Uuid | null;
   // private _business_account_balance?: number; // Optional: current balance in cents for business account
   private _business_account_amount?: number
@@ -84,33 +78,34 @@ export class TransactionEntity {
   private _created_at: string;
   private _updated_at: string;
 
-  constructor(props: TransactionProps) {
-    // --- Assigning values and defaults ---
-    this._uuid = props.uuid ?? new Uuid(); // Generate UUID if not provided
-    this._user_item_uuid = props.user_item_uuid; // Can be null based on schema
-    this._user_debit_benefit_uuid = props.user_debit_benefit_uuid ?? null; // Optional, can be null
-    this._user_debit_benefit_balance = props.user_debit_benefit_balance ?? null; // Optional, can be null
+  private constructor(props: TransactionProps) {
+    // O construtor agora apenas atribui os valores que recebe.
+    this._uuid = props.uuid ?? new Uuid();
+    this._user_item_uuid = props.user_item_uuid;
+    this._user_debit_benefit_uuid = props.user_debit_benefit_uuid ?? null;
+    this._user_debit_benefit_balance = props.user_debit_benefit_balance ?? null;
     this._favored_user_uuid = props.favored_user_uuid ?? null;
     this._favored_business_info_uuid = props.favored_business_info_uuid ?? null;
-    this._original_price = props.original_price * 100;
-    this._discount_percentage = props.discount_percentage * 10000;
-    this._net_price = props.net_price * 100;
-    this._fee_percentage = props.fee_percentage ? props.fee_percentage * 10000 : 0;
-    this._fee_amount = props.fee_amount ? props.fee_amount * 100 : 0;
-    this._cashback = 0; // Inicia como 0, será calculado.
+
+    // SEM MULTIPLICAÇÃO AQUI
+    this._original_price = props.original_price;
+    this._discount_percentage = props.discount_percentage;
+    this._net_price = props.net_price;
+    this._fee_percentage = props.fee_percentage ?? 0;
+
+    // Campos calculados são inicializados
+    this._fee_amount = props.fee_amount ?? 0;
+    this._cashback = props.cashback ?? 0;
+    this._partner_credit_amount = props.partner_credit_amount ?? 0;
     this._description = props.description ?? null;
-    this._status = TransactionStatus.pending
-    this._transaction_type = props.transaction_type; // Type must be provided
-    this._paid_at = props.paid_at ?? null; // Optional, can be null
-    this._item_uuid = props.item_uuid; // Item UUID must be provided
+    this._status = props.status ?? TransactionStatus.pending;
+    this._transaction_type = props.transaction_type;
+    this._paid_at = newDateF(new Date());
+    this._item_uuid = props.item_uuid;
     this._favored_partner_user_uuid = props.favored_partner_user_uuid ?? null;
     this._created_at = props.created_at ?? newDateF(new Date());
-    this._updated_at = props.updated_at ?? newDateF(new Date());
-
-    // --- Initial Validation ---
-    this.validate();
+    this._updated_at = newDateF(new Date());
   }
-
   // --- Getters ---
   get uuid(): Uuid { return this._uuid; }
   get user_item_uuid(): Uuid | null { return this._user_item_uuid; }
@@ -128,6 +123,8 @@ export class TransactionEntity {
   get fee_percentage(): number | undefined { return this._fee_percentage / 10000; }
   get fee_amount(): number { return this._fee_amount / 100; }
   get cashback(): number { return this._cashback / 100; }
+  get partner_credit_amount(): number { return this._partner_credit_amount / 100; }
+
   get description(): string | null { return this._description; }
   get status(): TransactionStatus { return this._status; }
   get transaction_type(): TransactionType { return this._transaction_type; }
@@ -241,8 +238,11 @@ export class TransactionEntity {
     // Arredonda para o inteiro escalado mais próximo e armazena
     this._fee_amount = Number(calculated_fee); // BigInt não precisa de Math.round para divisão inteira
 
-    this._cashback = Math.round((this._fee_amount * 20) / 100);
+    // Calcula o cashback como 20% do valor da taxa
+    this._cashback = Number((BigInt(this._fee_amount) * 20n) / 100n);
 
+    // 3.  Calcula o valor a ser creditado ao parceiro
+    this._partner_credit_amount = this._net_price - this._fee_amount;
     this.validate();
     // Não precisa retornar nada, pois o método modifica o estado interno
   }
@@ -257,7 +257,7 @@ export class TransactionEntity {
   private validate(): void {
     // Basic mandatory field checks
     if (this._original_price <= 0) {
-      throw new CustomError("Amount must be a positive number", 400);
+      throw new CustomError("Original price must be a positive number", 400);
     }
     if (this._discount_percentage < 0) {
       throw new CustomError("Discount percentage cannot be negative", 400);
@@ -319,10 +319,6 @@ export class TransactionEntity {
     }
     const discountAmountInCents = Math.round((this._original_price * this._discount_percentage) / 1000000);
 
-    
-
-
-
   }
 
   // Adicione este método dentro da sua classe TransactionEntity
@@ -338,7 +334,8 @@ export class TransactionEntity {
       net_price: this._net_price,
       fee_percentage: this._fee_percentage,
       fee_amount: this._fee_amount,
-      cashback: this._cashback, // <--- O valor calculado será incluído aqui!
+      cashback: this._cashback,
+      partner_credit_amount: this._partner_credit_amount,
       description: this._description,
       status: this._status,
       transaction_type: this._transaction_type,
@@ -346,18 +343,33 @@ export class TransactionEntity {
       created_at: this._created_at,
     };
   }
+  // Adicione este método dentro da sua classe TransactionEntity
+
+  static hydrate(props: TransactionProps): TransactionEntity {
+    return new TransactionEntity(props);
+  }
   // --- Static factory method (optional but good practice) ---
   static create(command: TransactionCreateCommand): TransactionEntity {
-    // Map command to props, setting initial status if needed
+    // 1. Prepara os 'props' escalonando APENAS os dados de entrada
     const props: TransactionProps = {
       ...command,
-      status: TransactionStatus.pending, // Este valor será ignorado pelo construtor
-      favored_user_uuid: command.favored_user_uuid ?? null,
-      favored_business_info_uuid: command.favored_business_info_uuid ?? null,
+      original_price: command.original_price * 100,
+      discount_percentage: command.discount_percentage * 10000,
+      net_price: command.net_price * 100,
+      status: TransactionStatus.pending,
 
+      // Garante que campos calculados não sejam passados aqui
+      fee_percentage: 0,
+      fee_amount: 0,
+      cashback: 0,
+      partner_credit_amount: 0,
     };
-    const transaction = new TransactionEntity(props);
-    // Perform any specific logic needed only on initial creation here
-    return transaction;
+
+    // 2. Cria a entidade com os dados preparados
+    const entity = new TransactionEntity(props);
+
+    // 3. Valida o estado inicial da entidade
+    entity.validate();
+    return entity;
   }
 }
