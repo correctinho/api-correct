@@ -7,6 +7,7 @@ import { ITransactionOrderRepository } from "../transaction-order.repository";
 import { BusinessAccountEventType, CorrectAccountEventType, UserItemEventType } from "@prisma/client";
 import { CalculateSplitPrePaidOutput } from "../../../../../paymentSplit/prePaidSplit";
 import { CustomError } from "../../../../../errors/custom.error";
+import { newDateF } from "../../../../../utils/date";
 
 export class TransactionOrderPrismaRepository implements ITransactionOrderRepository {
   async generateTransactionReceiptDetails(transactionId: string): Promise<any> {
@@ -251,7 +252,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
     const netAmountToCreditPlatform = dataToSave.fee_amount;
     const cashbackAmountToCreditUser = dataToSave.cashback; // Valor do cashback a ser creditado
 
-    
+
 
     const result = await prismaClient.$transaction(async (tx) => {
       // 1. Buscar UserItem DEBITADO e verificar saldo atomicamente
@@ -340,6 +341,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         where: { uuid: correctUserItemId },
         data: { balance: { increment: cashbackAmountToCreditUser }, updated_at: transactionEntity.updated_at }
       });
+
       // 9. Histórico GASTO UserItem DEBITADO
       await tx.userItemHistory.create({
         data: {
@@ -414,6 +416,136 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
     }); // Fim do $transaction
 
     return { success: result.success, finalDebitedUserItemBalance: result.finalDebitedUserItemBalance, user_cashback_amount: cashbackAmountToCreditUser }; // Retorna o resultado da transação
+  }
+
+  // Dentro da sua classe de implementação do ITransactionOrderRepository
+
+  async processSplitPostPaidPayment(
+    transactionEntity: TransactionEntity,
+    userInfoUuid: Uuid
+  ): Promise<{ success: boolean; finalDebitedUserItemBalance: number, user_cashback_amount: number }> {
+
+    // 1. Extração de Dados da Entidade (em centavos)
+    const dataToSave = transactionEntity.toJSON();
+    const debitedUserItemId = dataToSave.user_item_uuid;
+    const transactionId = dataToSave.uuid;
+    const favoredBusinessInfoId = dataToSave.favored_business_info_uuid;
+    const totalAmountToDecrement = dataToSave.net_price;
+    const netAmountToCreateAsCredit = dataToSave.partner_credit_amount;
+    const netAmountToCreditPlatform = dataToSave.fee_amount;
+    const cashbackAmountToCreditUser = dataToSave.cashback;
+
+    // 2. Início da Transação Atômica
+    const result = await prismaClient.$transaction(async (tx) => {
+
+      // 2.1. Leitura e Validação do Benefício a ser Debitado (Limite de Crédito)
+      const debitedUserItem = await tx.userItem.findUnique({
+        where: { uuid: debitedUserItemId },
+        select: { balance: true, user_info_uuid: true }
+      });
+      if (!debitedUserItem) { throw new CustomError(`Benefício (UUID: ${debitedUserItemId}) não encontrado.`, 404); }
+      if (debitedUserItem.user_info_uuid !== userInfoUuid.uuid) { throw new CustomError(`O benefício ${debitedUserItemId} não pertence ao usuário.`, 403); }
+      if (debitedUserItem.balance < totalAmountToDecrement) { throw new CustomError(`Limite de crédito insuficiente no benefício.`, 403); }
+
+      const debitedUserItemBalanceBefore = debitedUserItem.balance;
+      const debitedUserItemBalanceAfter = debitedUserItemBalanceBefore - totalAmountToDecrement;
+
+      // 2.2. Leitura da Carteira de Cashback "Correct"
+      const correctUserItem = await tx.userItem.findFirst({
+        where: {
+          user_info_uuid: userInfoUuid.uuid,
+          item_name: "Correct"
+        },
+        select: { uuid: true, balance: true }
+      });
+      if (!correctUserItem) { throw new CustomError(`Carteira 'Correct' do usuário não encontrada para receber cashback.`, 404); }
+
+      const correctUserItemId = correctUserItem.uuid;
+      const correctItemBalanceBeforeCashback = correctUserItem.balance;
+      const correctItemBalanceAfterCashback = correctItemBalanceBeforeCashback + cashbackAmountToCreditUser;
+
+      // 2.3. Leitura da Conta do Parceiro (para obter o UUID de referência)
+      const partnerBusinessAccount = await tx.businessAccount.findFirst({
+        where: { business_info_uuid: favoredBusinessInfoId },
+        select: { uuid: true }
+      });
+      if (!partnerBusinessAccount) { throw new CustomError(`Conta do parceiro (BusinessInfo: ${favoredBusinessInfoId}) não encontrada.`, 404); }
+      const partnerBusinessAccountId = partnerBusinessAccount.uuid;
+
+      // 2.4. Leitura da Conta da Plataforma
+      const currentCorrectAccount = await tx.correctAccount.findFirst({
+        select: { uuid: true, balance: true }
+      });
+      if (!currentCorrectAccount) { throw new CustomError(`Conta da plataforma 'Correct' não encontrada. Erro de sistema.`, 500); }
+
+      const correctAccountId = currentCorrectAccount.uuid;
+      const correctBalanceBefore = currentCorrectAccount.balance;
+      const correctBalanceAfter = correctBalanceBefore + netAmountToCreditPlatform;
+
+      // --- 3. Execução das Operações de Escrita ---
+
+      // 3.1. Debitar o limite do benefício do usuário
+      await tx.userItem.update({
+        where: { uuid: debitedUserItemId },
+        data: { balance: { decrement: totalAmountToDecrement } }
+      });
+
+      // 3.2. Creditar a taxa na conta da Correct
+      await tx.correctAccount.update({
+        where: { uuid: correctAccountId },
+        data: { balance: { increment: netAmountToCreditPlatform } }
+      });
+
+      // 3.3. Creditar o cashback na carteira "Correct" do usuário
+      await tx.userItem.update({
+        where: { uuid: correctUserItemId },
+        data: { balance: { increment: cashbackAmountToCreditUser } }
+      });
+
+      // 3.4. PONTO CHAVE: Criar o registro de Crédito para o Parceiro
+      const settlementDate = new Date();
+      settlementDate.setDate(settlementDate.getDate() + 45);
+      await tx.partnerCredit.create({
+        data: {
+          business_account_uuid: partnerBusinessAccountId,
+          original_transaction_uuid: transactionId,
+          balance: netAmountToCreateAsCredit,
+          spent_amount: 0,
+          status: "PENDING",
+          availability_date: settlementDate,
+        }
+      });
+
+      // --- 4. Criação dos Registros de Histórico ---
+
+      // 4.1. Históricos de débito e cashback do usuário
+      await tx.userItemHistory.createMany({
+        data: [
+          { user_item_uuid: debitedUserItemId, event_type: "ITEM_SPENT", amount: -totalAmountToDecrement, balance_before: debitedUserItemBalanceBefore, balance_after: debitedUserItemBalanceAfter, related_transaction_uuid: transactionId },
+          { user_item_uuid: correctUserItemId, event_type: "CASHBACK_RECEIVED", amount: cashbackAmountToCreditUser, balance_before: correctItemBalanceBeforeCashback, balance_after: correctItemBalanceAfterCashback, related_transaction_uuid: transactionId }
+        ]
+      });
+
+      // 4.2. Histórico da taxa da plataforma
+      await tx.correctAccountHistory.create({
+        data: { correct_account_uuid: correctAccountId, event_type: "PLATFORM_FEE_COLLECTED", amount: netAmountToCreditPlatform, balance_before: correctBalanceBefore, balance_after: correctBalanceAfter, related_transaction_uuid: transactionId }
+      });
+
+      // 4.3. Atualizar a transação principal para "success"
+      await tx.transactions.update({
+        where: { uuid: transactionId },
+        data: { status: "success", paid_at: newDateF(new Date()), updated_at: newDateF(new Date()) }
+      });
+
+      // 5. Retorno
+      return {
+        success: true,
+        finalDebitedUserItemBalance: debitedUserItemBalanceAfter,
+        user_cashback_amount: cashbackAmountToCreditUser
+      };
+    });
+
+    return result;
   }
 
   async savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity> {

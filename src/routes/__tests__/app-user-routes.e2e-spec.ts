@@ -3582,7 +3582,7 @@ describe("E2E App User tests", () => {
               user_item_uuid: alimentacao_benefit_user2_uuid,
             }
             const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input)
-            
+
             expect(result.statusCode).toBe(200)
             expect(result.body[0].amount).toBe(-9955 / 100) //99.55 according to transaction1
             expect(result.body[0].balance_before).toBe(200)
@@ -3605,6 +3605,151 @@ describe("E2E App User tests", () => {
           })
         })
       })
+
+      describe("E2E Process Post-Paid Transaction", () => {
+        console.log("Starting E2E Process Post-Paid Transaction tests...");
+        let post_paid_transaction_uuid: string;
+        let partner3_initial_liquid_balance: number;
+        let correct_admin_initial_balance: number;
+        let employee2_convenio_initial_limit: number;
+        let employee2_cashback_initial_balance: number;
+
+        let expected_post_paid_fee: number;
+        let expected_post_paid_cashback: number;
+        let expected_partner_credit_amount: number;
+
+        beforeAll(async () => {
+          // Capturar os saldos iniciais antes de qualquer transação pós-paga
+          const partnerAccount = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_auth_token3}`);
+          partner3_initial_liquid_balance = partnerAccount.body.balance;
+
+          const correctAdminAccount = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctAdminToken}`);
+          correct_admin_initial_balance = correctAdminAccount.body.balance;
+
+          const convenioBenefit = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: convenio_benefit_user2_uuid });
+          employee2_convenio_initial_limit = convenioBenefit.body.balance;
+          const cashbackBenefit = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid });
+          employee2_cashback_initial_balance = cashbackBenefit.body.balance;
+        });
+
+        it("should process a post-paid benefit successfully and create a partner credit instead of liquid balance", async () => {
+          // 1. ARRANGE: Partner creates a new transaction order
+          const transactionInput = {
+            original_price: 75, // R$ 75,00
+            discount_percentage: 0,
+            net_price: 75,
+          };
+          const createTransaction = await request(app)
+            .post("/pos-transaction")
+            .set('Authorization', `Bearer ${partner_auth_token3}`)
+            .send(transactionInput);
+
+          expect(createTransaction.statusCode).toBe(201);
+          post_paid_transaction_uuid = createTransaction.body.transaction_uuid;
+          expected_post_paid_fee = createTransaction.body.fee_amount;
+          expected_post_paid_cashback = createTransaction.body.cashback;
+          expected_partner_credit_amount = transactionInput.net_price - expected_post_paid_fee;
+
+          // 2. ACT: Employee processes the payment using a post-paid benefit
+          const paymentInput = {
+            transactionId: post_paid_transaction_uuid,
+            benefit_uuid: convenio_benefit_user2_uuid, // Using "Convênio" benefit
+          };
+
+          const result = await request(app)
+            .post("/pos-transaction/processing")
+            .set('Authorization', `Bearer ${employeeAuthToken2}`)
+            .send(paymentInput);
+
+          console.log("Post-paid transaction result:", result.body);
+          // 3. ASSERT: Check the immediate result
+          expect(result.statusCode).toBe(200);
+          expect(result.body.result).toBeTruthy();
+          expect(result.body.finalBalance).toBe(employee2_convenio_initial_limit - transactionInput.net_price);
+          expect(result.body.cashback).toBe(expected_post_paid_cashback);
+
+          // 4. ASSERT: Check the state of all accounts after the transaction
+          // a) Employee's "Convênio" limit should decrease
+          const convenioBenefitAfter = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: convenio_benefit_user2_uuid });
+          expect(convenioBenefitAfter.body.balance).toBe(employee2_convenio_initial_limit - transactionInput.net_price);
+
+          // c) Correct Admin's account balance should increase by the fee
+          const correctAdminAccountAfter = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctAdminToken}`);
+          expect(correctAdminAccountAfter.body.balance).toBe(correct_admin_initial_balance + expected_post_paid_fee);
+
+          // d) CRUCIAL: Partner's LIQUID balance should NOT change
+          const partnerAccountAfter = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_auth_token3}`);
+          expect(partnerAccountAfter.body.balance).toBe(partner3_initial_liquid_balance);
+
+          // b) Employee's cashback balance should increase
+          const cashbackBenefitAfter = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid });
+          console.log("correct acount", cashbackBenefitAfter.body)
+          expect(cashbackBenefitAfter.body.balance).toBe(employee2_cashback_initial_balance + expected_post_paid_cashback);
+
+          // e) CRUCIAL: A new PartnerCredit record should exist for the partner
+          // OBS: Este endpoint é uma sugestão. Se não existir, é necessário para testar e para a funcionalidade do parceiro.
+          // const partnerCredits = await request(app).get("/business/admin/credits").set('Authorization', `Bearer ${partner_auth_token3}`);
+          // expect(partnerCredits.statusCode).toBe(200);
+          // const newCredit = partnerCredits.body.find((credit: any) => credit.original_transaction_uuid === post_paid_transaction_uuid);
+          // expect(newCredit).toBeDefined();
+          // expect(newCredit.balance).toBe(expected_partner_credit_amount);
+          // expect(newCredit.status).toBe("PENDING");
+          // expect(newCredit).toHaveProperty("availability_date");
+        });
+
+        // it("should throw an error if the user's post-paid limit is not enough", async () => {
+        //   // ARRANGE: Create a transaction for a very high value
+        //   const transactionInput = {
+        //     original_price: 9999999, // R$ 99.999,99
+        //     discount_percentage: 0,
+        //     net_price: 9999999,
+        //   };
+        //   const createTransaction = await request(app)
+        //     .post("/pos-transaction")
+        //     .set('Authorization', `Bearer ${partner_auth_token3}`)
+        //     .send(transactionInput);
+
+        //   // ACT: Attempt to process the payment
+        //   const paymentInput = {
+        //     transactionId: createTransaction.body.transaction_uuid,
+        //     benefit_uuid: convenio_benefit_user2_uuid,
+        //   };
+
+        //   const result = await request(app)
+        //     .post("/pos-transaction/processing")
+        //     .set('Authorization', `Bearer ${employeeAuthToken2}`)
+        //     .send(paymentInput);
+
+        //   // ASSERT: Check for the expected error
+        //   expect(result.statusCode).toBe(403);
+        //   expect(result.body.error).toBe("User item balance is not enough");
+        // });
+      });
+
+      // describe("E2E Post-Paid Account Histories", () => {
+      //   it("should create a history record for the user's limit usage", async () => {
+      //     const input = {
+      //       user_item_uuid: convenio_benefit_user2_uuid,
+      //     }
+      //     const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input);
+      //     expect(result.statusCode).toBe(200);
+      //     const historyEntry = result.body.find((entry: any) => entry.related_transaction_uuid === post_paid_transaction_uuid);
+      //     expect(historyEntry).toBeDefined();
+      //     expect(historyEntry.event_type).toBe("ITEM_SPENT");
+      //     expect(historyEntry.amount).toBe(-7500); // Valor da transação em centavos
+      //   });
+
+      //   it("should NOT create a PAYMENT_RECEIVED history for the partner's liquid BusinessAccount", async () => {
+      //     const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token3}`);
+      //     expect(result.statusCode).toBe(200);
+      //     // Assuming the pre-paid test ran before, there should be at least one history entry.
+      //     // We check that no NEW entry was created for our post-paid transaction.
+      //     const postPaidEntry = result.body.find((entry: any) => entry.related_transaction_uuid === post_paid_transaction_uuid);
+      //     expect(postPaidEntry).toBeUndefined();
+      //   });
+      // });
+
+      // ... resto do seu arquivo de testes
     })
   })
 })
