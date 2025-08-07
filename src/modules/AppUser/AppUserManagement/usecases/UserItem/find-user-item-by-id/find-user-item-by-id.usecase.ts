@@ -14,7 +14,6 @@ export class FindUserItemByIdUsecase {
 
   async execute(user_item_uuid: string, business_user_business_info_uuid?: string, user_info_uuid?: string): Promise<OutputFindAppUserItemByIdDTO> {
     if (!user_item_uuid) throw new CustomError("User Item id is required", 400)
-
     const userItem = await this.appUserItemRepository.find(new Uuid(user_item_uuid))
     if (!userItem) throw new CustomError("User Item not found", 404)
     //If this situation happens, it means that it the employee is making this request
