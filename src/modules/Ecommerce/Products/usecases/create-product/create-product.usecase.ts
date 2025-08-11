@@ -28,7 +28,6 @@ export class CreateProductUsecase {
   ) { }
 
   private parseAndValidateInteger(valueStr: string | undefined | null, fieldName: string, isOptional: boolean = false): number {
-    console.log({ valueStr, fieldName, isOptional });
     if (valueStr === undefined || valueStr === null || valueStr.trim() === "") {
       if (isOptional) return 0;
       throw new CustomError(`${fieldName} is required.`, 400);
@@ -188,9 +187,7 @@ export class CreateProductUsecase {
       }
 
       productEntity.changeImagesUrl(finalImageUrls); // Define as URLs públicas na entidade do produto
-      console.log({ productEntity })
       const savedProduct = await this.productRepository.upsert(productEntity);
-      console.log({ savedProduct })
       return {
         uuid: savedProduct.uuid.uuid,
         category_uuid: savedProduct.category_uuid.uuid,

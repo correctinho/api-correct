@@ -29,6 +29,7 @@ export class CreateBranchUsecase {
           branchEntity.benefits_uuid.push(findItem.uuid.uuid)
         }
       }
+
       const branchCreated = await this.branchRepository.create(branchEntity);
       branches.push(branchCreated);
     }

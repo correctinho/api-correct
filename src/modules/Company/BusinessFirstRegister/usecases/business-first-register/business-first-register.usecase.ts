@@ -26,13 +26,11 @@ export class CreateBusinessRegisterUsecase {
 
   async execute(data: InputBusinessFirstRegisterDTO) {
     const register = await BusinessRegisterEntity.create(data)
-    console.log("Register data: ", register)
     const findBusiness = await this.companyDataRepository.findByDocument(register.document)
     if (findBusiness) throw new CustomError("Business already registered", 409)
 
     const findByEmail = await this.companyDataRepository.findByEmail(register.email)
     if (findByEmail) throw new CustomError("Business email already registered", 409)
-
 
 
     if (register.business_type === 'autonomo_comercio' || register.business_type === 'comercio') {
@@ -57,13 +55,11 @@ export class CreateBusinessRegisterUsecase {
       const partnerConfigEntity = PartnerConfigEntity.create(partneConfigData)
       //now we need to set taxes accordding to main branch selected
       //check if main branch is one of the branches list.
-
-
       const mainBranch = register.branches_uuid.find(branch => branch === data.partnerConfig.main_branch)
       if (!mainBranch) throw new CustomError("Invalid main branch", 400)
+      
       //find branches
       await this.verifyBranches(register.branches_uuid)
-
       //if it's all okay with branches uuid, we need to have main branch details
       //this main branch details is included in branches array
       //In this case, we need to check which one is the main branch
@@ -72,10 +68,8 @@ export class CreateBusinessRegisterUsecase {
       //these taxes will be defined according to user preferences
       if (partnerConfigEntity.use_marketing) partnerConfigEntity.changeMarketingTax(mainBranchDetails.marketing_tax)
       if (partnerConfigEntity.use_market_place) partnerConfigEntity.changeMarketingPlaceTax(mainBranchDetails.market_place_tax)
-
-      //in this line, we will set admin tax, it doesn't required any condition
+      //in this line, we will set admin tax, it doesn't require any condition
       partnerConfigEntity.changeAdminTax(mainBranchDetails.admin_tax)
-
       //now it's important to define which benefits will be accepted by partner. It's defined according to main branch
       //Basically, we need to populate partnerConfigEntity.items_uuid with the benefits that comes from mainBranch detals
       partnerConfigEntity.changeItemsUuid(mainBranchDetails.benefits_uuid)

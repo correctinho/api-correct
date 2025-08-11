@@ -7,6 +7,7 @@ import { Uuid } from "../../@shared/ValueObjects/uuid.vo";
 import { InputCreateBenefitDto } from "../../modules/benefits/usecases/create-benefit/create-benefit.dto";
 import path from 'path'
 import { randomUUID } from 'crypto'
+import { calculateCycleSettlementDateAsDate } from "../../utils/date";
 
 let userToken1: string;
 let userToken2: string;
@@ -208,39 +209,39 @@ describe("E2E App User tests", () => {
     const branchesByName = [
       {
         name: "Hipermercados",
-        marketing_tax: 100,
-        admin_tax: 150,
-        market_place_tax: 120,
+        marketing_tax: 1.00,
+        admin_tax: 1.50,
+        market_place_tax: 1.20,
         benefits_name: ['Adiantamento Salarial', 'Vale Alimentação', 'Correct']
       },
 
       {
         name: "Supermercados",
-        marketing_tax: 100,
-        admin_tax: 150,
-        market_place_tax: 120,
+        marketing_tax: 1.00,
+        admin_tax: 1.50,
+        market_place_tax: 1.20,
         benefits_name: ['Adiantamento Salarial', 'Vale Refeição', 'Correct']
       },
 
       {
         name: "Mercearias",
-        marketing_tax: 130,
-        admin_tax: 140,
-        market_place_tax: 130,
+        marketing_tax: 1.30,
+        admin_tax: 1.40,
+        market_place_tax: 1.30,
         benefits_name: ['Convênio', 'Vale Alimentação', 'Correct']
       },
       {
         name: "Restaurantes",
-        marketing_tax: 180,
-        admin_tax: 170,
-        market_place_tax: 160,
+        marketing_tax: 1.80,
+        admin_tax: 1.70,
+        market_place_tax: 1.60,
         benefits_name: ['Vale Refeição', 'Vale Alimentação', 'Correct']
       },
 
       {
         name: "Alimentação",
-        marketing_tax: 200,
-        admin_tax: 250,
+        marketing_tax: 2.00,
+        admin_tax: 2.50,
         market_place_tax: 220,
         benefits_name: ['Vale Refeição', 'Vale Alimentação', 'Correct']
       }
@@ -3209,8 +3210,10 @@ describe("E2E App User tests", () => {
           city: "Campo Grande",
           item_uuid: benefit1_uuid.uuid
         }
-        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({ partner_category: 'saude', city: "Campo Grande",
-          item_uuid: benefit1_uuid.uuid })
+        const result = await request(app).get("/partners/filter").set('Authorization', `Bearer ${userToken1}`).query({
+          partner_category: 'saude', city: "Campo Grande",
+          item_uuid: benefit1_uuid.uuid
+        })
         expect(result.statusCode).toBe(200)
 
       })
@@ -3221,13 +3224,22 @@ describe("E2E App User tests", () => {
   describe("E2E Transactions", () => {
     describe("E2E POS transactions", () => {
       let inputTransaction1: {
-        amount: number
-        description: string
+        original_price: number,
+        discount_percentage: number,
+        net_price: number
+
       }
-      let transaction1_uuid: string
-      let correctAdminCurrentBalance: number
-      let employee2CurrentDebitBalance: number
-      let partner3CurrentBalance: number
+      let transaction1_uuid: string;
+      let transaction1_net_price_in_cents: number;
+      let expected_fee_in_cents: number;
+      let expected_cashback_in_cents: number;
+      let expected_partner_net_amount_in_cents: number;
+
+      let partner3_initial_liquid_balance_in_cents: number;
+      let correct_admin_initial_balance_in_cents: number;
+      let employee2_alimentacao_initial_balance_in_cents: number;
+      let employee2_cashback_initial_balance_in_cents: number;
+
       //first we need to create transactions by partner
       beforeAll(async () => {
         //lets first create partner users
@@ -3245,30 +3257,30 @@ describe("E2E App User tests", () => {
         }
 
         const input2 = {
-        line1: "Rua",
-        line2: "72B",
-        line3: "",
-        neighborhood: "Bairro Teste",
-        postal_code: "5484248423",
-        city: "Campo Grande",
-        state: "Estado teste",
-        country: "País teste",
-        fantasy_name: "Mercado Empresa teste 2",
-        document: "comercio2",
-        classification: "Classificação",
-        colaborators_number: 5,
-        email: "comercio2@comercio.com",
-        phone_1: "215745158",
-        phone_2: "124588965",
-        business_type: "comercio",
-        branches_uuid: [branch1_uuid, branch3_uuid, branch4_uuid],
-        partnerConfig: {
-          main_branch: branch1_uuid,
-          partner_category: ['saude'],
-          use_marketing: false,
-          use_market_place: false
+          line1: "Rua",
+          line2: "72B",
+          line3: "",
+          neighborhood: "Bairro Teste",
+          postal_code: "5484248423",
+          city: "Campo Grande",
+          state: "Estado teste",
+          country: "País teste",
+          fantasy_name: "Mercado Empresa teste 2",
+          document: "comercio2",
+          classification: "Classificação",
+          colaborators_number: 5,
+          email: "comercio2@comercio.com",
+          phone_1: "215745158",
+          phone_2: "124588965",
+          business_type: "comercio",
+          branches_uuid: [branch1_uuid, branch3_uuid, branch4_uuid],
+          partnerConfig: {
+            main_branch: branch1_uuid,
+            partner_category: ['saude'],
+            use_marketing: false,
+            use_market_place: false
+          }
         }
-      }
         //WE NEED TO ACTIVATE PARTNER 2 BEFORE CREATING AN USER
         const inputActivatePartner2 = {
           status: "active"
@@ -3277,7 +3289,7 @@ describe("E2E App User tests", () => {
           business_info_uuid: partner_info_uuid2
         }
 
-        const activatePartner2 =  await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(queryToActivatePartner2).send(inputActivatePartner2)
+        const activatePartner2 = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(queryToActivatePartner2).send(inputActivatePartner2)
         expect(activatePartner2.statusCode).toBe(200)
 
         const createPartner2 = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send(inputPartner2)
@@ -3312,12 +3324,17 @@ describe("E2E App User tests", () => {
 
         //NOW WE NEED TO CREATE AN TRANSACTION
         inputTransaction1 = {
-          amount: 200,
-          description: "",
+          original_price: 99.55,
+          discount_percentage: 0,
+          net_price: 99.55
+
         }
         const createTransaction = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_auth_token3}`).send(inputTransaction1)
         transaction1_uuid = createTransaction.body.transaction_uuid
         expect(createTransaction.statusCode).toBe(201)
+
+        expected_fee_in_cents = createTransaction.body.fee_amount * 100// fee em reais
+        expected_cashback_in_cents = createTransaction.body.cashback * 100
 
         //Get employee 1 user items
         const employee1UserItems = await request(app).get("/user-item/all").set('Authorization', `Bearer ${employeeAuthToken}`)
@@ -3361,7 +3378,6 @@ describe("E2E App User tests", () => {
             transactionId: randomUUID()
           }
 
-
           const result = await request(app).get("/pos-transaction/app-user").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
 
           expect(result.statusCode).toBe(404)
@@ -3392,7 +3408,40 @@ describe("E2E App User tests", () => {
         })
       })
       describe("E2E Process Pre paid Transaction", () => {
+
+
+        beforeAll(async () => {
+          // --- 1. SETUP: Criar a transação e capturar os valores esperados ---
+          const transactionInput = {
+            original_price: 99.55,
+            discount_percentage: 0,
+            net_price: 99.55,
+          };
+          const createTransaction = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_auth_token3}`).send(transactionInput);
+
+          transaction1_uuid = createTransaction.body.transaction_uuid;
+          transaction1_net_price_in_cents = Math.round(transactionInput.net_price * 100);
+          expected_fee_in_cents = Math.round(createTransaction.body.fee_amount * 100);
+          expected_cashback_in_cents = Math.round(createTransaction.body.cashback * 100);
+          expected_partner_net_amount_in_cents = transaction1_net_price_in_cents - expected_fee_in_cents;
+
+          // --- 2. CAPTURA DE ESTADO: Obter saldos iniciais antes da ação ---
+          const partnerAccount = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_auth_token3}`);
+          partner3_initial_liquid_balance_in_cents = Math.round(partnerAccount.body.balance * 100);
+
+          const correctAdminAccount = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctAdminToken}`);
+          correct_admin_initial_balance_in_cents = Math.round(correctAdminAccount.body.balance * 100);
+
+          const alimentacaoBenefit = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: alimentacao_benefit_user2_uuid });
+          employee2_alimentacao_initial_balance_in_cents = Math.round(alimentacaoBenefit.body.balance * 100);
+
+          const cashbackBenefit = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid });
+          employee2_cashback_initial_balance_in_cents = Math.round(cashbackBenefit.body.balance * 100);
+        });
+
+
         it("Should throw an error if transaction id is missing", async () => {
+
 
           const input = {
             transactionId: "",
@@ -3472,47 +3521,38 @@ describe("E2E App User tests", () => {
         //   expect(result.statusCode).toBe(403)
         //   expect(result.body.error).toBe("User item is not valid for this transaction")
         // })
-        it("Should process pre paid benefit", async () => {
-          console.log("**********")
-          const input = {
+
+        it("should correctly process a pre-paid benefit and update all account balances", async () => {
+          // 3. ACT: Executar o pagamento
+          const paymentInput = {
             transactionId: transaction1_uuid,
             benefit_uuid: alimentacao_benefit_user2_uuid
-          }
-          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-          console.log("transaction process", result.body)
-          expect(result.statusCode).toBe(200)
-          expect(result.body.result).toBeTruthy()
+          };
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(paymentInput);
 
-          //get correct admin account to check if tax was applied
-          const correctAdminAccount = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctAdminToken}`)
-          console.log("correct admin account", correctAdminAccount.body)
-          //At this point, we expect the balance to be 200 (transaction value) - 130 / 100 (admin tax) - 140 (market place tax) - 20% of Total (cashback to user)
-          const fee = (130 + 140) / 100
-          const expectedGrossBalance = (fee / 100) * inputTransaction1.amount
-          const expectedNetBalance = expectedGrossBalance - (0.2 * expectedGrossBalance)
-          correctAdminCurrentBalance = +correctAdminAccount.body.balance
-          expect(correctAdminAccount.statusCode).toBe(200)
-          expect(correctAdminAccount.body.balance).toBe(expectedNetBalance * 100)
-          expect(correctAdminCurrentBalance).toEqual(expectedNetBalance * 100)
-          expect(correctAdminAccount.body.updated_at).toBeTruthy()
+          // 4. ASSERT: Validar a resposta da API (em Reais)
+          expect(result.statusCode).toBe(200);
+          expect(result.body.result).toBeTruthy();
+          expect(result.body.cashback).toBeCloseTo(expected_cashback_in_cents / 100);
+          expect(result.body.finalBalance).toBeCloseTo((employee2_alimentacao_initial_balance_in_cents - transaction1_net_price_in_cents) / 100);
 
-          //let's get Correct Benefit user 2 to compare
-          const correctBenefitUser2 = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid })
-          console.log("user correct benefit", correctBenefitUser2.body)
-          expect(correctBenefitUser2.statusCode).toBe(200)
-          expect(correctBenefitUser2.body.balance).toBe(0.2 * expectedGrossBalance * 100)
-          employee2CurrentDebitBalance = +correctBenefitUser2.body.balance
-          expect(employee2CurrentDebitBalance).toEqual(correctBenefitUser2.body.balance)
+          // 5. ASSERT: Validar o estado final de todas as contas (em Centavos)
+          // a) Conta do administrador da Correct
+          const correctAdminAccountAfter = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctAdminToken}`);
+          expect(correctAdminAccountAfter.body.balance * 100).toBe(correct_admin_initial_balance_in_cents + expected_fee_in_cents);
 
-          //Get Business Account to check
-          const partnerAccount = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_auth_token3}`)
-          expect(partnerAccount.statusCode).toBe(200)
-          console.log("partner account", partnerAccount.body)
-          partner3CurrentBalance = inputTransaction1.amount - inputTransaction1.amount * fee / 100
-          expect(partnerAccount.body.balance).toBe(partner3CurrentBalance * 100)
+          // b) Carteira de cashback do usuário
+          const cashbackBenefitAfter = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid });
+          expect(cashbackBenefitAfter.body.balance * 100).toBe(employee2_cashback_initial_balance_in_cents + expected_cashback_in_cents);
 
+          // c) Conta líquida do parceiro (Saldo inicial + valor líquido da venda)
+          const partnerAccountAfter = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_auth_token3}`);
+          expect(partnerAccountAfter.body.balance * 100).toBe(partner3_initial_liquid_balance_in_cents + expected_partner_net_amount_in_cents);
 
-        })
+          // d) Saldo do benefício "Vale Alimentação" do usuário
+          const alimentacaoBenefitAfter = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: alimentacao_benefit_user2_uuid });
+          expect(alimentacaoBenefitAfter.body.balance * 100).toBe(employee2_alimentacao_initial_balance_in_cents - transaction1_net_price_in_cents);
+        });
 
       })
       describe("E2E Accounts history", () => {
@@ -3531,7 +3571,7 @@ describe("E2E App User tests", () => {
               user_item_uuid: correct_benefit_user2_uuid,
               month: 0
             }
-            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input)
             expect(result.statusCode).toBe(400)
             expect(result.body.error).toBe("Mês inválido. Por favor, forneça um valor entre 1 e 12.")
           })
@@ -3540,7 +3580,7 @@ describe("E2E App User tests", () => {
               user_item_uuid: correct_benefit_user2_uuid,
               month: 13
             }
-            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
+            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input)
             expect(result.statusCode).toBe(400)
             expect(result.body.error).toBe("Mês inválido. Por favor, forneça um valor entre 1 e 12.")
           })
@@ -3548,54 +3588,175 @@ describe("E2E App User tests", () => {
             const input = {
               user_item_uuid: correct_benefit_user2_uuid,
             }
-            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken}`).query(input)
             expect(result.statusCode).toBe(403)
             expect(result.body.error).toBe("Unauthorized access")
           })
-          it("Should return history of cashback received from ", async () => {
+          it("should return the correct history for the cashback received", async () => {
             const input = {
               user_item_uuid: correct_benefit_user2_uuid,
-            }
-            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-            console.log("user debit account: ", result.body)
-            expect(result.statusCode).toBe(200)
-            expect(result.body[0].amount).toBe(108)
-            expect(result.body[0].balance_before).toBe(0)
-            expect(result.body[0].balance_after).toBe(108) //Be AWARE - If something changes on previous tests, this might cause error
-            expect(result.body[0].event_type).toBe("CASHBACK_RECEIVED")
-            expect(result.body[0].related_transaction_uuid).toBe(transaction1_uuid)
-          })
-          it("Should return history of user item used to be paid on transaction 1 ", async () => {
+            };
+            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input);
+
+            expect(result.statusCode).toBe(200);
+            const historyEntry = result.body[0]; // Pega o registro de histórico mais recente
+
+            // <<< MUDANÇA: Comparações dinâmicas e em centavos >>>
+            expect(historyEntry.amount * 100).toBe(expected_cashback_in_cents);
+            expect(historyEntry.balance_before * 100).toBe(employee2_cashback_initial_balance_in_cents);
+            expect(historyEntry.balance_after * 100).toBe(employee2_cashback_initial_balance_in_cents + expected_cashback_in_cents);
+            expect(historyEntry.event_type).toBe("CASHBACK_RECEIVED");
+            expect(historyEntry.related_transaction_uuid).toBe(transaction1_uuid);
+          });
+
+          it("should return the correct history for the benefit spent on transaction 1", async () => {
             const input = {
               user_item_uuid: alimentacao_benefit_user2_uuid,
-            }
-            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
-            console.log("user alimentação account: ", result.body)
-            expect(result.statusCode).toBe(200)
-            expect(result.body[0].amount).toBe(-200)
-            expect(result.body[0].balance_before).toBe(200)
-            expect(result.body[0].balance_after).toBe(0) //Be AWARE - If something changes on previous tests, this might cause error
-            expect(result.body[0].event_type).toBe("ITEM_SPENT")
-            expect(result.body[0].related_transaction_uuid).toBe(transaction1_uuid)
-          })
+            };
+            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input);
+
+            expect(result.statusCode).toBe(200);
+            const historyEntry = result.body[0];
+
+            // <<< MUDANÇA: Comparações dinâmicas e em centavos >>>
+            expect(historyEntry.amount * 100).toBe(-transaction1_net_price_in_cents);
+            expect(historyEntry.balance_before * 100).toBe(employee2_alimentacao_initial_balance_in_cents);
+            expect(historyEntry.balance_after * 100).toBe(employee2_alimentacao_initial_balance_in_cents - transaction1_net_price_in_cents);
+            expect(historyEntry.event_type).toBe("ITEM_SPENT");
+            expect(historyEntry.related_transaction_uuid).toBe(transaction1_uuid);
+          });
         })
         describe("E2E Business account histories", () => {
           it("Should return no history (Empty array)", async () => {
             const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token2}`)
-            console.log("******************")
-            console.log("partner 2: ", result.body)
             expect(result.statusCode).toBe(200)
             expect(result.body.length).toBe(0)
           })
           it("Should return business account history)", async () => {
             const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token3}`)
-            console.log("partner 3: ", result.body)
 
             expect(result.statusCode).toBe(200)
             expect(result.body.length).toBe(1)
           })
         })
       })
+
+      describe("E2E Process Post-Paid Transaction", () => {
+        let post_paid_transaction_uuid: string;
+        // Variáveis para armazenar saldos em CENTAVOS para cálculos precisos
+        let partner3_initial_liquid_balance_in_cents: number;
+        let correct_admin_initial_balance_in_cents: number;
+        let employee2_convenio_initial_limit_in_cents: number;
+        let employee2_cashback_initial_balance_in_cents: number;
+
+        let expected_post_paid_fee_in_cents: number;
+        let expected_post_paid_cashback_in_cents: number;
+        let expected_partner_credit_amount_in_cents: number;
+
+        beforeAll(async () => {
+          // A API retorna saldos em Reais. Capturamos e convertemos para centavos para usar nos cálculos do teste.
+          const partnerAccount = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_auth_token3}`);
+          partner3_initial_liquid_balance_in_cents = Math.round(partnerAccount.body.balance * 100);
+
+          const correctAdminAccount = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctAdminToken}`);
+          correct_admin_initial_balance_in_cents = Math.round(correctAdminAccount.body.balance * 100);
+
+          const convenioBenefit = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: convenio_benefit_user2_uuid });
+          employee2_convenio_initial_limit_in_cents = Math.round(convenioBenefit.body.balance * 100);
+
+          const cashbackBenefit = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid });
+          employee2_cashback_initial_balance_in_cents = Math.round(cashbackBenefit.body.balance * 100);
+
+          // Validação do setup: Confirmamos que o saldo inicial do convênio é R$ 350,00
+          expect(employee2_convenio_initial_limit_in_cents).toBe(35000);
+        });
+
+        it("should process a post-paid benefit and create a partner credit with the correct cycle settlement date", async () => {
+          // 1. ARRANGE: Partner cria uma transação (valores em Reais)
+          const transactionInput = {
+            original_price: 75.00,
+            discount_percentage: 0,
+            net_price: 75.00,
+          };
+          const createTransaction = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_auth_token3}`).send(transactionInput);
+
+          expect(createTransaction.statusCode).toBe(201);
+          post_paid_transaction_uuid = createTransaction.body.transaction_uuid;
+          expected_post_paid_fee_in_cents = createTransaction.body.fee_amount;
+          expected_post_paid_fee_in_cents = Math.round(createTransaction.body.fee_amount * 100);
+          expected_post_paid_cashback_in_cents = Math.round(createTransaction.body.cashback * 100);
+          expected_partner_credit_amount_in_cents = Math.round(transactionInput.net_price * 100) - expected_post_paid_fee_in_cents;
+
+
+          // 2. ACT: Employee processes the payment
+          const paymentInput = {
+            transactionId: post_paid_transaction_uuid,
+            benefit_uuid: convenio_benefit_user2_uuid,
+          };
+
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(paymentInput);
+
+          // 3. ASSERT: Checar a resposta imediata da API (valores em Reais)
+          expect(result.statusCode).toBe(200);
+          expect(result.body.result).toBeTruthy();
+          expect(result.body.finalBalance).toBe((employee2_convenio_initial_limit_in_cents / 100) - transactionInput.net_price);
+          expect(result.body.cashback).toBe(expected_post_paid_cashback_in_cents / 100);
+
+          // 4. ASSERT: Checar o estado final das contas, buscando novamente os dados
+          const convenioBenefitAfter = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: convenio_benefit_user2_uuid });
+          expect(convenioBenefitAfter.body.balance * 100).toBe(employee2_convenio_initial_limit_in_cents - (transactionInput.net_price * 100));
+
+          const cashbackBenefitAfter = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid });
+          expect(cashbackBenefitAfter.body.balance * 100).toBe(employee2_cashback_initial_balance_in_cents + expected_post_paid_cashback_in_cents);
+
+          const correctAdminAccountAfter = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctAdminToken}`);
+          expect(correctAdminAccountAfter.body.balance * 100).toBe(correct_admin_initial_balance_in_cents + expected_post_paid_fee_in_cents);
+
+          const partnerAccountAfter = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_auth_token3}`);
+          expect(partnerAccountAfter.body.balance * 100).toBe(partner3_initial_liquid_balance_in_cents);
+
+          // 5. ASSERT CRÍTICO: Verificar o PartnerCredit criado e sua data de liquidação
+          // O teste calcula a data esperada, exatamente como o backend faz.
+          // Hoje é 07/08/2025. Com delay de 2 meses e dia 10, a data esperada é 10/10/2025.
+          const expectedSettlementDate = calculateCycleSettlementDateAsDate(new Date());
+
+          const partnerCredits = await request(app).get("/business/admin/credits").set('Authorization', `Bearer ${partner_auth_token3}`);
+          expect(partnerCredits.statusCode).toBe(200);
+          const newCredit = partnerCredits.body.find((credit: any) => credit.original_transaction_uuid === post_paid_transaction_uuid);
+          expect(newCredit).toBeDefined();
+          expect(newCredit.balance * 100).toBe(expected_partner_credit_amount_in_cents);
+          expect(newCredit.status).toBe("PENDING");
+
+          // Comparamos a data retornada pela API com a data calculada pelo teste.
+          // Usamos toISOString() para uma comparação de texto precisa e padronizada.
+          expect(new Date(newCredit.availability_date).toISOString()).toBe(expectedSettlementDate.toISOString());
+        });
+      });
+
+      // describe("E2E Post-Paid Account Histories", () => {
+      //   it("should create a history record for the user's limit usage", async () => {
+      //     const input = {
+      //       user_item_uuid: convenio_benefit_user2_uuid,
+      //     }
+      //     const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input);
+      //     expect(result.statusCode).toBe(200);
+      //     const historyEntry = result.body.find((entry: any) => entry.related_transaction_uuid === post_paid_transaction_uuid);
+      //     expect(historyEntry).toBeDefined();
+      //     expect(historyEntry.event_type).toBe("ITEM_SPENT");
+      //     expect(historyEntry.amount).toBe(-7500); // Valor da transação em centavos
+      //   });
+
+      //   it("should NOT create a PAYMENT_RECEIVED history for the partner's liquid BusinessAccount", async () => {
+      //     const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token3}`);
+      //     expect(result.statusCode).toBe(200);
+      //     // Assuming the pre-paid test ran before, there should be at least one history entry.
+      //     // We check that no NEW entry was created for our post-paid transaction.
+      //     const postPaidEntry = result.body.find((entry: any) => entry.related_transaction_uuid === post_paid_transaction_uuid);
+      //     expect(postPaidEntry).toBeUndefined();
+      //   });
+      // });
+
+      // ... resto do seu arquivo de testes
     })
   })
 })

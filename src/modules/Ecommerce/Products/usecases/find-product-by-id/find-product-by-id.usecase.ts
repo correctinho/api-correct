@@ -14,8 +14,6 @@ export class FindProductByIdUsecase{
     const product = await this.productRepository.find(new Uuid(product_uuid));
     if(!product) throw new CustomError("Product not found", 404);
 
-    console.log(product);
-
     return {
       uuid: product.uuid.uuid,
       category_uuid: product.category_uuid.uuid,

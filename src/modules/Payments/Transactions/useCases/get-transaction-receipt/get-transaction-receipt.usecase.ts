@@ -76,7 +76,7 @@ export class GetTransactionReceiptUsecase {
       status: transaction.status,
       
       // Apenas o valor principal da transação, como solicitado
-      amountInCents: transaction.amount,
+      amountInCents: transaction.net_price,
 
       // Dados do Pagador (formato padrão)
       payer: {

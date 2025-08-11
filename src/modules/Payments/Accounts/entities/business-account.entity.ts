@@ -42,7 +42,7 @@ export class BusinessAccountEntity {
     return this._uuid;
   }
   get balance(): number {
-    return this._balance;
+    return this._balance / 100;
   }
   get business_info_uuid(): string {
     return this._business_info_uuid;
@@ -62,7 +62,7 @@ export class BusinessAccountEntity {
     if (value < 0) {
       throw new CustomError('Balance cannot be negative', 400);
     }
-    this._balance = value;
+    this._balance = value * 100;
     this.validate()
   }
   set business_info_uuid(value: string) {

@@ -40,9 +40,9 @@ export class BranchEntity {
     this._name = props.name;
     this._benefits_uuid = props.benefits_uuid || []
     this._benefits_name = props.benefits_name || []
-    this._marketing_tax = props.marketing_tax;
-    this._admin_tax = props.admin_tax;
-    this._market_place_tax = props.market_place_tax
+    this._marketing_tax = props.marketing_tax * 10000;
+    this._admin_tax = props.admin_tax * 10000;
+    this._market_place_tax = props.market_place_tax * 10000
     this._created_at = props.created_at ?? randomUUID()
     this._updated_at = props.updated_at ?? randomUUID()
     this.validate()
@@ -65,15 +65,15 @@ export class BranchEntity {
   }
 
   get marketing_tax(): number {
-    return this._marketing_tax
+    return this._marketing_tax / 10000
   }
 
   get admin_tax(): number {
-    return this._admin_tax
+    return this._admin_tax / 10000
   }
 
   get market_place_tax(): number {
-    return this._market_place_tax
+    return this._market_place_tax / 10000
   }
 
   get created_at(): string | null {
@@ -106,6 +106,19 @@ export class BranchEntity {
   changeMarketPlaceTax(market_place_tax: number) {
     this._market_place_tax = market_place_tax;
     this.validate();
+  }
+
+  public toJSON() {
+    return {
+      uuid: this._uuid, // Assumindo que Uuid tem uma propriedade .value
+      name: this._name,
+      marketing_tax: this._marketing_tax,
+      admin_tax: this._admin_tax,
+      market_place_tax: this._market_place_tax,
+      created_at: this._created_at,
+      updated_at: this._updated_at
+      // Adicione outras propriedades que precisam ser salvas
+    };
   }
 
   validate() {

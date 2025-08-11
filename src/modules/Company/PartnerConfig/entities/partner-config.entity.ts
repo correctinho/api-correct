@@ -53,10 +53,10 @@ export class PartnerConfigEntity {
     this._main_branch = props.main_branch;
     this._partner_category = props.partner_category;
     this._items_uuid = props.items_uuid;
-    this._admin_tax = props.admin_tax;
-    this._marketing_tax = props.marketing_tax;
+    this._admin_tax = props.admin_tax * 10000;
+    this._marketing_tax = props.marketing_tax * 10000;
     this._use_marketing = props.use_marketing ?? false;
-    this._market_place_tax = props.market_place_tax;
+    this._market_place_tax = props.market_place_tax * 10000;
     this._use_market_place = props.use_market_place ?? false;
     this._title = props.title;
     this._phone = props.phone;
@@ -64,7 +64,7 @@ export class PartnerConfigEntity {
     this._description = props.description;
     this._latitude = props.latitude;
     this._longitude = props.longitude;
-    this._cashback_tax = props.cashback_tax ?? 0;
+    this._cashback_tax = props.cashback_tax ? props.cashback_tax * 1000 : 0;
     this._created_at = newDateF(new Date());
     this._updated_at = newDateF(new Date());
     this.validate();
@@ -92,11 +92,11 @@ export class PartnerConfigEntity {
   }
 
   get admin_tax(): number {
-    return this._admin_tax;
+    return this._admin_tax / 10000;
   }
 
   get marketing_tax(): number {
-    return this._marketing_tax;
+    return this._marketing_tax / 10000;
   }
 
   get use_marketing(): boolean {
@@ -104,7 +104,7 @@ export class PartnerConfigEntity {
   }
 
   get market_place_tax(): number {
-    return this._market_place_tax;
+    return this._market_place_tax / 10000;
   }
 
   get use_market_place(): boolean {
@@ -136,7 +136,7 @@ export class PartnerConfigEntity {
   }
 
   get cashback_tax(): number | undefined {
-    return this._cashback_tax;
+    return this._cashback_tax / 10000;
   }
 
   get created_at(): string | undefined {

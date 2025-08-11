@@ -1,3 +1,4 @@
+import { settlementConfig } from "../config/settlement.config";
 import { CustomError } from "../errors/custom.error";
 
 // Função auxiliar para formatar componentes de data com dois dígitos
@@ -52,4 +53,13 @@ export const addDaysToDate = async (dateString: string, daysToAdd: number): Prom
   date.setDate(date.getDate() + daysToAdd);
 
   return formatDateToString(date);
+};
+
+// Versão recomendada (retorna um objeto Date)
+export const calculateCycleSettlementDateAsDate = (transactionDate: Date): Date => {
+  const settlementDate = new Date(transactionDate.getTime());
+  settlementDate.setMonth(settlementDate.getMonth() + settlementConfig.delayInMonths);
+  settlementDate.setDate(settlementConfig.dayOfMonth);
+  settlementDate.setHours(0, 0, 0, 0);
+  return settlementDate;
 };
