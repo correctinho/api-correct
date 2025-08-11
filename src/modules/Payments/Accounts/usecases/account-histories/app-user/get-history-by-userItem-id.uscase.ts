@@ -48,9 +48,9 @@ export class GetAppUserHistoryByAccountIdUsecase {
     return userItemHistory.map((item: OutputGetUserItemHistoryDTO) => ({
       uuid: item.uuid,
       event_type: String(item.event_type),
-      amount: item.amount,
-      balance_before: item.balance_before,
-      balance_after: item.balance_after,
+      amount: item.amount / 100,
+      balance_before: item.balance_before / 100,
+      balance_after: item.balance_after / 100,
       related_transaction_uuid: item.related_transaction_uuid ? item.related_transaction_uuid : "",
       user_info_uuid: item.user_info_uuid,
       created_at: item.created_at,

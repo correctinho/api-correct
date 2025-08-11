@@ -177,7 +177,6 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         Business: true
       }
     })
-
     if (!userItem) return null
     return {
       uuid: new Uuid(userItem.uuid),

@@ -26,9 +26,9 @@ export class GetBenefitByIDUsecase {
         return {
           branch_uuid: branch.Branch.uuid,
           name: branch.Branch.name,
-          marketing_tax: branch.Branch.marketing_tax,
-          admin_tax: branch.Branch.admin_tax,
-          market_place_tax: branch.Branch.market_place_tax,
+          marketing_tax: branch.Branch.marketing_tax / 10000,
+          admin_tax: branch.Branch.admin_tax / 10000,
+          market_place_tax: branch.Branch.market_place_tax / 10000,
           created_at: branch.Branch.created_at,
           updated_at: branch.Branch.updated_at
         }

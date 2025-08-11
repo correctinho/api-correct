@@ -106,6 +106,18 @@ export class BusinessItemsDetailsEntity {
     this._is_active = false
   }
 
+  toJSON() {
+    return {
+      uuid: this._uuid.uuid,
+      item_uuid: this._item_uuid.uuid,
+      business_info_uuid: this._business_info_uuid.uuid,
+      cycle_start_day: this._cycle_start_day,
+      cycle_end_day: this._cycle_end_day,
+      is_active: this._is_active,
+      created_at: this._created_at,
+      updated_at: this._updated_at
+    }
+  }
 
   static create(data: BusinessItemDetailsCreateCommand){
     const item = new BusinessItemsDetailsEntity(data)

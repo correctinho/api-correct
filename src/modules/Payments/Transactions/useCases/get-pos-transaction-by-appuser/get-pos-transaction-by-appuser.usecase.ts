@@ -55,7 +55,7 @@ export class GetPOSTransactionByAppUserUsecase {
     return {
       transaction_uuid: transaction.uuid.uuid,
       fantasy_name:businessInfo.fantasy_name,
-      amount: transaction.amount,
+      amount: transaction.net_price,
       created_at: transaction.created_at,
       availableItems: compareUserItems
     } as OutputGetTransactionByAppUserDTO

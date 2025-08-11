@@ -16,7 +16,7 @@ export class GetAllBenefitGroupsByEmployerUsecase {
         uuid: item.uuid.uuid,
         group_name: item.group_name,
         employer_item_details_uuid:item.employer_item_details_uuid.uuid,
-        value: item.value / 100,
+        value: item.value,
         business_info_uuid: item.business_info_uuid.uuid,
         is_default: item.is_default,
         created_at: item.created_at,

@@ -86,7 +86,7 @@ export class AppUserItemEntity {
     this._item_uuid = props.item_uuid
     this._img_url = props.img_url
     this._item_name = props.item_name
-    this._balance = props.balance
+    this._balance = props.balance * 100
     this._status = props.status ?? 'active'
     this._group_uuid = props.group_uuid
     this._blocked_at = props.blocked_at
@@ -96,7 +96,7 @@ export class AppUserItemEntity {
     this._cancel_reason = props.cancel_reason
     this._grace_period_end_date = props.grace_period_end_date
     this._group_name = props.group_name
-    this._group_value = props.group_value
+    this._group_value = props.group_value * 100
     this._group_is_default = props.group_is_default
     this._created_at = newDateF(new Date())
     this._updated_at = newDateF(new Date())
@@ -140,7 +140,7 @@ export class AppUserItemEntity {
   }
 
   get balance(): number {
-    return this._balance
+    return this._balance / 100
   }
 
   get status(): UserItemStatus {
@@ -182,7 +182,7 @@ export class AppUserItemEntity {
     return this._group_name
   }
   get group_value(): number {
-    return this._group_value
+    return this._group_value / 100
   }
 
   get group_is_default(): boolean {
@@ -202,7 +202,7 @@ export class AppUserItemEntity {
   }
 
   changeBalance(balance: number) {
-    this._balance = balance;
+    this._balance = balance * 100;
     this.validate();
   }
 
@@ -235,7 +235,7 @@ export class AppUserItemEntity {
   }
 
   changeGroupValue(group_value: number) {
-    this._group_value = group_value;
+    this._group_value = group_value * 100;
     this.validate();
   }
 
@@ -296,8 +296,7 @@ export class AppUserItemEntity {
     if (!this._user_info_uuid) throw new CustomError("User Info id is required", 400)
     if (!this._item_uuid) throw new CustomError("Item id is required", 400)
     if (this._balance < 0) throw new CustomError("Balance cannot be negative", 400);
-    if(this._balance > this.group_value) throw new CustomError("Balance cannot be higher than group value setup", 400)
-
+    if(this._balance > this._group_value) throw new CustomError("Balance cannot be higher than group value setup", 400)
     if (typeof this._balance !== 'number' || isNaN(this._balance)) throw new CustomError("Balance must be a valid number", 400);
 
     // Validação do status

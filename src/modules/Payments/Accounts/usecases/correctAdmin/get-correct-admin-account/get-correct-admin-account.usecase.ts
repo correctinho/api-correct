@@ -14,10 +14,9 @@ export class GetCorrectAdminAccountUsecase {
     const correctAdminAccount = await this.correctAdminAccount.find();
     if (!correctAdminAccount) throw new CustomError("Correct Admin Account not found", 404);
     // Ensure transaction has the favored business info needed
-
     return {
       uuid: correctAdminAccount.uuid,
-      balance: correctAdminAccount.balance,
+      balance: correctAdminAccount.balance / 100,
       status: correctAdminAccount.status,
       created_at: correctAdminAccount.created_at,
       updated_at: correctAdminAccount.updated_at,

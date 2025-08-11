@@ -4,14 +4,23 @@ import { CalculateSplitPrePaidOutput } from "../../../../paymentSplit/prePaidSpl
 import { AppUserItemEntity } from "../../../AppUser/AppUserManagement/entities/app-user-item.entity";
 import { TransactionEntity } from "../entities/transaction-order.entity";
 
-export interface ITransactionOrderRepository extends RepositoryInterface<TransactionEntity>  {
-  save (entity: TransactionEntity): Promise<TransactionEntity>;
+export interface ITransactionOrderRepository extends RepositoryInterface<TransactionEntity> {
+  savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity>;
   processSplitPrePaidPayment(
     transactionEntity: TransactionEntity,
     splitOutput: CalculateSplitPrePaidOutput,
     userInfoUuid: Uuid
-     ): Promise<{ success: boolean; finalDebitedUserItemBalance: number, user_cashback_amount: number }>;
-  findCorrectAccount (): Promise<any>;
-  findBusinessAccountByBusinessInfoId (id: string): Promise<any>;
-  generateTransactionReceiptDetails (transactionId: string): Promise<any>
+  ): Promise<{ success: boolean; finalDebitedUserItemBalance: number, user_cashback_amount: number }>;
+  findCorrectAccount(): Promise<any>;
+  findBusinessAccountByBusinessInfoId(id: string): Promise<any>;
+  generateTransactionReceiptDetails(transactionId: string): Promise<any>
+  processSplitPrePaidPaymentTest(
+    transactionEntity: TransactionEntity,
+    userInfoUuid: Uuid
+  ): Promise<{ success: boolean; finalDebitedUserItemBalance: number, user_cashback_amount: number }>;
+  processSplitPostPaidPayment(
+    transactionEntity: TransactionEntity,
+    userInfoUuid: Uuid // <<< Parâmetro adicionado
+  ): Promise<{ success: boolean; finalDebitedUserItemBalance: number, user_cashback_amount: number }>
+  
 }
