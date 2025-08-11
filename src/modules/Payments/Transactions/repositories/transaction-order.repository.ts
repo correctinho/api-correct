@@ -22,4 +22,5 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
     transactionEntity: TransactionEntity,
     userInfoUuid: Uuid // <<< Parâmetro adicionado
   ): Promise<{ success: boolean; finalDebitedUserItemBalance: number, user_cashback_amount: number }>
+  
 }

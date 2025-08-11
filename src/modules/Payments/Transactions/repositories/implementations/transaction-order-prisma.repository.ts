@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
-import { prismaClient } from "../../../../../infra/databases/prisma.config";
 import { AppUserItemEntity } from "../../../../AppUser/AppUserManagement/entities/app-user-item.entity";
 import { TransactionEntity } from "../../entities/transaction-order.entity";
 import { ITransactionOrderRepository } from "../transaction-order.repository";
 import { BusinessAccountEventType, CorrectAccountEventType, UserItemEventType } from "@prisma/client";
 import { CalculateSplitPrePaidOutput } from "../../../../../paymentSplit/prePaidSplit";
 import { CustomError } from "../../../../../errors/custom.error";
-import { newDateF } from "../../../../../utils/date";
+import { calculateCycleSettlementDateAsDate, newDateF } from "../../../../../utils/date";
+import { prismaClient } from "../../../../../infra/databases/prisma.config";
 
 export class TransactionOrderPrismaRepository implements ITransactionOrderRepository {
   async generateTransactionReceiptDetails(transactionId: string): Promise<any> {
@@ -395,12 +395,9 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         where: { uuid: transactionId },
         data: {
           status: "success",
-          cashback: cashbackAmountToCreditUser,
-          fee_amount: netAmountToCreditPlatform,
-          user_item_uuid: debitedUserItemId,
-          favored_business_info_uuid: favoredBusinessInfoId,
-          paid_at: transactionEntity.paid_at,
-          updated_at: transactionEntity.updated_at
+          // Apenas atualizamos o que muda no final do processamento
+          paid_at: newDateF(new Date()),
+          updated_at: newDateF(new Date())
         }
       });
 
@@ -502,9 +499,9 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         data: { balance: { increment: cashbackAmountToCreditUser } }
       });
 
-      // 3.4. PONTO CHAVE: Criar o registro de Crédito para o Parceiro
-      const settlementDate = new Date();
-      settlementDate.setDate(settlementDate.getDate() + 45);
+      // 3.4. PONTO CHAVE: Criar o registro de Crédito para o Parceiro com a nova lógica de ciclo
+      const settlementDate = calculateCycleSettlementDateAsDate(new Date());
+
       await tx.partnerCredit.create({
         data: {
           business_account_uuid: partnerBusinessAccountId,
@@ -512,7 +509,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
           balance: netAmountToCreateAsCredit,
           spent_amount: 0,
           status: "PENDING",
-          availability_date: settlementDate,
+          availability_date: settlementDate, // Passando o objeto Date, como recomendado
         }
       });
 
@@ -547,6 +544,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
 
     return result;
   }
+
 
   async savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity> {
     const dataToSave = entity.toJSON()
