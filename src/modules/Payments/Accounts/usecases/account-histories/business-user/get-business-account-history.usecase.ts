@@ -1,3 +1,5 @@
+// ... imports ...
+
 import { CustomError } from "../../../../../../errors/custom.error";
 import { IAccountsHistoryRepository } from "../../repositories/accounts-history.repository";
 import { IBusinessAccountRepository } from "../../repositories/business-account.repository";
@@ -10,37 +12,34 @@ export class GetBusinessAccountHistoryUsecase {
   ) { }
   async execute(data: InputGetBusinessAccountHistoryDTO): Promise<OutputGetBusinessAccountHistoryDTO[] | []> {
     if (!data.business_info_uuid) throw new CustomError("Business info uuid is required", 400);
-
     const now = new Date();
-    let yearToQuery = data.year;
-    let monthToQuery = data.month; // 1-indexed
-
+    
+    // --- CORREÇÃO AQUI ---
+    // Converte os parâmetros de entrada para números inteiros.
+    let yearToQuery = data.year ? parseInt(String(data.year), 10) : undefined;
+    let monthToQuery = data.month ? parseInt(String(data.month), 10) : undefined;
 
     if (monthToQuery !== undefined) {
-      if (monthToQuery < 1 || monthToQuery > 12) {
+      // Agora a validação funcionará corretamente com números
+      if (isNaN(monthToQuery) || monthToQuery < 1 || monthToQuery > 12) {
         throw new CustomError("Mês inválido. Por favor, forneça um valor entre 1 e 12.", 400);
       }
-      // Se monthToQuery é fornecido, yearToQuery deveria ser também, ou usar o ano atual como padrão.
       if (yearToQuery === undefined) {
         yearToQuery = now.getFullYear();
-        // Opcional: Adicionar um log ou aviso se o ano não foi fornecido com o mês.
       }
     } else {
-      // Padrão: mês e ano atuais se nenhum foi fornecido
       yearToQuery = now.getFullYear();
-      monthToQuery = now.getMonth() + 1; // getMonth() é 0-indexed
+      monthToQuery = now.getMonth() + 1;
     }
 
-    if (yearToQuery === undefined || monthToQuery === undefined) {
-      // Esta condição não deveria ser atingida com a lógica acima se o objetivo é sempre ter um mês/ano.
-      // Mas é uma salvaguarda ou ponto de decisão se a lógica de input for mais complexa.
-      throw new CustomError("Ano e Mês devem ser especificados ou deixados em branco para usar o padrão.", 400)
+    if (yearToQuery === undefined || isNaN(yearToQuery)) {
+        throw new CustomError("Ano inválido.", 400)
     }
 
-    //find business account
+    // O restante do código permanece o mesmo...
     const businessAccount = await this.businessAccountRepository.findByBusinessId(data.business_info_uuid)
     if(!businessAccount) throw new CustomError("Business account not found", 404)
-    //find history
+
     const accountHistory = await this.accountHistoryRepository.findBusinessAccountHistory(businessAccount.uuid.uuid, yearToQuery, monthToQuery)
     if(accountHistory.length === 0) return []
 
@@ -54,8 +53,5 @@ export class GetBusinessAccountHistoryUsecase {
       related_transaction_uuid: item.related_transaction_uuid ? item.related_transaction_uuid : "",
       created_at: item.created_at
     }))
-
-
-
   }
 }
