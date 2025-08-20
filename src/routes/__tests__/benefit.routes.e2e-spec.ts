@@ -4,6 +4,7 @@ import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-be
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo';
 import { BranchDTO } from '../../modules/benefits/usecases/get-benefit-by-id/get-benefit.dto';
 import { randomUUID } from 'crypto'
+import { PrismaClient } from '@prisma/client';
 const inputNewAdmin = {
   name: "Admin Correct",
   email: "admincorrect@correct.com.br",
@@ -314,6 +315,13 @@ describe("E2E Branch tests", () => {
       branch5_uuid = result.body[4].uuid
 
       expect(result.statusCode).toBe(201)
+      const prisma = new PrismaClient();
+      const branchFromDb = await prisma.branchInfo.findFirst({
+        where: { name: 'Hipermercados' } // Vamos checar um dos ramos como amostra
+      });
+      // Esta asserção vai confirmar se a escrita inicial está correta
+      expect(branchFromDb.admin_tax).toBe(15000);
+      await prisma.$disconnect();
       expect(result.body.length).toBe(5)
     })
 

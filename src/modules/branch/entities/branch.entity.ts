@@ -38,11 +38,11 @@ export class BranchEntity {
   private constructor(props: BranchProps) {
     this._uuid = props.uuid ? props.uuid : randomUUID();
     this._name = props.name;
-    this._benefits_uuid = props.benefits_uuid || []
-    this._benefits_name = props.benefits_name || []
-    this._marketing_tax = props.marketing_tax * 10000;
-    this._admin_tax = props.admin_tax * 10000;
-    this._market_place_tax = props.market_place_tax * 10000
+    this._benefits_uuid = props.benefits_uuid || [];
+    this._benefits_name = props.benefits_name || [];
+    this._marketing_tax = props.marketing_tax;
+    this._admin_tax = props.admin_tax;
+    this._market_place_tax = props.market_place_tax;
     this._created_at = props.created_at ?? randomUUID()
     this._updated_at = props.updated_at ?? randomUUID()
     this.validate()
@@ -130,8 +130,21 @@ export class BranchEntity {
     //   );
 
   }
-  static create(data: BranchCreateCommand) {
-    const branch = new BranchEntity(data);
+
+  public static hydrate(props: BranchProps): BranchEntity {
+    // Apenas chama o construtor com os dados brutos (inteiros), sem conversão.
+    return new BranchEntity(props);
+  }
+  public static create(data: BranchCreateCommand): BranchEntity {
+    // Prepara as props para o construtor, aplicando a regra de negócio aqui.
+    const propsForConstructor: BranchProps = {
+      ...data,
+      benefits_uuid: [], // Inicializado aqui, preenchido no use case
+      admin_tax: Math.round(data.admin_tax * 10000),
+      marketing_tax: Math.round(data.marketing_tax * 10000),
+      market_place_tax: Math.round(data.market_place_tax * 10000),
+    };
+    const branch = new BranchEntity(propsForConstructor);
     return branch;
   }
 }

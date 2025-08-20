@@ -42,7 +42,7 @@ export class CreateAppUserInfoByEmployerUsecase {
 
     //get debit benefit
     const benefit = await this.benefitsRepository.findByName("Correct")
-    if (!benefit) throw new CustomError("Benefit not found", 404)
+    if (!benefit) throw new CustomError("Correct benefit not found", 404)
     //set debit benefit
     userInfoEntity.setDebitBenefitUuid(benefit.uuid)
 

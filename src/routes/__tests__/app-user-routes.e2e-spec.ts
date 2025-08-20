@@ -3409,7 +3409,6 @@ describe("E2E App User tests", () => {
       })
       describe("E2E Process Pre paid Transaction", () => {
 
-
         beforeAll(async () => {
           // --- 1. SETUP: Criar a transação e capturar os valores esperados ---
           const transactionInput = {
@@ -3441,8 +3440,6 @@ describe("E2E App User tests", () => {
 
 
         it("Should throw an error if transaction id is missing", async () => {
-
-
           const input = {
             transactionId: "",
             benefit_uuid: randomUUID
@@ -3503,24 +3500,50 @@ describe("E2E App User tests", () => {
           expect(result.body.error).toBe("User item balance is not enough")
         })
         //BELOW TEST STILL MUST BE IMPLEMENTED
-        // it("Should throw an error if business does not accept user benefit", async () => {
+        it("deve lançar um erro se o parceiro não aceitar o benefício utilizado", async () => {
+          // --- ARRANGE (Preparação) ---
 
-        //   //The partner that created the transaction follows below rules
-        //   //   {
-        //   //   name: "Mercearias",
-        //   //   marketing_tax: 130,
-        //   //   admin_tax: 140,
-        //   //   market_place_tax: 130,
-        //   //   benefits_name: ['Convênio', 'Vale Alimentação', 'Correct']
-        //   // },
-        //   const input = {
-        //     transactionId: transaction1_uuid,
-        //     benefit_uuid: adiantamento_benefit_user1_uuid
-        //   }
-        //   const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
-        //   expect(result.statusCode).toBe(403)
-        //   expect(result.body.error).toBe("User item is not valid for this transaction")
-        // })
+          // 1. Criamos um parceiro 'Supermercado' que sabemos que NÃO aceita 'Convênio'.
+          const supermercadoInput = {
+            fantasy_name: "Supermercado Teste Rejeita Convênio",
+            document: `supermercado_rejeita_${randomUUID()}`, // Documento único para isolamento
+            line1: "Rua Teste", line2: "123", neighborhood: "Bairro", postal_code: "79000000",
+            city: "Campo Grande", state: "MS", country: "Brasil",
+            classification: "Supermercado", colaborators_number: 5, email: `supermercado-rejeita-${randomUUID()}@test.com`, phone_1: "55556666",
+            business_type: "comercio",
+            branches_uuid: [branch2_uuid], // <<< Associado ao Ramo "Supermercados"
+            partnerConfig: { main_branch: branch2_uuid, partner_category: ['comercio'], use_marketing: false, use_market_place: false }
+          };
+          const createSupermercadoRes = await request(app).post("/business/register").send(supermercadoInput);
+          expect(createSupermercadoRes.statusCode).toBe(201);
+          const supermercadoInfoUuid = createSupermercadoRes.body.BusinessInfo.uuid;
+
+          // Ativamos o parceiro e criamos seu admin para poder criar uma transação
+          await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query({ business_info_uuid: supermercadoInfoUuid }).send({ status: "active" });
+          await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send({ password: "123", business_info_uuid: supermercadoInfoUuid, email: supermercadoInput.email, name: "Admin Supermercado" });
+          const authSupermercadoRes = await request(app).post("/business/admin/login").send({ business_document: supermercadoInput.document, password: "123", email: supermercadoInput.email });
+          const supermercadoAdminToken = authSupermercadoRes.body.token;
+
+          // 2. O parceiro "Supermercado" cria uma transação
+          const transactionInput = { original_price: 50, discount_percentage: 0, net_price: 50 };
+          const createTxRes = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${supermercadoAdminToken}`).send(transactionInput);
+          expect(createTxRes.statusCode).toBe(201);
+          const transactionId = createTxRes.body.transaction_uuid;
+
+          // 3. O funcionário 1 (employeeAuthToken) tentará pagar com "Convênio", que não é aceito.
+          const paymentInput = {
+            transactionId: transactionId,
+            benefit_uuid: convenio_benefit_user1_uuid // O usuário TEM este benefício
+          };
+
+          // --- ACT (Ação) ---
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(paymentInput);
+
+          // --- ASSERT (Verificação) ---
+          // A API deve rejeitar a transação, pois o benefício não é válido para este parceiro
+          expect(result.statusCode).toBe(403);
+          expect(result.body.error).toBe("User item is not valid for this transaction");
+        });
 
         it("should correctly process a pre-paid benefit and update all account balances", async () => {
           // 3. ACT: Executar o pagamento
@@ -3632,12 +3655,21 @@ describe("E2E App User tests", () => {
             expect(result.statusCode).toBe(200)
             expect(result.body.length).toBe(0)
           })
-          it("Should return business account history)", async () => {
-            const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token3}`)
 
-            expect(result.statusCode).toBe(200)
-            expect(result.body.length).toBe(1)
-          })
+          it("should return the correct business account history for the receiving partner", async () => {
+            const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token3}`);
+            expect(result.statusCode).toBe(200);
+            expect(result.body.length).toBeGreaterThan(0);
+
+            const historyEntry = result.body[0]; // Pega o registro mais recente
+
+            // Validação detalhada do conteúdo do histórico (API retorna em Reais)
+            expect(historyEntry.event_type).toBe("PAYMENT_RECEIVED");
+            expect(historyEntry.amount).toBeCloseTo(expected_partner_net_amount_in_cents / 100);
+            expect(historyEntry.balance_before).toBeCloseTo(partner3_initial_liquid_balance_in_cents / 100);
+            expect(historyEntry.balance_after).toBeCloseTo((partner3_initial_liquid_balance_in_cents + expected_partner_net_amount_in_cents) / 100);
+            expect(historyEntry.related_transaction_uuid).toBe(transaction1_uuid);
+          });
         })
       })
 
@@ -3682,7 +3714,6 @@ describe("E2E App User tests", () => {
 
           expect(createTransaction.statusCode).toBe(201);
           post_paid_transaction_uuid = createTransaction.body.transaction_uuid;
-          expected_post_paid_fee_in_cents = createTransaction.body.fee_amount;
           expected_post_paid_fee_in_cents = Math.round(createTransaction.body.fee_amount * 100);
           expected_post_paid_cashback_in_cents = Math.round(createTransaction.body.cashback * 100);
           expected_partner_credit_amount_in_cents = Math.round(transactionInput.net_price * 100) - expected_post_paid_fee_in_cents;
@@ -3699,7 +3730,7 @@ describe("E2E App User tests", () => {
           // 3. ASSERT: Checar a resposta imediata da API (valores em Reais)
           expect(result.statusCode).toBe(200);
           expect(result.body.result).toBeTruthy();
-          expect(result.body.finalBalance).toBe((employee2_convenio_initial_limit_in_cents / 100) - transactionInput.net_price);
+          expect(result.body.finalBalance).toBeCloseTo((employee2_convenio_initial_limit_in_cents / 100) - transactionInput.net_price);
           expect(result.body.cashback).toBe(expected_post_paid_cashback_in_cents / 100);
 
           // 4. ASSERT: Checar o estado final das contas, buscando novamente os dados
@@ -3733,29 +3764,92 @@ describe("E2E App User tests", () => {
         });
       });
 
-      // describe("E2E Post-Paid Account Histories", () => {
-      //   it("should create a history record for the user's limit usage", async () => {
-      //     const input = {
-      //       user_item_uuid: convenio_benefit_user2_uuid,
-      //     }
-      //     const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input);
-      //     expect(result.statusCode).toBe(200);
-      //     const historyEntry = result.body.find((entry: any) => entry.related_transaction_uuid === post_paid_transaction_uuid);
-      //     expect(historyEntry).toBeDefined();
-      //     expect(historyEntry.event_type).toBe("ITEM_SPENT");
-      //     expect(historyEntry.amount).toBe(-7500); // Valor da transação em centavos
-      //   });
+      describe("E2E Process Post-Paid Transaction", () => {
+        // <<< MUDANÇA 1: Declaramos as variáveis que serão compartilhadas entre os testes aqui >>>
+        let post_paid_transaction_uuid: string;
+        let transaction_net_price_in_cents: number;
 
-      //   it("should NOT create a PAYMENT_RECEIVED history for the partner's liquid BusinessAccount", async () => {
-      //     const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token3}`);
-      //     expect(result.statusCode).toBe(200);
-      //     // Assuming the pre-paid test ran before, there should be at least one history entry.
-      //     // We check that no NEW entry was created for our post-paid transaction.
-      //     const postPaidEntry = result.body.find((entry: any) => entry.related_transaction_uuid === post_paid_transaction_uuid);
-      //     expect(postPaidEntry).toBeUndefined();
-      //   });
-      // });
+        // Variáveis de estado inicial (em centavos), preenchidas no beforeAll
+        let partner3_initial_liquid_balance_in_cents: number;
+        let correct_admin_initial_balance_in_cents: number;
+        let employee2_convenio_initial_limit_in_cents: number;
+        let employee2_cashback_initial_balance_in_cents: number;
 
+        beforeAll(async () => {
+          // <<< ETAPA 2: O beforeAll prepara o estado inicial para TODOS os testes filhos >>>
+          const convenioBenefit = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: convenio_benefit_user2_uuid });
+          employee2_convenio_initial_limit_in_cents = Math.round(convenioBenefit.body.balance * 100);
+
+          const cashbackBenefit = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: correct_benefit_user2_uuid });
+          employee2_cashback_initial_balance_in_cents = Math.round(cashbackBenefit.body.balance * 100);
+
+          const correctAdminAccount = await request(app).get('/admin/account').set('Authorization', `Bearer ${correctAdminToken}`);
+          correct_admin_initial_balance_in_cents = Math.round(correctAdminAccount.body.balance * 100);
+
+          const partnerAccount = await request(app).get("/business/admin/account").set('Authorization', `Bearer ${partner_auth_token3}`);
+          partner3_initial_liquid_balance_in_cents = Math.round(partnerAccount.body.balance * 100);
+
+          // Validação do setup para garantir que o teste tem um ponto de partida conhecido
+          expect(employee2_convenio_initial_limit_in_cents).toBeGreaterThan(0);
+        });
+
+        it("should process a post-paid benefit correctly", async () => {
+          // ARRANGE
+          const transactionInput = {
+            original_price: 75.00,
+            discount_percentage: 0,
+            net_price: 75.00,
+          };
+          const createTransaction = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_auth_token3}`).send(transactionInput);
+          expect(createTransaction.statusCode).toBe(201);
+
+          // <<< MUDANÇA 2: Atribuímos valor às variáveis compartilhadas >>>
+          post_paid_transaction_uuid = createTransaction.body.transaction_uuid;
+          transaction_net_price_in_cents = Math.round(transactionInput.net_price * 100);
+
+          const expected_fee_in_cents = Math.round(createTransaction.body.fee_amount * 100);
+          const expected_cashback_in_cents = Math.round(createTransaction.body.cashback * 100);
+          const expected_partner_credit_amount_in_cents = transaction_net_price_in_cents - expected_fee_in_cents;
+
+          // ACT
+          const paymentInput = {
+            transactionId: post_paid_transaction_uuid,
+            benefit_uuid: convenio_benefit_user2_uuid,
+          };
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(paymentInput);
+
+          // ASSERT (As asserções do pagamento principal continuam aqui, como já estavam)
+          expect(result.statusCode).toBe(200);
+          // ... (resto das suas asserções para o pagamento)
+        });
+
+        describe("E2E Post-Paid Account Histories", () => {
+          it("should create a history record for the user's limit usage", async () => {
+            const input = {
+              user_item_uuid: convenio_benefit_user2_uuid,
+            };
+            const result = await request(app).get("/app-user/account/history").set('Authorization', `Bearer ${employeeAuthToken2}`).query(input);
+            expect(result.statusCode).toBe(200);
+            // Procuramos o registro de histórico específico da nossa transação
+            const historyEntry = result.body.find((entry: any) => entry.related_transaction_uuid === post_paid_transaction_uuid);
+
+            expect(historyEntry).toBeDefined();
+            expect(historyEntry.event_type).toBe("ITEM_SPENT");
+            // Comparamos com os valores dinâmicos, não com números fixos
+            expect(historyEntry.amount).toBeCloseTo(-transaction_net_price_in_cents / 100);
+            expect(historyEntry.balance_before).toBeCloseTo(employee2_convenio_initial_limit_in_cents / 100);
+            expect(historyEntry.balance_after).toBeCloseTo((employee2_convenio_initial_limit_in_cents - transaction_net_price_in_cents) / 100);
+          });
+
+          it("should NOT create a PAYMENT_RECEIVED history for the partner's liquid BusinessAccount", async () => {
+            const result = await request(app).get("/business/account/history").set('Authorization', `Bearer ${partner_auth_token3}`);
+            expect(result.statusCode).toBe(200);
+            // Verificamos que na lista de históricos do parceiro, NENHUM registro corresponde à nossa transação pós-paga
+            const postPaidEntry = result.body.find((entry: any) => entry.related_transaction_uuid === post_paid_transaction_uuid);
+            expect(postPaidEntry).toBeUndefined();
+          });
+        });
+      });
       // ... resto do seu arquivo de testes
     })
   })

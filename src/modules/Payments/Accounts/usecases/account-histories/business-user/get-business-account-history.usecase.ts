@@ -41,7 +41,7 @@ export class GetBusinessAccountHistoryUsecase {
     const businessAccount = await this.businessAccountRepository.findByBusinessId(data.business_info_uuid)
     if(!businessAccount) throw new CustomError("Business account not found", 404)
     //find history
-    const accountHistory = await this.accountHistoryRepository.findBusinessAccountHistory(businessAccount.uuid, yearToQuery, monthToQuery)
+    const accountHistory = await this.accountHistoryRepository.findBusinessAccountHistory(businessAccount.uuid.uuid, yearToQuery, monthToQuery)
     if(accountHistory.length === 0) return []
 
     return accountHistory.map((item: OutputGetBusinessAccountHistoryDTO) => ({

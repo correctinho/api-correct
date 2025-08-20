@@ -3,4 +3,5 @@ import RepositoryInterface from "../../../../@shared/domain/repository/repositor
 
 export interface IPartnerCreditRepository extends RepositoryInterface<PartnerCreditEntity> {
     findAllByBusinessAccount(businessAccountId: string): Promise<PartnerCreditEntity[]>;
+     findAllSpendableByAccountId(accountId: string): Promise<PartnerCreditEntity[]>;
 }
