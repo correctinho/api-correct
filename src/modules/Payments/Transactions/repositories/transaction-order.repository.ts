@@ -2,8 +2,23 @@ import RepositoryInterface from "../../../../@shared/domain/repository/repositor
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
 import { CalculateSplitPrePaidOutput } from "../../../../paymentSplit/prePaidSplit";
 import { AppUserItemEntity } from "../../../AppUser/AppUserManagement/entities/app-user-item.entity";
+import { BusinessAccountEntity } from "../../Accounts/entities/business-account.entity";
+import { PartnerCreditEntity } from "../../Accounts/entities/partner-credit.entity";
 import { TransactionEntity } from "../entities/transaction-order.entity";
 
+export type ProcessPaymentByBusinessParams = {
+  transaction: TransactionEntity;
+  payerAccount: BusinessAccountEntity;
+  payerCredits: PartnerCreditEntity[];
+  sellerBusinessInfoId: string;
+};
+
+
+export type ProcessPaymentByBusinessResult = {
+  amountPaidFromCredits: number;
+  amountPaidFromLiquidBalance: number;
+  payerFinalLiquidBalance: number;
+};
 export interface ITransactionOrderRepository extends RepositoryInterface<TransactionEntity> {
   savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity>;
   processSplitPrePaidPayment(
@@ -22,5 +37,6 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
     transactionEntity: TransactionEntity,
     userInfoUuid: Uuid // <<< Parâmetro adicionado
   ): Promise<{ success: boolean; finalDebitedUserItemBalance: number, user_cashback_amount: number }>
-  
+  processPaymentByBusiness(params: ProcessPaymentByBusinessParams): Promise<ProcessPaymentByBusinessResult>;
+
 }

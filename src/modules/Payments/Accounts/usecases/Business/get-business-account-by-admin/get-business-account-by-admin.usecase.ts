@@ -12,7 +12,6 @@ export class GetBusinessAccountByAdminUseCase {
     if(!data.business_info_uuid){
       throw new CustomError("business_info_uuid is required", 400)
     }
-
     //get business account
     const businessAccount = await this.businessAccountRepository.findByBusinessId(data.business_info_uuid)
     if(!businessAccount){
@@ -20,9 +19,9 @@ export class GetBusinessAccountByAdminUseCase {
     }
 
     return {
-      uuid: businessAccount.uuid,
-      business_info_uuid: businessAccount.business_info_uuid,
-      balance: businessAccount.balance / 100,
+      uuid: businessAccount.uuid.uuid,
+      business_info_uuid: businessAccount.business_info_uuid.uuid,
+      balance: businessAccount.balance,
       status: businessAccount.status,
       created_at: businessAccount.created_at,
       updated_at: businessAccount.updated_at,

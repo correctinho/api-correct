@@ -1,10 +1,7 @@
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../errors/custom.error";
-import { calculateSplitPrePaidAmount } from "../../../../../paymentSplit/prePaidSplit";
 import { IAppUserItemRepository } from "../../../../AppUser/AppUserManagement/repositories/app-user-item-repository";
-import { ICompanyDataRepository } from "../../../../Company/CompanyData/repositories/company-data.repository";
 import { IPartnerConfigRepository } from "../../../../Company/PartnerConfig/repositories/partner-config.repository";
-import { TransactionEntity } from "../../entities/transaction-order.entity";
 import { ITransactionOrderRepository } from "../../repositories/transaction-order.repository";
 import { InputProcessPaymentDTO } from "./dto/process-payment-by-app-user.dto";
 
@@ -17,75 +14,51 @@ export class ProcessPaymentByAppUserUsecase {
 
   async execute(data: InputProcessPaymentDTO): Promise<any> {
 
-    if (!data.transactionId) {
-      throw new CustomError("Transaction ID is required", 400);
-    }
+    if (!data.transactionId) throw new CustomError("Transaction ID is required", 400);
     if (!data.benefit_uuid) throw new CustomError("Benefit UUID is required", 400);
 
-    //get transaction details
-    const transaction = await this.transactionOrderRepository.find(new Uuid(data.transactionId));
-    if (!transaction) throw new CustomError("Transaction not found", 404);
-    // Ensure transaction has the favored business info needed
-    if (!transaction.favored_business_info_uuid) {
+    // 1. Buscamos a ENTIDADE diretamente. O método find() já a retorna hidratada.
+    const transactionEntity = await this.transactionOrderRepository.find(new Uuid(data.transactionId));
+    if (!transactionEntity) throw new CustomError("Transaction not found", 404);
+
+    if (!transactionEntity.favored_business_info_uuid) {
       throw new CustomError("Transaction is missing partner information", 400);
     }
 
-    //check if user has the benefit
+    // 2. Buscamos o UserItem
     const userItem = await this.userItemRepository.find(new Uuid(data.benefit_uuid));
     if (!userItem) throw new CustomError("User item not found", 404);
 
-
-    //double validation if user item is from the same user
+    // 3. Validações de Negócio
     if (userItem.user_info_uuid.uuid !== data.appUserInfoID) throw new CustomError("User item is not from this user", 403);
-
-    //check benefit status
     if (userItem.status === "inactive" || userItem.status === "blocked") throw new CustomError("User item is not active", 403);
 
-    //check if user has enough balance
-    if (userItem.balance < transaction.net_price) throw new CustomError("User item balance is not enough", 403);
+    // 4. A verificação de saldo agora usa o getter da entidade (Reais)
+    if (userItem.balance < transactionEntity.net_price) throw new CustomError("User item balance is not enough", 403);
 
-    //check if user benefit can be paid in this transaction
-    const partnerConfig = await this.partnerConfigRepository.findByPartnerId(transaction.favored_business_info_uuid.uuid);
+    const partnerConfig = await this.partnerConfigRepository.findByPartnerId(transactionEntity.favored_business_info_uuid.uuid);
     if (!partnerConfig) throw new CustomError("Partner not found", 404);
 
     const isBenefitValid = partnerConfig.items_uuid.some((item) => item === userItem.item_uuid.uuid);
     if (!isBenefitValid) throw new CustomError("User item is not valid for this transaction", 403);
 
-    const transactionEntity = TransactionEntity.hydrate(transaction);
+    // 5. Preparamos a entidade para o processamento
     transactionEntity.changeUserItemUuid(new Uuid(data.benefit_uuid));
-    //check if benefit is pos ou pre paid
+
+    // 6. Direcionamos para o método correto do repositório
     if (userItem.item_category === "pre_pago") {
-      //if it is pre paid, amount is immediately transfered to partner
-      try {
-
-        const processSplitPrePaidPayment = await this.transactionOrderRepository.processSplitPrePaidPaymentTest(
-          transactionEntity,
-          new Uuid(data.appUserInfoID)
-        )
-        return { result: processSplitPrePaidPayment.success, finalBalance: processSplitPrePaidPayment.finalDebitedUserItemBalance / 100, cashback: processSplitPrePaidPayment.user_cashback_amount / 100 }
-      } catch (err) {
-        return err
-      }
-
-
-
-    } {
-      //else, amount must go to credits
-      // TODO: Implementar lógica pós-pago/crédito
-      try {
-        // << NOSSA NOVA CHAMADA AQUI >>
-        const processSplitPostPaidPayment = await this.transactionOrderRepository.processSplitPostPaidPayment(
-          transactionEntity,
-          new Uuid(data.appUserInfoID)
-        );
-        return { result: processSplitPostPaidPayment.success, finalBalance: processSplitPostPaidPayment.finalDebitedUserItemBalance / 100, cashback: processSplitPostPaidPayment.user_cashback_amount / 100 };
-      } catch (err) {
-        return err;
-      }
+      const repoResult = await this.transactionOrderRepository.processSplitPrePaidPaymentTest(
+        transactionEntity,
+        new Uuid(data.appUserInfoID)
+      );
+      // 7. O use case formata o retorno (que vem do repo em centavos) para Reais
+      return { result: repoResult.success, finalBalance: repoResult.finalDebitedUserItemBalance / 100, cashback: repoResult.user_cashback_amount / 100 };
+    } else { // Pós-pago
+      const repoResult = await this.transactionOrderRepository.processSplitPostPaidPayment(
+        transactionEntity,
+        new Uuid(data.appUserInfoID)
+      );
+      return { result: repoResult.success, finalBalance: repoResult.finalDebitedUserItemBalance / 100, cashback: repoResult.user_cashback_amount / 100 };
     }
-
   }
-
-  //logic to process payment by app user
-
 }

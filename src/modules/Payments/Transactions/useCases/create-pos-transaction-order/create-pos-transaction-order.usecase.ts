@@ -35,8 +35,9 @@ export class CreatePOSTransactionOrderUsecase {
     //Get partner config details
     const partnerConfig = await this.partnerConfigRepository.findByPartnerId(businessInfo.uuid)
     if (!partnerConfig) throw new CustomError("Partner config not found", 400)
-
+    
     const transactionEntity = TransactionEntity.create(data)
+
     // Calculate fee
     transactionEntity.calculateFeePercentage(partnerConfig.admin_tax, partnerConfig.marketing_tax)
     transactionEntity.calculateFee()
@@ -55,12 +56,12 @@ export class CreatePOSTransactionOrderUsecase {
       user_item_uuid: transaction.user_item_uuid ? transaction.user_item_uuid.uuid : null,
       favored_user_uuid: transaction.favored_user_uuid ? transaction.favored_user_uuid.uuid : null,
       favored_business_info_uuid: transaction.favored_business_info_uuid ? transaction.favored_business_info_uuid.uuid : null,
-      original_price: transaction.original_price / 100,
-      discount_percentage: transaction.discount_percentage / 10000,
-      net_price: transaction.net_price / 100,
-      fee_percentage: transaction.fee_percentage / 10000,
-      fee_amount: transaction.fee_amount / 100,
-      cashback: transaction.cashback / 100,
+      original_price: transaction.original_price,
+      discount_percentage: transaction.discount_percentage,
+      net_price: transaction.net_price,
+      fee_percentage: transaction.fee_percentage,
+      fee_amount: transaction.fee_amount,
+      cashback: transaction.cashback,
       description: transaction.description,
       transaction_status: transaction.status,
       transaction_type: transaction.transaction_type,

@@ -33,7 +33,6 @@ export class CreateBranchUsecase {
       const branchCreated = await this.branchRepository.create(branchEntity);
       branches.push(branchCreated);
     }
-
     return branches
   }
 

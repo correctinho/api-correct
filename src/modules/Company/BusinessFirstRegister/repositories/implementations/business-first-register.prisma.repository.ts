@@ -54,7 +54,7 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
         }))
       }),
       prismaClient.correctUserBusinessInfo.create({
-        data:{
+        data: {
           uuid: randomUUID(),
           business_info_uuid: data.business_info_uuid,
           correct_admin_uuid: correctUserUuid,
@@ -100,7 +100,11 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
     }
   }
   async savePartner(data: BusinessRegisterEntity, partnerConfig: PartnerConfigEntity, correctUserUuid?: string): Promise<any> {
-    const [address, businessInfo, business_branch, correctUserBusiness] = await prismaClient.$transaction([
+
+    // Cenário 2: Valor lido pelo .toJSON() (a forma correta)
+    const dadosParaSalvar = partnerConfig.toJSON();
+    // ===================
+    const [address, businessInfo, business_branch, correctUserBusiness, partner] = await prismaClient.$transaction([
 
       prismaClient.address.create({
         data: {
@@ -144,7 +148,7 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
       }),
 
       prismaClient.correctUserBusinessInfo.create({
-        data:{
+        data: {
           uuid: randomUUID(),
           business_info_uuid: data.business_info_uuid,
           correct_admin_uuid: correctUserUuid,
@@ -153,26 +157,25 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
       }),
 
       prismaClient.partnerConfig.create({
-        data:{
-          uuid: randomUUID(),
-          business_info_uuid: data.business_info_uuid,
-          main_branch: partnerConfig.main_branch.uuid,
-          partner_category: partnerConfig.partner_category,
-          items_uuid: partnerConfig.items_uuid,
-          admin_tax: partnerConfig.admin_tax,
-          marketing_tax: partnerConfig.marketing_tax,
-          use_marketing: partnerConfig.use_marketing,
-          market_place_tax: partnerConfig.market_place_tax,
-          use_market_place: partnerConfig.use_market_place,
-          latitude: partnerConfig.latitude,
-          longitude: partnerConfig.longitude,
-          title: partnerConfig.title,
-          created_at: partnerConfig.created_at,
+        data: {
+          uuid: dadosParaSalvar.uuid,
+          business_info_uuid: dadosParaSalvar.business_info_uuid,
+          main_branch: dadosParaSalvar.main_branch_uuid,
+          partner_category: dadosParaSalvar.partner_category,
+          items_uuid: dadosParaSalvar.items_uuid,
+          admin_tax: dadosParaSalvar.admin_tax,
+          marketing_tax: dadosParaSalvar.marketing_tax,
+          use_marketing: dadosParaSalvar.use_marketing,
+          market_place_tax: dadosParaSalvar.market_place_tax,
+          use_market_place: dadosParaSalvar.use_market_place,
+          latitude: dadosParaSalvar.latitude,
+          longitude: dadosParaSalvar.longitude,
+          title: dadosParaSalvar.title,
+          created_at: dadosParaSalvar.created_at,
         },
-
       }),
       prismaClient.businessAccount.create({
-        data:{
+        data: {
           uuid: randomUUID(),
           balance: 0,
           business_info_uuid: data.business_info_uuid,
@@ -181,7 +184,6 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
         }
       })
     ])
-
     return {
       Address: {
         uuid: address.uuid,
@@ -217,17 +219,17 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
         created_at: correctUserBusiness.created_at
       },
       PartnerConfig: {
-        uuid: partnerConfig.uuid.uuid,
-        business_info_uuid: partnerConfig.business_info_uuid.uuid,
-        main_branch: partnerConfig.main_branch.uuid,
-        partner_category: partnerConfig.partner_category,
-        items_uuid: partnerConfig.items_uuid,
-        admin_tax: partnerConfig.admin_tax,
-        marketing_tax: partnerConfig.marketing_tax,
-        use_marketing: partnerConfig.use_marketing,
-        market_place_tax: partnerConfig.market_place_tax,
-        use_market_place: partnerConfig.use_market_place,
-        created_at: partnerConfig.created_at
+        uuid: partner.uuid,
+        business_info_uuid: partner.business_info_uuid,
+        main_branch: partner.main_branch,
+        partner_category: partner.partner_category,
+        items_uuid: partner.items_uuid,
+        admin_tax: partner.admin_tax,
+        marketing_tax: partner.marketing_tax,
+        use_marketing: partner.use_marketing,
+        market_place_tax: partner.market_place_tax,
+        use_market_place: partner.use_market_place,
+        created_at: partner.created_at
       }
     }
   }
