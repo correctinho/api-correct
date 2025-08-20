@@ -14,6 +14,7 @@ import { groupsRouter } from './Groups/groups.routes';
 import { transactionsRouter } from './Transactions/transactions.routes';
 import { ecommerceRouter } from './Ecommerce/ecommerce.routes';
 import { accountsRouter } from './Accounts/accounts';
+import { sseRouter } from './SSERoute/sse.route';
 
 const router = Router();
 
@@ -32,5 +33,6 @@ router.use(groupsRouter)
 router.use(transactionsRouter)
 router.use(ecommerceRouter)
 router.use(accountsRouter)
+router.use(sseRouter)
 
 export { router };

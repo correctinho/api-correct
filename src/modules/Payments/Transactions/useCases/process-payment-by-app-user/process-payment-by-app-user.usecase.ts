@@ -1,5 +1,6 @@
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../errors/custom.error";
+import { sseSendEvent } from "../../../../../infra/sse/sse.config";
 import { IAppUserItemRepository } from "../../../../AppUser/AppUserManagement/repositories/app-user-item-repository";
 import { IPartnerConfigRepository } from "../../../../Company/PartnerConfig/repositories/partner-config.repository";
 import { ITransactionOrderRepository } from "../../repositories/transaction-order.repository";
@@ -47,18 +48,62 @@ export class ProcessPaymentByAppUserUsecase {
 
     // 6. Direcionamos para o método correto do repositório
     if (userItem.item_category === "pre_pago") {
-      const repoResult = await this.transactionOrderRepository.processSplitPrePaidPaymentTest(
-        transactionEntity,
-        new Uuid(data.appUserInfoID)
-      );
-      // 7. O use case formata o retorno (que vem do repo em centavos) para Reais
-      return { result: repoResult.success, finalBalance: repoResult.finalDebitedUserItemBalance / 100, cashback: repoResult.user_cashback_amount / 100 };
+      try {
+        const repoResult = await this.transactionOrderRepository.processSplitPrePaidPaymentTest(
+          transactionEntity,
+          new Uuid(data.appUserInfoID)
+        );
+
+        // ====================================================================
+        // <<< PASSO 2: Enviar notificação de SUCESSO >>>
+        // ====================================================================
+        sseSendEvent(data.transactionId, 'paymentConfirmed', {
+          status: 'success',
+          message: 'Pagamento pré-pago confirmado!',
+          amount: transactionEntity.net_price // Enviamos o valor em Reais
+        });
+
+        return { result: repoResult.success, finalBalance: repoResult.finalDebitedUserItemBalance / 100, cashback: repoResult.user_cashback_amount / 100 };
+      } catch (err) {
+        let errorMessage = 'Ocorreu um erro no pagamento.';
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+
+        sseSendEvent(data.transactionId, 'paymentFailed', {
+          status: 'failed',
+          message: errorMessage
+        });
+        throw err;
+      }
     } else { // Pós-pago
-      const repoResult = await this.transactionOrderRepository.processSplitPostPaidPayment(
-        transactionEntity,
-        new Uuid(data.appUserInfoID)
-      );
-      return { result: repoResult.success, finalBalance: repoResult.finalDebitedUserItemBalance / 100, cashback: repoResult.user_cashback_amount / 100 };
+      try {
+        const repoResult = await this.transactionOrderRepository.processSplitPostPaidPayment(
+          transactionEntity,
+          new Uuid(data.appUserInfoID)
+        );
+
+        // Enviamos a mesma notificação de sucesso para o fluxo pós-pago
+        sseSendEvent(data.transactionId, 'paymentConfirmed', {
+          status: 'success',
+          message: 'Pagamento pós-pago confirmado!',
+          amount: transactionEntity.net_price
+        });
+
+        return { result: repoResult.success, finalBalance: repoResult.finalDebitedUserItemBalance / 100, cashback: repoResult.user_cashback_amount / 100 };
+      } catch (err) {
+        // Enviamos a mesma notificação de falha para o fluxo pós-pago
+        let errorMessage = 'Ocorreu um erro no pagamento.';
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+
+        sseSendEvent(data.transactionId, 'paymentFailed', {
+          status: 'failed',
+          message: errorMessage
+        });
+        throw err;
+      }
     }
   }
 }
