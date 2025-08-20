@@ -13,6 +13,9 @@ export class GetBusinessAccountHistoryController {
     try {
 
       let data = req.body
+
+      data.year = req.query.year
+      data.month = req.query.month
       data.business_info_uuid = req.companyUser.businessInfoUuid
 
 
