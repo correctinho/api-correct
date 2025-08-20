@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { AppUserItemEntity } from "../../../../AppUser/AppUserManagement/entities/app-user-item.entity";
-import { TransactionEntity } from "../../entities/transaction-order.entity";
-import { ITransactionOrderRepository } from "../transaction-order.repository";
+import { TransactionEntity, TransactionProps } from "../../entities/transaction-order.entity";
+import { ITransactionOrderRepository, ProcessPaymentByBusinessParams, ProcessPaymentByBusinessResult } from "../transaction-order.repository";
 import { BusinessAccountEventType, CorrectAccountEventType, UserItemEventType } from "@prisma/client";
 import { CalculateSplitPrePaidOutput } from "../../../../../paymentSplit/prePaidSplit";
 import { CustomError } from "../../../../../errors/custom.error";
@@ -10,6 +10,7 @@ import { calculateCycleSettlementDateAsDate, newDateF } from "../../../../../uti
 import { prismaClient } from "../../../../../infra/databases/prisma.config";
 
 export class TransactionOrderPrismaRepository implements ITransactionOrderRepository {
+
   async generateTransactionReceiptDetails(transactionId: string): Promise<any> {
     const transaction = await prismaClient.transactions.findUnique({
       where: {
@@ -401,8 +402,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         }
       });
 
-
-      // Retornar sucesso e o saldo final do item DEBITADO
       return {
         success: true,
         finalDebitedUserItemBalance: debitedUserItemBalanceAfter,
@@ -547,79 +546,202 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
 
 
   async savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity> {
-    const dataToSave = entity.toJSON()
+    const dataToSave = entity.toJSON();
+    const createdTxData = await prismaClient.transactions.create({ data: dataToSave });
 
-    const transaction = await prismaClient.transactions.create({
-      data: {
-        uuid: dataToSave.uuid,
-        user_item_uuid: null,
-        favored_user_uuid: null,
-        favored_business_info_uuid: dataToSave.favored_business_info_uuid,
-        original_price: dataToSave.original_price,
-        discount_percentage: dataToSave.discount_percentage,
-        net_price: dataToSave.net_price,
-        fee_percentage: dataToSave.fee_percentage,
-        partner_credit_amount: dataToSave.partner_credit_amount,
-        fee_amount: dataToSave.fee_amount,
-        cashback: dataToSave.cashback,
-        description: dataToSave.description,
-        status: dataToSave.status,
-        transaction_type: dataToSave.transaction_type,
-        favored_partner_user_uuid: dataToSave.favored_partner_user_uuid,
-        paid_at: null,
-        created_at: dataToSave.created_at,
+    // CRUCIAL: Após criar, buscamos novamente para ter todos os dados
+    // e hidratamos para retornar uma instância de classe real.
+    const finalTxData = await prismaClient.transactions.findUnique({
+      where: { uuid: createdTxData.uuid }
+    });
+
+    const transactionProps: TransactionProps = {
+      uuid: new Uuid(finalTxData.uuid),
+      // ... (mapear todos os outros campos de finalTxData para TransactionProps)
+      user_item_uuid: finalTxData.user_item_uuid ? new Uuid(finalTxData.user_item_uuid) : null,
+      favored_user_uuid: finalTxData.favored_user_uuid ? new Uuid(finalTxData.favored_user_uuid) : null,
+      favored_business_info_uuid: finalTxData.favored_business_info_uuid ? new Uuid(finalTxData.favored_business_info_uuid) : null,
+      original_price: finalTxData.original_price,
+      discount_percentage: finalTxData.discount_percentage,
+      net_price: finalTxData.net_price,
+      fee_percentage: finalTxData.fee_percentage,
+      fee_amount: finalTxData.fee_amount,
+      partner_credit_amount: finalTxData.partner_credit_amount,
+      cashback: finalTxData.cashback,
+      description: finalTxData.description,
+      status: finalTxData.status,
+      transaction_type: finalTxData.transaction_type,
+      favored_partner_user_uuid: finalTxData.favored_partner_user_uuid ? new Uuid(finalTxData.favored_partner_user_uuid) : null,
+      paid_at: finalTxData.paid_at,
+      created_at: finalTxData.created_at,
+      updated_at: finalTxData.updated_at,
+    };
+
+    return TransactionEntity.hydrate(transactionProps);
+  }
+
+  public async processPaymentByBusiness(params: ProcessPaymentByBusinessParams): Promise<ProcessPaymentByBusinessResult> {
+    const { transaction, payerAccount, payerCredits, sellerBusinessInfoId } = params;
+
+    const result = await prismaClient.$transaction(async (tx) => {
+      // --- PASSO 1: INICIALIZAÇÃO E PREPARAÇÃO ---
+      const transactionJson = transaction.toJSON();
+      let amountToPayInCents = transactionJson.net_price;
+      let totalPaidFromCredits = 0;
+      let totalPaidFromLiquid = 0;
+
+      // --- PASSO 2: BUSCAR A CONTA DO VENDEDOR ---
+      const sellerAccount = await tx.businessAccount.findFirst({
+        where: { business_info_uuid: sellerBusinessInfoId },
+      });
+      if (!sellerAccount) {
+        throw new CustomError("Conta do parceiro vendedor não encontrada.", 404);
       }
-    })
 
-    return {
-      uuid: new Uuid(transaction.uuid),
-      user_item_uuid: transaction.user_item_uuid ? new Uuid(transaction.user_item_uuid) : null,
-      favored_user_uuid: transaction.favored_user_uuid ? new Uuid(transaction.favored_user_uuid) : null,
-      favored_business_info_uuid: transaction.favored_business_info_uuid ? new Uuid(transaction.favored_business_info_uuid) : null,
-      original_price: transaction.original_price,
-      discount_percentage: transaction.discount_percentage,
-      net_price: transaction.net_price,
-      fee_percentage: transaction.fee_percentage,
-      fee_amount: transaction.fee_amount,
-      cashback: transaction.cashback,
-      description: transaction.description,
-      status: transaction.status,
-      transaction_type: transaction.transaction_type,
-      favored_partner_user_uuid: transaction.favored_partner_user_uuid ? new Uuid(transaction.favored_partner_user_uuid) : null,
-      paid_at: transaction.paid_at,
-      created_at: transaction.created_at,
-      updated_at: transaction.updated_at
-    } as TransactionEntity
+      // --- PASSO 3: LÓGICA DE CONSUMO DE CRÉDITOS (FIFO) ---
+      for (const creditToSpend of payerCredits) {
+        if (amountToPayInCents <= 0) break; // Para o loop se o pagamento já foi coberto
+
+        const creditBalanceInCents = creditToSpend.toJSON().balance; // Pega o saldo em centavos
+        const spendAmount = Math.min(amountToPayInCents, creditBalanceInCents);
+
+        // 1. Aplica a regra de negócio na entidade (diminui o saldo interno)
+        creditToSpend.spend(spendAmount);
+        const updatedCreditJson = creditToSpend.toJSON();
+
+        // 2. Persiste a alteração do crédito gasto no banco
+        await tx.partnerCredit.update({
+          where: { uuid: updatedCreditJson.uuid },
+          data: {
+            balance: updatedCreditJson.balance,
+            spent_amount: updatedCreditJson.spent_amount,
+          },
+        });
+
+        // 3. Calcula a NOVA data de liquidação para o vendedor
+        const newSettlementDate = calculateCycleSettlementDateAsDate(new Date());
+
+        // 4. Cria o novo crédito para o vendedor (transferência do recebível)
+        await tx.partnerCredit.create({
+          data: {
+            business_account_uuid: sellerAccount.uuid,
+            original_transaction_uuid: transactionJson.uuid,
+            balance: spendAmount,
+            spent_amount: 0,
+            status: "PENDING",
+            availability_date: newSettlementDate,
+          },
+        });
+
+        // 5. Registra o gasto do crédito para fins de auditoria
+        await tx.partnerCreditSpend.create({
+          data: {
+            partner_credit_uuid: creditToSpend.uuid.uuid,
+            spending_transaction_uuid: transactionJson.uuid,
+            amount_spent: spendAmount,
+          },
+        });
+
+        // 6. Atualiza os contadores
+        totalPaidFromCredits += spendAmount;
+        amountToPayInCents -= spendAmount;
+      }
+
+      // --- PASSO 4: LÓGICA DE CONSUMO DE SALDO LÍQUIDO (SE NECESSÁRIO) ---
+      if (amountToPayInCents > 0) {
+        totalPaidFromLiquid = amountToPayInCents;
+        const payerAccountJson = payerAccount.toJSON();
+
+        // 1. Debita do saldo líquido do pagador
+        const updatedPayerAccount = await tx.businessAccount.update({
+          where: { uuid: payerAccountJson.uuid },
+          data: { balance: { decrement: totalPaidFromLiquid } },
+        });
+
+        // 2. Credita no saldo líquido do vendedor
+        const updatedSellerAccount = await tx.businessAccount.update({
+          where: { uuid: sellerAccount.uuid },
+          data: { balance: { increment: totalPaidFromLiquid } },
+        });
+
+        // 3. Cria históricos para a movimentação de saldo líquido
+        await tx.businessAccountHistory.createMany({
+          data: [
+            { // Histórico de débito para o pagador
+              business_account_uuid: payerAccountJson.uuid,
+              event_type: "PAYOUT_PROCESSED", // ou um tipo mais específico como "P2P_PAYMENT_SENT"
+              amount: -totalPaidFromLiquid,
+              balance_before: payerAccountJson.balance,
+              balance_after: updatedPayerAccount.balance,
+              related_transaction_uuid: transactionJson.uuid,
+            },
+            { // Histórico de crédito para o vendedor
+              business_account_uuid: sellerAccount.uuid,
+              event_type: "PAYMENT_RECEIVED",
+              amount: totalPaidFromLiquid,
+              balance_before: sellerAccount.balance,
+              balance_after: updatedSellerAccount.balance,
+              related_transaction_uuid: transactionJson.uuid,
+            }
+          ]
+        });
+      }
+
+      // --- PASSO 5: FINALIZAÇÃO DA TRANSAÇÃO ORIGINAL ---
+      await tx.transactions.update({
+        where: { uuid: transactionJson.uuid },
+        data: { status: "success", paid_at: newDateF(new Date()), updated_at: newDateF(new Date()) },
+      });
+
+      // --- PASSO 6: RETORNO PARA O USE CASE ---
+      const finalPayerAccountState = await tx.businessAccount.findUnique({ where: { uuid: payerAccount.uuid.uuid } });
+
+      return {
+        amountPaidFromCredits: totalPaidFromCredits,
+        amountPaidFromLiquidBalance: totalPaidFromLiquid,
+        payerFinalLiquidBalance: finalPayerAccountState.balance,
+      };
+    });
+
+    return result;
   }
   async find(id: Uuid): Promise<TransactionEntity | null> {
-    const transaction = await prismaClient.transactions.findUnique({
+    // 1. Busca os dados brutos da transação no banco de dados
+    const transactionData = await prismaClient.transactions.findUnique({
       where: {
-        uuid: id.uuid
-      }
-    })
+        uuid: id.uuid,
+      },
+    });
 
-    if (!transaction) return null
+    if (!transactionData) {
+      return null;
+    }
 
-    return {
-      uuid: new Uuid(transaction.uuid),
-      user_item_uuid: transaction.user_item_uuid ? new Uuid(transaction.user_item_uuid) : null,
-      favored_user_uuid: transaction.favored_user_uuid ? new Uuid(transaction.favored_user_uuid) : null,
-      favored_business_info_uuid: transaction.favored_business_info_uuid ? new Uuid(transaction.favored_business_info_uuid) : null,
-      original_price: transaction.original_price,
-      discount_percentage: transaction.discount_percentage,
-      net_price: transaction.net_price,
-      fee_percentage: transaction.fee_percentage,
-      fee_amount: transaction.fee_amount,
-      cashback: transaction.cashback,
-      partner_credit_amount: transaction.partner_credit_amount,
-      description: transaction.description,
-      status: transaction.status,
-      transaction_type: transaction.transaction_type,
-      favored_partner_user_uuid: transaction.favored_partner_user_uuid ? new Uuid(transaction.favored_partner_user_uuid) : null,
-      paid_at: transaction.paid_at,
-      created_at: transaction.created_at,
-      updated_at: transaction.updated_at
-    } as TransactionEntity
+    // 2. Prepara as 'props' para a hidratação, convertendo strings para Value Objects
+    const transactionProps: TransactionProps = {
+      uuid: new Uuid(transactionData.uuid),
+      user_item_uuid: transactionData.user_item_uuid ? new Uuid(transactionData.user_item_uuid) : null,
+      favored_user_uuid: transactionData.favored_user_uuid ? new Uuid(transactionData.favored_user_uuid) : null,
+      favored_business_info_uuid: transactionData.favored_business_info_uuid ? new Uuid(transactionData.favored_business_info_uuid) : null,
+      original_price: transactionData.original_price,
+      discount_percentage: transactionData.discount_percentage,
+      net_price: transactionData.net_price,
+      fee_percentage: transactionData.fee_percentage,
+      fee_amount: transactionData.fee_amount,
+      partner_credit_amount: transactionData.partner_credit_amount,
+      cashback: transactionData.cashback,
+      description: transactionData.description,
+      status: transactionData.status,
+      transaction_type: transactionData.transaction_type,
+      favored_partner_user_uuid: transactionData.favored_partner_user_uuid ? new Uuid(transactionData.favored_partner_user_uuid) : null,
+      paid_at: transactionData.paid_at,
+      created_at: transactionData.created_at,
+      updated_at: transactionData.updated_at,
+    };
+
+    // 3. Usa o método estático 'hydrate' para reconstruir a entidade completa.
+    //    Isso garante que o objeto retornado seja uma instância de classe real.
+    return TransactionEntity.hydrate(transactionProps);
   }
 
   create(entity: TransactionEntity): Promise<void> {

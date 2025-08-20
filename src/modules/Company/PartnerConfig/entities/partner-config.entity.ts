@@ -25,7 +25,12 @@ export type PartnerConfigProps = {
   cashback_tax?: number;
 
 };
-
+export type PartnerConfigCreateCommand = Omit<PartnerConfigProps, 'admin_tax' | 'marketing_tax' | 'market_place_tax' | 'cashback_tax'> & {
+  admin_tax: number; // ex: 1.5
+  marketing_tax: number; // ex: 1.3
+  market_place_tax: number; // ex: 1.2
+  cashback_tax?: number;
+}
 export class PartnerConfigEntity {
   private _uuid?: Uuid;
   private _business_info_uuid: Uuid;
@@ -53,12 +58,12 @@ export class PartnerConfigEntity {
     this._main_branch = props.main_branch;
     this._partner_category = props.partner_category;
     this._items_uuid = props.items_uuid;
-    this._admin_tax = props.admin_tax * 10000;
-    this._marketing_tax = props.marketing_tax * 10000;
+    this._admin_tax = props.admin_tax; // Recebe o valor já escalado
+    this._marketing_tax = props.marketing_tax; // Recebe o valor já escalado
     this._use_marketing = props.use_marketing ?? false;
-    this._market_place_tax = props.market_place_tax * 10000;
+    this._market_place_tax = props.market_place_tax; // Recebe o valor já escalado
     this._use_market_place = props.use_market_place ?? false;
-    this._title = props.title;
+    this._title = props.title ?? null;
     this._phone = props.phone;
     this._sales_type = props.sales_type;
     this._description = props.description;
@@ -203,17 +208,17 @@ export class PartnerConfigEntity {
     this.validate();
   }
 
-  changeLatitude(latitude: number){
+  changeLatitude(latitude: number) {
     this._latitude = latitude;
     this.validate()
   }
 
-  changeLongitude(longitude: number){
+  changeLongitude(longitude: number) {
     this._longitude = longitude;
     this.validate()
   }
 
-  changeCashbackTax(cashback_tax: number){
+  changeCashbackTax(cashback_tax: number) {
     this._cashback_tax = cashback_tax;
     this.validate()
   }
@@ -271,8 +276,44 @@ export class PartnerConfigEntity {
     }
   }
 
-  // Método estático para criação
-  static create(data: PartnerConfigProps) {
-    return new PartnerConfigEntity(data);
+  public toJSON() {
+    return {
+      uuid: this._uuid.uuid,
+      business_info_uuid: this._business_info_uuid.uuid,
+      main_branch_uuid: this._main_branch.uuid,
+      partner_category: this._partner_category,
+      items_uuid: this._items_uuid,
+      admin_tax: this._admin_tax, // Retorna o inteiro escalado (15000)
+      marketing_tax: this._marketing_tax, // Retorna o inteiro escalado (13000)
+      use_marketing: this._use_marketing,
+      market_place_tax: this._market_place_tax, // Retorna o inteiro escalado (12000)
+      use_market_place: this._use_market_place,
+      title: this._title,
+      phone: this._phone,
+      description: this._description,
+      sales_type: this._sales_type,
+      latitude: this._latitude,
+      longitude: this._longitude,
+      cashback_tax: this._cashback_tax,
+      created_at: this._created_at,
+      updated_at: this._updated_at
+    }
+  }
+  public static create(data: PartnerConfigCreateCommand): PartnerConfigEntity {
+    const props: PartnerConfigProps = {
+      ...data,
+      admin_tax: Math.round(data.admin_tax * 10000),
+      marketing_tax: Math.round(data.marketing_tax * 10000),
+      market_place_tax: Math.round(data.market_place_tax * 10000),
+      cashback_tax: data.cashback_tax ? Math.round(data.cashback_tax * 10000) : 0,
+    };
+    const entity = new PartnerConfigEntity(props);
+    return entity;
+  }
+
+  // <<< MUDANÇA 4: ADICIONAMOS O MÉTODO 'HYDRATE' >>>
+  public static hydrate(props: PartnerConfigProps): PartnerConfigEntity {
+    // Apenas chama o construtor, pois os dados do banco já estão no formato interno correto
+    return new PartnerConfigEntity(props);
   }
 }

@@ -1,6 +1,6 @@
 import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 import { prismaClient } from "../../../../../../infra/databases/prisma.config";
-import { BusinessAccountEntity } from "../../../entities/business-account.entity";
+import { BusinessAccountEntity, BusinessAccountProps } from "../../../entities/business-account.entity";
 import { IBusinessAccountRepository } from "../business-account.repository";
 
 export class BusinessAccountPrismaRepository implements IBusinessAccountRepository {
@@ -19,20 +19,29 @@ export class BusinessAccountPrismaRepository implements IBusinessAccountReposito
   }
 
   async findByBusinessId(businessId: string): Promise<BusinessAccountEntity | null> {
-    const result = await prismaClient.businessAccount.findFirst({
+    // 1. Busca os dados brutos da conta no banco
+    const accountData = await prismaClient.businessAccount.findFirst({
       where: {
         business_info_uuid: businessId
       }
-    })
+    });
 
-    if (!result) return null
-    return {
-      uuid: result.uuid,
-      business_info_uuid: result.business_info_uuid,
-      balance: result.balance,
-      status: result.status,
-      created_at: result.created_at,
-      updated_at: result.updated_at,
-    } as BusinessAccountEntity
+    if (!accountData) {
+      return null;
+    }
+
+    // 2. Prepara as 'props' para a hidratação, convertendo strings para Value Objects
+    const accountProps: BusinessAccountProps = {
+      uuid: new Uuid(accountData.uuid),
+      balance: accountData.balance,
+      business_info_uuid: new Uuid(accountData.business_info_uuid),
+      status: accountData.status,
+      created_at: accountData.created_at,
+      updated_at: accountData.updated_at,
+    };
+
+    // 3. Usa o método estático 'hydrate' para reconstruir a entidade completa.
+    //    Isso garante que o objeto retornado tenha todos os métodos (como .toJSON()).
+    return BusinessAccountEntity.hydrate(accountProps);
   }
 }

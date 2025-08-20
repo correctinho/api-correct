@@ -4,6 +4,7 @@ import { prismaClient } from "../../../../../../infra/databases/prisma.config";
 import { PartnerCategory, PartnerConfigEntity } from "../../../entities/partner-config.entity";
 import { IPartnerConfigRepository } from "../../partner-config.repository";
 import { BusinessAccountEntity } from "../../../../../Payments/Accounts/entities/business-account.entity";
+import { newDateF } from "../../../../../../utils/date";
 
 export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
   // async upsert(data: PartnerConfigEntity): Promise<PartnerConfigEntity> {
@@ -24,26 +25,30 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
     throw new Error("Method not implemented.");
   }
   async update(entity: PartnerConfigEntity): Promise<void> {
+    // Primeiro, obtemos os dados brutos da entidade
+    const dataToSave = entity.toJSON();
+
     await prismaClient.partnerConfig.update({
       where: {
-        uuid: entity.uuid.uuid
+        uuid: dataToSave.uuid // Usamos o UUID do objeto JSON
       },
       data: {
-        uuid: entity.uuid.uuid,
-        business_info_uuid: entity.business_info_uuid.uuid,
-        main_branch: entity.main_branch.uuid,
-        partner_category: entity.partner_category,
-        items_uuid: entity.items_uuid,
-        admin_tax: entity.admin_tax,
-        marketing_tax: entity.marketing_tax,
-        use_marketing: entity.use_marketing,
-        market_place_tax: entity.market_place_tax,
-        use_market_place: entity.use_market_place,
-        title: entity.title,
-        phone: entity.phone,
-        description: entity.description,
-        sales_type: entity.sales_type,
-        updated_at: entity.updated_at
+        // Passamos todos os dados do objeto JSON, garantindo que
+        // os valores de taxa sejam os inteiros escalados corretos (ex: 15000)
+        business_info_uuid: dataToSave.business_info_uuid,
+        main_branch: dataToSave.main_branch_uuid, // Assumindo que toJSON retorna main_branch_uuid
+        partner_category: dataToSave.partner_category,
+        items_uuid: dataToSave.items_uuid,
+        admin_tax: dataToSave.admin_tax,
+        marketing_tax: dataToSave.marketing_tax,
+        use_marketing: dataToSave.use_marketing,
+        market_place_tax: dataToSave.market_place_tax,
+        use_market_place: dataToSave.use_market_place,
+        title: dataToSave.title,
+        phone: dataToSave.phone,
+        description: dataToSave.description,
+        sales_type: dataToSave.sales_type,
+        updated_at: newDateF(new Date()) // Atualiza sempre a data de modificação
       }
     })
   }
@@ -80,7 +85,6 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
         business_info_uuid: id
       }
     })
-
     if (!config) return null
     return {
       uuid: new Uuid(config.uuid),
@@ -106,7 +110,7 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
   }
 
   async createPartnerConfig(data: PartnerConfigEntity, businessAccountEntity: BusinessAccountEntity): Promise<PartnerConfigEntity> {
-
+    console.log("create partner config repositiory: ", data)
     const [config, businessAccount] = await prismaClient.$transaction([
       prismaClient.partnerConfig.create({
 
@@ -127,8 +131,8 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
 
       }),
       prismaClient.businessAccount.create({
-        data:{
-          uuid: businessAccountEntity.uuid,
+        data: {
+          uuid: businessAccountEntity.uuid.uuid,
           balance: businessAccountEntity.balance,
           business_info_uuid: data.business_info_uuid.uuid,
           status: businessAccountEntity.status,
