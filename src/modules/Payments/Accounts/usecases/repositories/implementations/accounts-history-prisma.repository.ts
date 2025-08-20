@@ -4,16 +4,20 @@ import { OutputGetBusinessAccountHistoryDTO } from "../../account-histories/busi
 import { IAccountsHistoryRepository } from "../accounts-history.repository";
 
 export class AccountsHistoryPrismaRepository implements IAccountsHistoryRepository {
+
   async findBusinessAccountHistory(business_account_uuid: string, yearToQuery?: number, monthToQuery?: number): Promise<OutputGetBusinessAccountHistoryDTO[] | []> {
-    const startDate = new Date(Date.UTC(yearToQuery, monthToQuery - 1, 1)); // monthToQuery - 1 para 0-indexed month
+
+    // --- LÓGICA DE DATA CORRIGIDA ---
+    const startDate = new Date(Date.UTC(yearToQuery, monthToQuery - 1, 1));
+    // A data final agora é o primeiro dia do mês seguinte, para ser usada com 'lt' (menor que).
     const endDate = new Date(Date.UTC(yearToQuery, monthToQuery, 1));
 
     const result = await prismaClient.businessAccountHistory.findMany({
-      where:{
+      where: {
         business_account_uuid: business_account_uuid,
         created_at: {
-          gte: startDate,
-          lte: endDate
+          gte: startDate, // Maior ou igual ao primeiro dia do mês
+          lt: endDate     // <<< CORREÇÃO: Menor que o primeiro dia do mês seguinte
         }
       },
       orderBy: {
@@ -29,35 +33,36 @@ export class AccountsHistoryPrismaRepository implements IAccountsHistoryReposito
         related_transaction_uuid: true,
         created_at: true
       }
-    })
+    });
 
     return result.map(item => ({
       uuid: item.uuid,
-      business_account_uuid: item.uuid,
+      // <<< CORREÇÃO: Mapeando o campo correto >>>
+      business_account_uuid: item.business_account_uuid,
       event_type: String(item.event_type),
       amount: item.amount,
       balance_before: item.balance_before,
       balance_after: item.balance_after,
       related_transaction_uuid: item.related_transaction_uuid ? item.related_transaction_uuid : "",
       created_at: item.created_at
-    }))
-
+    }));
   }
+
   async findUserItemHistory(userItemId: string, yearToQuery?: number, monthToQuery?: number): Promise<OutputGetUserItemHistoryDTO[] | []> {
-    const startDate = new Date(Date.UTC(yearToQuery, monthToQuery - 1, 1)); // monthToQuery - 1 para 0-indexed month
+    // Aplicando a mesma correção de data para o histórico do usuário para consistência
+    const startDate = new Date(Date.UTC(yearToQuery, monthToQuery - 1, 1));
     const endDate = new Date(Date.UTC(yearToQuery, monthToQuery, 1));
 
     const result = await prismaClient.userItemHistory.findMany({
-
       where: {
         user_item_uuid: userItemId,
         created_at: {
-          gte: startDate, // gte = greater than or equal to (maior ou igual a)
-          lte: endDate
+          gte: startDate,
+          lt: endDate // <<< CORREÇÃO: Menor que o primeiro dia do mês seguinte
         },
       },
       orderBy: {
-        created_at: 'desc', // Ordenar do mais recente para o mais antigo
+        created_at: 'desc',
       },
       select: {
         uuid: true,
@@ -73,8 +78,7 @@ export class AccountsHistoryPrismaRepository implements IAccountsHistoryReposito
           }
         }
       }
-    }
-    )
+    });
 
     return result.map(item => ({
       uuid: item.uuid,
