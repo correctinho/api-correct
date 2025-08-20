@@ -20,7 +20,6 @@ export class ActivateUserItemByEmployerUsecase {
     const employeeItemEntity = new AppUserItemEntity(employeeItem)
     //Check if business admin is allowed to manipulate item
     if (employeeItem.business_info_uuid.uuid !== input.business_info_uuid) throw new CustomError("Unauthorized access", 403);
-
     //if it is alrady active, throw an error
     if (employeeItemEntity.status === 'active') throw new CustomError("Employee item is already active", 400)
 

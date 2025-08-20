@@ -2797,5 +2797,189 @@ describe("E2E Business tests", () => {
       expect(Math.round(payerAccountAfter.body.balance * 100)).toBe(initialPayerLiquidInCents);
     });
   });
+  describe("E2E Get Business Account History", () => {
+    let historyPartnerAdminToken: string;
+    let historyPartnerInfoUuid: string;
 
+    beforeAll(async () => {
+      // --- ARRANGE GERAL ---
+      // 1. Criar um parceiro dedicado para estes testes de histórico
+      const partnerInput = {
+        fantasy_name: "History Test Store",
+        document: "33333333333333", // Documento único
+        line1: "Rua do Histórico",
+        line2: "789",
+        neighborhood: "Bairro dos Testes",
+        postal_code: "79003003",
+        city: "Campo Grande",
+        state: "MS",
+        country: "Brasil",
+        classification: "Serviços",
+        colaborators_number: 2,
+        email: "history.test@correct.com.br",
+        phone_1: "67933333333",
+        business_type: "comercio",
+        branches_uuid: [branch3_uuid], // Usando o ramo "Mercearias" com taxa de 1.4%
+        partnerConfig: {
+          main_branch: branch3_uuid,
+          partner_category: ['comercio'],
+          use_marketing: false,
+          use_market_place: false
+        }
+      };
+      const createPartnerRes = await request(app).post("/business/register").send(partnerInput);
+      expect(createPartnerRes.statusCode).toBe(201);
+      historyPartnerInfoUuid = createPartnerRes.body.BusinessInfo.uuid;
+
+      // 2. Ativar o parceiro
+      const activatePartnerRes = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query({ business_info_uuid: historyPartnerInfoUuid }).send({ status: "active" });
+      expect(activatePartnerRes.statusCode).toBe(200);
+
+      // 3. Criar e autenticar o admin do parceiro de histórico
+      const createPartnerAdminRes = await request(app).post("/business/admin/correct").set('Authorization', `Bearer ${correctAdminToken}`).send({ password: "password123", business_info_uuid: historyPartnerInfoUuid, email: "history.test@correct.com.br", name: "Admin History" });
+      expect(createPartnerAdminRes.statusCode).toBe(201);
+
+      const authPartnerRes = await request(app).post("/business/admin/login").send({ business_document: "33333333333333", password: "password123", email: "history.test@correct.com.br" });
+      expect(authPartnerRes.statusCode).toBe(200);
+      historyPartnerAdminToken = authPartnerRes.body.token;
+
+      // 4. Criar um funcionário para realizar os pagamentos
+      const employeeInput = {
+        document: '426.624.360-00', // Documento único
+        full_name: 'Funcionario Gerador de Historico',
+        date_of_birth: '01/01/1995',
+        gender: 'Outro',
+        dependents_quantity: 0,
+        company_owner: false,
+      };
+      const createEmployeeRes = await request(app).post("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).send(employeeInput);
+      expect(createEmployeeRes.statusCode).toBe(201);
+
+      const employeeInfoDetails = await request(app).get("/app-user/business-admin").set('Authorization', `Bearer ${employer_user_token}`).query({ employeeDocument: employeeInput.document, businessInfoUuid: employer_info_uuid })
+      const employeeInfoUuid = employeeInfoDetails.body.uuid;
+
+      const createUserAuthRes = await request(app).post("/app-user").send({ document: '426.624.360-00', email: 'history_employee@test.com', password: '123' });
+      expect(createUserAuthRes.statusCode).toBe(201);
+
+      const authEmployeeRes = await request(app).post("/login-app-user").send({ document: '426.624.360-00', password: '123' });
+      expect(authEmployeeRes.statusCode).toBe(200);
+      const historyEmployeeUserToken = authEmployeeRes.body.token;
+
+      // 5. Ativar um benefício pré-pago para o funcionário
+      const activatePrepaidRes = await request(app).patch("/user-item/activate").set('Authorization', `Bearer ${employer_user_token}`).send({ user_info_uuid: employeeInfoUuid, item_uuid: benefit1_uuid }); // Vale Alimentação
+      expect(activatePrepaidRes.statusCode).toBe(200);
+
+      const allItemsRes = await request(app).get("/user-item/all").set('Authorization', `Bearer ${historyEmployeeUserToken}`);
+      expect(allItemsRes.statusCode).toBe(200);
+      const historyPrepaidBenefitUserItemUuid = allItemsRes.body.find((item: any) => item.item_name === 'Vale Alimentação').uuid;
+
+      // 6. Gerar duas transações para popular o histórico
+      // Transação 1 (mais antiga)
+      const tx1Res = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${historyPartnerAdminToken}`).send({ original_price: 150, discount_percentage: 0, net_price: 150 });
+      await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${historyEmployeeUserToken}`).send({ transactionId: tx1Res.body.transaction_uuid, benefit_uuid: historyPrepaidBenefitUserItemUuid });
+
+      await new Promise(resolve => setTimeout(resolve, 50)); // Pequeno delay para garantir timestamps diferentes
+
+      // Transação 2 (mais recente)
+      const tx2Res = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${historyPartnerAdminToken}`).send({ original_price: 80, discount_percentage: 0, net_price: 80 });
+      await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${historyEmployeeUserToken}`).send({ transactionId: tx2Res.body.transaction_uuid, benefit_uuid: historyPrepaidBenefitUserItemUuid });
+    });
+
+
+    it("should throw a 400 error for an invalid month (e.g., 0 or 13)", async () => {
+      const now = new Date();
+      const resInvalid = await request(app)
+        .get("/business/account/history")
+        .set('Authorization', `Bearer ${historyPartnerAdminToken}`)
+        .query({ year: now.getFullYear(), month: 13 });
+
+      expect(resInvalid.statusCode).toBe(400);
+      expect(resInvalid.body.error).toBe("Mês inválido. Por favor, forneça um valor entre 1 e 12.");
+
+      const resZero = await request(app)
+        .get("/business/account/history")
+        .set('Authorization', `Bearer ${historyPartnerAdminToken}`)
+        .query({ year: now.getFullYear(), month: 0 });
+
+      expect(resZero.statusCode).toBe(400);
+      expect(resZero.body.error).toBe("Mês inválido. Por favor, forneça um valor entre 1 e 12.");
+    });
+    it("should throw a 400 error for an invalid year (e.g., 'abc')", async () => {
+      const now = new Date();
+      const result = await request(app)
+        .get("/business/account/history")
+        .set('Authorization', `Bearer ${historyPartnerAdminToken}`)
+        .query({ year: 'abc', month: now.getMonth() + 1 });
+
+      expect(result.statusCode).toBe(400);
+      expect(result.body.error).toBe("Ano inválido.");
+    });
+    it("should return an empty array for a month with no transactions", async () => {
+      const now = new Date();
+      // Consulta um mês no futuro, onde garantidamente não haverá transações
+      const nextMonth = now.getMonth() + 2;
+      const year = nextMonth > 12 ? now.getFullYear() + 1 : now.getFullYear();
+
+      const result = await request(app)
+        .get("/business/account/history")
+        .set('Authorization', `Bearer ${historyPartnerAdminToken}`)
+        .query({ year: year, month: nextMonth > 12 ? 1 : nextMonth });
+
+      expect(result.statusCode).toBe(200);
+      expect(result.body).toEqual([]);
+    });
+
+    it("should return the account history for the current month by default and in descending order", async () => {
+      const result = await request(app)
+        .get("/business/account/history")
+        .set('Authorization', `Bearer ${historyPartnerAdminToken}`);
+
+      expect(result.statusCode).toBe(200);
+      expect(Array.isArray(result.body)).toBe(true);
+      expect(result.body.length).toBe(2);
+
+      // --- Validação da ordem e dos valores ---
+      // A taxa do branch3 (Mercearias) é 1.4% (admin_tax).
+      const firstEntry = result.body[0]; // A mais recente
+      const secondEntry = result.body[1]; // A mais antiga
+
+      // Transação 2 (mais recente): 80.00 - 1.4% = 78.88
+      const expectedAmountTx2 = 78.88;
+      // Transação 1 (mais antiga): 150.00 - 1.4% = 147.90
+      const expectedAmountTx1 = 147.90;
+
+      // A primeira entrada deve ser a de R$80
+      expect(firstEntry.event_type).toBe('PAYMENT_RECEIVED');
+      expect(firstEntry.amount).toBeCloseTo(expectedAmountTx2);
+      expect(firstEntry.balance_before).toBeCloseTo(expectedAmountTx1);
+      expect(firstEntry.balance_after).toBeCloseTo(expectedAmountTx1 + expectedAmountTx2);
+
+      // A segunda entrada deve ser a de R$150
+      expect(secondEntry.event_type).toBe('PAYMENT_RECEIVED');
+      expect(secondEntry.amount).toBeCloseTo(expectedAmountTx1);
+      expect(secondEntry.balance_before).toBe(0);
+      expect(secondEntry.balance_after).toBeCloseTo(expectedAmountTx1);
+
+      // Confirma que a data da primeira é mais recente que a da segunda
+      expect(new Date(firstEntry.created_at) > new Date(secondEntry.created_at)).toBe(true);
+    });
+
+    it("should return the correct history when a specific month and year are provided", async () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1; // getMonth é 0-indexed, a API espera 1-indexed
+
+      const result = await request(app)
+        .get("/business/account/history")
+        .set('Authorization', `Bearer ${historyPartnerAdminToken}`)
+        .query({ year: year, month: month });
+
+      expect(result.statusCode).toBe(200);
+      expect(result.body.length).toBe(2);
+
+      const transaction = result.body[0]; // A mais recente
+      expect(transaction.event_type).toBe('PAYMENT_RECEIVED');
+      expect(transaction.amount).toBeCloseTo(78.88);
+    });
+  });
 })
