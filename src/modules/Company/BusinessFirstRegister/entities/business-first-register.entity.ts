@@ -102,11 +102,20 @@ export class BusinessRegisterEntity {
     if (!this.email) throw new CustomError("Email is required", 400)
     if (!this.phone_1) throw new CustomError("Telephone 1 is required", 400)
     if (!this.business_type) throw new CustomError("Business type is required", 400)
-    if((this.business_type === 'autonomo_comercio' || this.business_type === 'comercio') && this.branches_uuid[0] === ''){
-      throw new CustomError("Business branch is required", 400)
+    // Regra para Parceiros (comercio / autonomo_comercio)
+    if (this.business_type === 'autonomo_comercio' || this.business_type === 'comercio') {
+      // A verificação `!this.branches_uuid.length` é mais segura do que `[0] === ''`
+      if (!this.branches_uuid || !this.branches_uuid.length || this.branches_uuid[0] === '') {
+        throw new CustomError("Business branch is required", 400);
+      }
     }
-    if(this.business_type === 'empregador' && this.items_uuid[0] === ''){
-      throw new CustomError("Item is required", 400)
+
+    // Regra para Empregadores
+    if (this.business_type === 'empregador') {
+      // A verificação `!this.items_uuid.length` é mais segura
+      if (!this.items_uuid || !this.items_uuid.length || this.items_uuid[0] === '') {
+        throw new CustomError("Item is required", 400);
+      }
     }
 
   }

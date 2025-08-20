@@ -1,5 +1,5 @@
 import { prismaClient } from '../../../../infra/databases/prisma.config';
-import { BranchEntity } from '../../entities/branch.entity';
+import { BranchEntity, BranchProps } from '../../entities/branch.entity';
 import { IBranchRepository } from '../branch.repository';
 import { newDateF } from '../../../../utils/date';
 
@@ -12,7 +12,7 @@ export class BranchPrismaRepository implements IBranchRepository {
       }
     })
 
-    if(!branch) return null
+    if (!branch) return null
 
     return branch as BranchEntity
   }
@@ -45,6 +45,7 @@ export class BranchPrismaRepository implements IBranchRepository {
 
   }
   async createMany(entities: BranchEntity[]): Promise<BranchEntity[]> {
+    
     const transactionResult = await prismaClient.$transaction([
       // Criação em massa na tabela branchInfo
       prismaClient.branchInfo.createMany({
@@ -76,30 +77,29 @@ export class BranchPrismaRepository implements IBranchRepository {
   }
 
   async getByID(uuid: string): Promise<BranchEntity | null> {
-    const r = await prismaClient.branchInfo.findFirst({
+    const branchData = await prismaClient.branchInfo.findUnique({
       where: { uuid: uuid },
-      include: { BranchItem: true}
+      include: { BranchItem: { include: { Item: { select: { uuid: true, name: true } } } } }
     });
 
-    let items_uuid: string[] = []
-    for await (const item of r.BranchItem){
-      items_uuid.push(item.item_uuid)
+    if (!branchData) {
+      return null;
     }
 
-    if (r !== null) {
-      return {
-        uuid: r.uuid,
-        name: r.name,
-        benefits_uuid: items_uuid,
-        marketing_tax: r.marketing_tax,
-        market_place_tax: r.market_place_tax,
-        admin_tax: r.admin_tax,
-        created_at: r.created_at,
-        updated_at: r.updated_at
-      } as BranchEntity;
-    }
+    const branchProps: BranchProps = {
+      uuid: branchData.uuid,
+      name: branchData.name,
+      admin_tax: branchData.admin_tax,       // Passando o inteiro do banco (15000)
+      marketing_tax: branchData.marketing_tax,
+      market_place_tax: branchData.market_place_tax,
+      benefits_name: branchData.BranchItem.map(r => r.Item.name),
+      benefits_uuid: branchData.BranchItem.map(r => r.Item.uuid),
+      created_at: branchData.created_at,
+      updated_at: branchData.updated_at
+    };
 
-    return null;
+    // Agora chamamos o hydrate, que passa os dados direto para o construtor.
+    return BranchEntity.hydrate(branchProps);
   }
 
   async update(uuid: string, data: BranchEntity): Promise<void> {
@@ -127,12 +127,12 @@ export class BranchPrismaRepository implements IBranchRepository {
 
   async getAvailableBranches(): Promise<BranchEntity[] | []> {
     const r = await prismaClient.branchInfo.findMany({
-      where:{
-        BusinessinfoBranch: { some: {}}
+      where: {
+        BusinessinfoBranch: { some: {} }
       }
     });
 
-    if(r.length > 0){
+    if (r.length > 0) {
       return r as BranchEntity[]
     }
 

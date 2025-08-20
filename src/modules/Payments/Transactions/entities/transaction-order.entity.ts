@@ -223,10 +223,13 @@ export class TransactionEntity {
     if (admin_tax < 0 || marketing_tax < 0) {
       throw new CustomError("Admin and marketing taxes cannot be negative", 400);
     }
-    this._fee_percentage = (admin_tax + marketing_tax) * 10000;
+
+    // CORREÇÃO: Como os valores já vêm escalados do PartnerConfig (ex: 15000),
+    // nós apenas os somamos. 
+    this._fee_percentage = admin_tax + marketing_tax;
+
     this.validate();
   }
-
   calculateFee(): void {
     // Verifica se os valores necessários existem antes de calcular
     if (this._net_price === undefined || this._fee_percentage === undefined) {
