@@ -1,18 +1,35 @@
+// export type InputCreateProductDTO = {
+//   category_uuid: string;        // String UUID
+//   business_user_uuid: string;   // String UUID
+//   ean_code: string | null;
+//   brand: string | null | undefined;
+//   name: string;
+//   description: string | null;
+//   original_price: string;     // String, needs parsing to number (cents)
+//   promotional_price: string;  // String, needs parsing to number (cents)
+//   discount: string;           // String, needs parsing to number
+//   stock: string;              // String, needs parsing to number
+//   api_image?: string;
+//   uploaded_images: FileDTO[]; // Assumed to be correctly formed FileDTOs
+//   is_mega_promotion: string;  // String (e.g., "true", "false")
+//   is_active?: string;         // String (e.g., "true", "false"), optional
+//   weight?: string;
+//   height?: string;
+//   width?: string;
+// };
+
 export type InputCreateProductDTO = {
-  category_uuid: string;        // String UUID
-  business_user_uuid: string;   // String UUID
-  ean_code: string | null;
-  brand: string | null | undefined;
+  category_uuid: string;      // UUID da Categoria
+  business_user_uuid: string; // UUID do usuário de negócio (virá do token)
+  ean_code?: string | null;
+  brand: string;
   name: string;
-  description: string | null;
-  original_price: string;     // String, needs parsing to number (cents)
-  promotional_price: string;  // String, needs parsing to number (cents)
-  discount: string;           // String, needs parsing to number
-  stock: string;              // String, needs parsing to number
-  api_image?: string;
-  uploaded_images: FileDTO[]; // Assumed to be correctly formed FileDTOs
-  is_mega_promotion: string;  // String (e.g., "true", "false")
-  is_active?: string;         // String (e.g., "true", "false"), optional
+  description?: string | null;
+  original_price: number;     // Ex: "19.99"
+  discount: number;           // Ex: "10" (para 10%)
+  stock: number;              // Ex: "100"
+  is_mega_promotion?: boolean; // Ex: "true" ou "false"
+  is_active?: boolean;         // Ex: "true" ou "false"
   weight?: string;
   height?: string;
   width?: string;
@@ -29,15 +46,13 @@ export type FileDTO = {
 
 export type OutputCreateProductDTO = {
   uuid: string;
-  category_uuid: string;
-  ean_code: string | null;
   name: string;
   description: string | null;
-  original_price: number;
-  promotional_price: number;
-  discount: number;
+  original_price: number; // Em Reais (ex: 19.99)
+  promotional_price: number; // Em Reais
+  discount: number; // Em porcentagem (ex: 10)
   stock: number;
-  images_url: string[]; // Estas serão as URLs públicas
+  images_url: string[]
   is_mega_promotion: boolean;
   is_active: boolean;
   created_at: string;
@@ -46,4 +61,18 @@ export type OutputCreateProductDTO = {
   height?: string;
   width?: string;
   brand: string | null;
+};
+
+export type InputUploadProductImagesDTO = {
+  // O ID do produto virá do parâmetro da URL (ex: req.params.productId)
+  productId: string;
+
+  // Os arquivos de imagem virão do corpo da requisição (ex: req.files)
+  files: FileDTO[];
+};
+
+export type OutputUploadProductImagesDTO = {
+  productId: string;
+  // Retorna a lista final e atualizada de URLs públicas das imagens do produto
+  images_url: string[];
 };

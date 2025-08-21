@@ -1,6 +1,6 @@
 // ../../../../../infra/providers/storage/implementations/minio/minio.storage.ts
 import { Client as MinioClient } from 'minio';
-import { FileDTO } from '../../../../../modules/Ecommerce/Products/entities/products.entity';
+import { FileDTO } from '../../../../../modules/Ecommerce/Products/entities/product.entity';
 import { IStorage, UploadResponse, StorageUploadData } from '../../storage';
 
 export class MinioStorage implements IStorage {

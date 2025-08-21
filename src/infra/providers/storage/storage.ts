@@ -1,5 +1,5 @@
 // ../../../../../infra/providers/storage/storage.ts
-import { FileDTO } from "../../../modules/Ecommerce/Products/entities/products.entity";
+import { FileDTO } from "../../../modules/Ecommerce/Products/entities/product.entity";
 
 export interface StorageUploadData {
   url: string;  // A URL pública completa para acessar o arquivo
