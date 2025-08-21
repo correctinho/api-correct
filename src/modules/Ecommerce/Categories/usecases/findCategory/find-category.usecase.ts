@@ -14,9 +14,8 @@ export class FindCategoryUsecase {
       throw new CustomError('UUID is required', 400);
     }
     const findCategory = await this.categoryRepository.find(new Uuid(data.category_uuid));
-    if (!findCategory)
-      throw new CustomError('Category not found', 404);
-
+    if (!findCategory) throw new CustomError('Category not found', 404);
+ 
     return {
       uuid: findCategory.uuid.uuid,
       name: findCategory.name,

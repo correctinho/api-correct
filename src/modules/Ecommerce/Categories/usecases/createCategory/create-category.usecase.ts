@@ -34,7 +34,7 @@ export class CreateCategoryUsecase {
       uuid: categoryEntity.uuid.uuid,
       name: categoryEntity.name,
       description: categoryEntity.description,
-      created_at: categoryEntity._created_at,
+      created_at: categoryEntity.created_at,
     };
   }
 }

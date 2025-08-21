@@ -1,19 +1,17 @@
 import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
 import { prismaClient } from '../../../../../infra/databases/prisma.config';
-import { ProductEntity } from '../../entities/products.entity';
+import { ProductEntity, ProductProps } from '../../entities/product.entity';
 import { IProductRepository } from '../product.repository';
 
 export class ProductPrismaRepository implements IProductRepository {
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   create(entity: ProductEntity): Promise<void> {
     throw new Error('Method not implemented.');
   }
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   update(entity: ProductEntity): Promise<void> {
     throw new Error('Method not implemented.');
   }
-  find(id: Uuid): Promise<ProductEntity> {
+  async find(id: Uuid): Promise<ProductEntity> {
     const product = prismaClient.products.findUnique({
       where: {
         uuid: id.uuid,
@@ -37,7 +35,7 @@ export class ProductPrismaRepository implements IProductRepository {
         discount: prod.discount,
         promotional_price: prod.promotional_price,
         stock: prod.stock,
-        images_url: prod.image_urls,
+        image_urls: prod.image_urls,
         is_mega_promotion: prod.is_mega_promotion,
         is_active: prod.is_active,
         weight: prod.weight,
@@ -52,7 +50,37 @@ export class ProductPrismaRepository implements IProductRepository {
   findAll(): Promise<ProductEntity[]> {
     throw new Error('Method not implemented.');
   }
+  async createProduct(entity: ProductEntity): Promise<ProductEntity> {
+    const dataToSave = entity.toJSON();
+    const createdProductData = await prismaClient.products.create({
+      data: dataToSave,
+    });
 
+    // CRUCIAL: Após criar, reconstruímos a entidade para retornar uma instância de classe completa.
+    const productProps: ProductProps = {
+      uuid: new Uuid(createdProductData.uuid),
+      category_uuid: new Uuid(createdProductData.category_uuid),
+      business_info_uuid: new Uuid(createdProductData.business_info_uuid),
+      ean_code: createdProductData.ean_code,
+      brand: createdProductData.brand,
+      name: createdProductData.name,
+      description: createdProductData.description,
+      original_price: createdProductData.original_price,
+      discount: createdProductData.discount,
+      promotional_price: createdProductData.promotional_price,
+      stock: createdProductData.stock,
+      image_urls: createdProductData.image_urls,
+      is_mega_promotion: createdProductData.is_mega_promotion,
+      is_active: createdProductData.is_active,
+      created_at: createdProductData.created_at,
+      updated_at: createdProductData.updated_at,
+      weight: createdProductData.weight,
+      height: createdProductData.height,
+      width: createdProductData.width,
+    };
+
+    return ProductEntity.hydrate(productProps);
+  }
   async findBusinessProducts(
     businessInfoUuid: string,
   ): Promise<ProductEntity[] | []> {
@@ -80,9 +108,9 @@ export class ProductPrismaRepository implements IProductRepository {
       original_price: product.original_price,
       discount: product.discount,
       promotional_price: product.promotional_price,
-      is_active:product.is_active,
+      is_active: product.is_active,
       stock: product.stock,
-      images_url: product.image_urls,
+      image_urls: product.image_urls,
       is_mega_promotion: product.is_mega_promotion,
       weight: product.weight,
       height: product.height,
@@ -105,7 +133,7 @@ export class ProductPrismaRepository implements IProductRepository {
         original_price: entity.original_price,
         promotional_price: entity.promotional_price,
         discount: entity.discount,
-        image_urls: entity.images_url,
+        image_urls: entity.image_urls,
         is_mega_promotion: entity.is_mega_promotion,
         is_active: entity.is_active,
         stock: entity.stock,
@@ -124,7 +152,7 @@ export class ProductPrismaRepository implements IProductRepository {
         original_price: entity.original_price,
         promotional_price: entity.promotional_price,
         discount: entity.discount,
-        image_urls: entity.images_url,
+        image_urls: entity.image_urls,
         is_mega_promotion: entity.is_mega_promotion,
         is_active: entity.is_active,
         stock: entity.stock,
@@ -147,7 +175,7 @@ export class ProductPrismaRepository implements IProductRepository {
       discount: product.discount,
       promotional_price: product.promotional_price,
       stock: product.stock,
-      images_url: product.image_urls,
+      image_urls: product.image_urls,
       is_mega_promotion: product.is_mega_promotion,
       is_active: product.is_active,
       weight: product.weight,
