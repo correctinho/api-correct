@@ -20,9 +20,9 @@ export class FindProductByIdUsecase{
       brand: product.brand,
       name: product.name,
       description: product.description,
-      original_price: product.original_price / 100,
+      original_price: product.original_price,
       discount: product.discount,
-      promotional_price: product.promotional_price / 100,
+      promotional_price: product.promotional_price,
       stock: product.stock,
       is_mega_promotion: product.is_mega_promotion,
       weight: product.weight,
@@ -32,9 +32,8 @@ export class FindProductByIdUsecase{
       created_at: product.created_at,
       updated_at: product.updated_at,
       images_url: {
-        thumbnail: product.images_url.filter(image => image.endsWith('thumbnail.webp')),
-        medium: product.images_url.filter(image => image.endsWith('medium.webp')),
-        large: product.images_url.filter(image => image.endsWith('large.webp')),
+        medium: product.image_urls.filter(image => image.endsWith('medium.webp')),
+        large: product.image_urls.filter(image => image.endsWith('large.webp')),
       }
     }
   }

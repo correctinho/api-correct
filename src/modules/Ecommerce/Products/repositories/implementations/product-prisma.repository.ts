@@ -8,44 +8,75 @@ export class ProductPrismaRepository implements IProductRepository {
   create(entity: ProductEntity): Promise<void> {
     throw new Error('Method not implemented.');
   }
-  update(entity: ProductEntity): Promise<void> {
-    throw new Error('Method not implemented.');
+  async update(entity: ProductEntity): Promise<void> {
+    // 1. Usamos .toJSON() para obter os dados brutos e internos da entidade,
+    //    garantindo que estamos passando os valores corretos (ex: preços em centavos) para o banco.
+    const dataToSave = entity.toJSON();
+
+    await prismaClient.products.update({
+      where: {
+        uuid: dataToSave.uuid,
+      },
+      data: {
+        // Passamos apenas os campos que podem ser atualizados.
+        // UUIDs de relacionamento e data de criação geralmente não são alterados.
+        name: dataToSave.name,
+        description: dataToSave.description,
+        ean_code: dataToSave.ean_code,
+        brand: dataToSave.brand,
+        original_price: dataToSave.original_price,
+        discount: dataToSave.discount,
+        promotional_price: dataToSave.promotional_price,
+        stock: dataToSave.stock,
+        image_urls: dataToSave.image_urls,
+        is_mega_promotion: dataToSave.is_mega_promotion,
+        is_active: dataToSave.is_active,
+        weight: dataToSave.weight,
+        height: dataToSave.height,
+        width: dataToSave.width,
+        updated_at: dataToSave.updated_at, // O método .touch() na entidade já atualizou esta data
+      },
+    });
   }
-  async find(id: Uuid): Promise<ProductEntity> {
-    const product = prismaClient.products.findUnique({
+  async find(id: Uuid): Promise<ProductEntity | null> {
+    // 1. Busca os dados brutos da transação no banco de dados
+    const productData = await prismaClient.products.findUnique({
       where: {
         uuid: id.uuid,
       },
     });
-    if (!product) return null
 
-    return product.then((prod) => {
-      if (!prod) {
-        throw new Error('Product not found');
-      }
-      return {
-        uuid: new Uuid(prod.uuid),
-        category_uuid: new Uuid(prod.category_uuid),
-        business_info_uuid: new Uuid(prod.business_info_uuid),
-        ean_code: prod.ean_code,
-        brand: prod.brand,
-        name: prod.name,
-        description: prod.description,
-        original_price: prod.original_price,
-        discount: prod.discount,
-        promotional_price: prod.promotional_price,
-        stock: prod.stock,
-        image_urls: prod.image_urls,
-        is_mega_promotion: prod.is_mega_promotion,
-        is_active: prod.is_active,
-        weight: prod.weight,
-        height: prod.height,
-        width: prod.width,
-        created_at: prod.created_at,
-        updated_at: prod.updated_at,
-      } as ProductEntity;
+    if (!productData) {
+      return null;
     }
-    );
+
+    // 2. Prepara as 'props' para a hidratação, convertendo strings para Value Objects
+    const productProps: ProductProps = {
+      uuid: new Uuid(productData.uuid),
+      category_uuid: new Uuid(productData.category_uuid),
+      business_info_uuid: new Uuid(productData.business_info_uuid),
+      ean_code: productData.ean_code,
+      brand: productData.brand,
+      name: productData.name,
+      description: productData.description,
+      original_price: productData.original_price,
+      discount: productData.discount,
+      promotional_price: productData.promotional_price,
+      stock: productData.stock,
+      image_urls: productData.image_urls,
+      is_mega_promotion: productData.is_mega_promotion,
+      is_active: productData.is_active,
+      weight: productData.weight,
+      height: productData.height,
+      width: productData.width,
+      created_at: productData.created_at,
+      updated_at: productData.updated_at,
+    };
+
+    // 3. Usa o método estático 'hydrate' para reconstruir a entidade completa.
+    //    Isso garante que o objeto retornado seja uma instância de classe real,
+    //    com todos os seus métodos (como .setImagesUrl() e .toJSON()).
+    return ProductEntity.hydrate(productProps);
   }
   findAll(): Promise<ProductEntity[]> {
     throw new Error('Method not implemented.');
@@ -81,42 +112,91 @@ export class ProductPrismaRepository implements IProductRepository {
 
     return ProductEntity.hydrate(productProps);
   }
-  async findBusinessProducts(
-    businessInfoUuid: string,
-  ): Promise<ProductEntity[] | []> {
-    const products = await prismaClient.products.findMany({
+  async findBusinessProducts(businessInfoUuid: string): Promise<ProductEntity[]> {
+    const productsData = await prismaClient.products.findMany({
       where: {
         business_info_uuid: businessInfoUuid,
-        //is_active: true,
+        // is_active: true, // Mantido comentado para o parceiro ver seus próprios produtos inativos
       },
       orderBy: [
-        {
-          is_mega_promotion: 'desc',
-        },
-        {
-          created_at: 'desc',
-        },
+        { is_mega_promotion: 'desc' },
+        { created_at: 'desc' },
       ],
     });
-    return products.map((product) => ({
-      uuid: new Uuid(product.uuid),
-      category_uuid: new Uuid(product.category_uuid),
-      business_info_uuid: new Uuid(product.business_info_uuid),
-      brand: product.brand,
-      name: product.name,
-      description: product.description,
-      original_price: product.original_price,
-      discount: product.discount,
-      promotional_price: product.promotional_price,
-      is_active: product.is_active,
-      stock: product.stock,
-      image_urls: product.image_urls,
-      is_mega_promotion: product.is_mega_promotion,
-      weight: product.weight,
-      height: product.height,
-      width: product.width,
-      created_at: product.created_at,
-    })) as ProductEntity[];
+
+    if (!productsData || productsData.length === 0) {
+      return [];
+    }
+
+    // Mapeamos os dados brutos do banco para reconstruir nossas Entidades de Domínio.
+    return productsData.map((product) => {
+      const productProps: ProductProps = {
+        uuid: new Uuid(product.uuid),
+        category_uuid: new Uuid(product.category_uuid),
+        business_info_uuid: new Uuid(product.business_info_uuid),
+        brand: product.brand,
+        name: product.name,
+        description: product.description,
+        original_price: product.original_price,
+        discount: product.discount,
+        promotional_price: product.promotional_price,
+        stock: product.stock,
+        image_urls: product.image_urls,
+        is_mega_promotion: product.is_mega_promotion,
+        is_active: product.is_active,
+        ean_code: product.ean_code,
+        weight: product.weight,
+        height: product.height,
+        width: product.width,
+        created_at: product.created_at,
+        updated_at: product.updated_at,
+      };
+      // Usamos o método estático 'hydrate' para retornar uma instância de classe real.
+      return ProductEntity.hydrate(productProps);
+    });
+  }
+
+  async findActiveProductsByBusinessId(businessInfoUuid: string): Promise<ProductEntity[]> {
+    const productsData = await prismaClient.products.findMany({
+      where: {
+        business_info_uuid: businessInfoUuid,
+        is_active: true, // A chave da lógica está aqui
+      },
+      orderBy: [
+        { is_mega_promotion: 'desc' },
+        { created_at: 'desc' },
+      ],
+    });
+
+    if (!productsData || productsData.length === 0) {
+      return [];
+    }
+
+    // Mapeamos os dados brutos do banco para reconstruir nossas Entidades de Domínio.
+    return productsData.map(product => {
+      const productProps: ProductProps = {
+        uuid: new Uuid(product.uuid),
+        category_uuid: new Uuid(product.category_uuid),
+        business_info_uuid: new Uuid(product.business_info_uuid),
+        ean_code: product.ean_code,
+        brand: product.brand,
+        name: product.name,
+        description: product.description,
+        original_price: product.original_price,
+        discount: product.discount,
+        promotional_price: product.promotional_price,
+        stock: product.stock,
+        image_urls: product.image_urls,
+        is_mega_promotion: product.is_mega_promotion,
+        is_active: product.is_active,
+        weight: product.weight,
+        height: product.height,
+        width: product.width,
+        created_at: product.created_at,
+        updated_at: product.updated_at,
+      };
+      return ProductEntity.hydrate(productProps);
+    });
   }
   async upsert(entity: ProductEntity): Promise<ProductEntity> {
     const product = await prismaClient.products.upsert({
