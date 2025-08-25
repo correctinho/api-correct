@@ -18,7 +18,6 @@ export class CreateProductController {
 
       const data = req.body;
       data.business_user_uuid = req.companyUser.companyUserId
-      // data.uploaded_images = req.files as Express.Multer.File[];
 
       const usecase = new CreateProductUsecase(
         this.productRepository,

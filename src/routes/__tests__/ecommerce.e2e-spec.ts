@@ -3,6 +3,11 @@ import { app } from "../../app"
 import { InputCreateBenefitDto } from "../../modules/benefits/usecases/create-benefit/create-benefit.dto"
 import { Uuid } from "../../@shared/ValueObjects/uuid.vo"
 
+import path from 'path';
+import fs from 'fs';
+import { IStorage, UploadResponse } from '../../infra/providers/storage/storage'; // Importe a interface e os tipos
+import { container } from "../../container";
+
 let correctAdminToken: string
 const inputNewAdmin = {
   name: "Admin Correct",
@@ -468,20 +473,318 @@ describe("E2E Ecommerce tests", () => {
         expect(result.statusCode).toBe(404);
         expect(result.body.error).toBe("Categoria não encontrada.");
       });
+
     })
 
-    // describe("E2E Get All business products", () => {
-    //   it("Should return empty array", async () => {
-    //     const result = await request(app).get(`/ecommerce/business/products/${partner2_info_uuid}`)
-    //     expect(result.statusCode).toBe(200)
-    //     expect(result.body).toEqual([])
-    //   })
-    //   it("Should return an array with one product", async () => {
-    //     const result = await request(app).get(`/ecommerce/business/products/${partner1_info_uuid}`)
-    //     expect(result.statusCode).toBe(200)
-    //     expect(result.body.length).toEqual(3)
-    //   })
-    // })
+
+    const mockStorage: IStorage = {
+      upload: jest.fn(),
+      delete: jest.fn(),
+    };
+
+    jest.mock('../../infra/providers/storage/implementations/supabase/supabase.storage', () => {
+      // Retornamos uma classe falsa que, quando instanciada, retorna nosso objeto mockado.
+      return {
+        SupabaseStorage: jest.fn().mockImplementation(() => {
+          return mockStorage;
+        }),
+      };
+    });
+    // ====================================================================
+    //UPLOAD PRODUCT IMAGES TESTS NOT IMPLEMENTED YET
+    // ====================================================================
+
+    // describe("E2E Product Image Upload", () => {
+    //   let product_uuid: string;
+    //   let partner_token: string;
+
+    //   beforeAll(async () => {
+    //     container.setStorage(mockStorage);
+
+    //     // O resto do seu setup para criar um produto continua como antes
+    //     partner_token = partner1_admin_token;
+    //     const productInput = {
+    //       name: "Produto para Teste de Imagem",
+    //       description: "Descrição do produto.",
+    //       original_price: 150.00,
+    //       discount: 10,
+    //       stock: 20,
+    //       category_uuid: category1_uuid,
+    //       brand: "Marca de Teste",
+    //     };
+    //     const result = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner_token}`).send(productInput);
+    //     expect(result.statusCode).toBe(201);
+    //     product_uuid = result.body.uuid;
+    //   });
+
+    //   // Limpamos os mocks após cada teste para garantir o isolamento
+    //   afterEach(() => {
+    //     jest.clearAllMocks();
+    //   });
+
+    //   it("should successfully upload, process, and associate images with a product", async () => {
+    //     // --- ARRANGE ---
+    //     const fakeUploadResponse: UploadResponse = {
+    //       data: {
+    //         url: `https://fake-storage.com/products/fake-image.webp`,
+    //         path: `products/fake-image.webp`,
+    //       },
+    //       error: null,
+    //     };
+    //     (mockStorage.upload as jest.Mock).mockResolvedValue(fakeUploadResponse);
+
+    //     const imagePath = path.join(__dirname, '../../../test-files/test-image.jpg');
+    //     const imageBuffer = fs.readFileSync(imagePath);
+
+    //     // --- ACT ---
+    //     const result = await request(app)
+    //       .post(`/ecommerce/product/${product_uuid}/images`)
+    //       .set('Authorization', `Bearer ${partner_token}`)
+    //       // ====================================================================
+    //       // <<< CORREÇÃO FINAL AQUI >>>
+    //       // Alteramos o nome do campo de 'images' para 'file' para corresponder
+    //       // ao que o middleware `uploadImage.array('file', 5)` espera.
+    //       // ====================================================================
+    //       .attach('file', imageBuffer, 'test-image.jpg');
+
+    //     // --- ASSERT ---
+    //     expect(result.statusCode).toBe(200); // Controller retorna 200 (OK) para update
+
+    //     expect(result.body.images_url).toHaveLength(3);
+    //     expect(result.body.images_url[0]).toContain('fake-image.webp');
+
+    //     expect(mockStorage.upload).toHaveBeenCalledTimes(3);
+
+    //     const productAfter = await request(app).get(`/ecommerce/product/${product_uuid}`);
+    //     expect(productAfter.statusCode).toBe(200);
+    //     expect(productAfter.body.images_url).toHaveLength(3);
+    //   });
+
+    // });
+
+    describe("E2E Get Public Business Products", () => {
+      let activeProductUuid: string;
+
+      // No setup, adicionamos um produto ativo e um inativo ao parceiro 1, que já existe.
+      beforeAll(async () => {
+        // 1. Criar um produto ATIVO para o partner1
+        const activeProductInput = {
+          name: "Produto Visível Publicamente",
+          description: "Este produto deve aparecer na lista pública.",
+          original_price: 100.00,
+          discount: 10,
+          stock: 50,
+          category_uuid: category1_uuid,
+          brand: "Marca Pública",
+          is_active: true
+        };
+        const activeProductRes = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`).send(activeProductInput);
+        expect(activeProductRes.statusCode).toBe(201);
+        activeProductUuid = activeProductRes.body.uuid;
+
+        // 2. Criar um produto INATIVO para o partner1
+        const inactiveProductInput = {
+          name: "Produto Invisível Publicamente",
+          description: "Este produto NÃO deve aparecer na lista pública.",
+          original_price: 200.00,
+          discount: 0,
+          stock: 20,
+          category_uuid: category1_uuid,
+          brand: "Marca Privada",
+          is_active: false
+        };
+        const inactiveProductRes = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`).send(inactiveProductInput);
+        expect(inactiveProductRes.statusCode).toBe(201);
+      });
+
+      it("should return ONLY active products for a given business", async () => {
+        // ACT: Chamamos o endpoint público para o parceiro 1
+        const result = await request(app).get(`/ecommerce/business/${partner1_info_uuid}/products`);
+        // ASSERT:
+        expect(result.statusCode).toBe(200);
+        // 1. A verificação mais importante: deve retornar 2 produtos, o que foi criado agora e o que foi criado anteriormente.
+        expect(result.body).toHaveLength(2);
+
+        // 2. Verificamos se o produto retornado é o correto.
+        const product = result.body.find((p: any) => p.uuid === activeProductUuid);
+        expect(product.uuid).toBe(activeProductUuid);
+        expect(product.name).toBe("Produto Visível Publicamente");
+
+        // 3. Verificamos se a estrutura da resposta está otimizada para o cliente.
+        expect(product).toHaveProperty('main_image_url');
+        expect(product).not.toHaveProperty('is_active');
+      });
+
+      it("should return an empty array for a partner with no products", async () => {
+        // ACT: Usamos o parceiro 2, que sabemos que não tem produtos.
+        const result = await request(app).get(`/ecommerce/business/${partner2_info_uuid}/products`);
+
+        // ASSERT:
+        expect(result.statusCode).toBe(200);
+        expect(result.body).toEqual([]);
+      });
+
+      it("should return a 404 error if the business does not exist or is inactive", async () => {
+        const nonExistentUuid = new Uuid().uuid;
+        const result = await request(app).get(`/ecommerce/business/${nonExistentUuid}/products`);
+
+        expect(result.statusCode).toBe(404);
+        expect(result.body.error).toBe("Parceiro não encontrado ou inativo.");
+      });
+    });
+
+    describe("E2E Get Own Business Products (Admin)", () => {
+      let activeProductFromSetup: any;
+      let inactiveProductUuid: string;
+
+      // No setup, criamos um produto ativo e um inativo para o parceiro 1,
+      // que já foi criado e autenticado no beforeAll principal.
+      beforeAll(async () => {
+        // 1. Criar um produto ATIVO (além do que já pode existir de testes anteriores)
+        const activeProductInput = {
+          name: "Produto Ativo para Gerenciamento",
+          description: "Este produto deve aparecer na lista de gerenciamento.",
+          original_price: 250.00,
+          discount: 5,
+          stock: 10,
+          category_uuid: category1_uuid,
+          brand: "Marca Gerenciável",
+          is_active: true
+        };
+        const activeProductRes = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`).send(activeProductInput);
+        expect(activeProductRes.statusCode).toBe(201);
+        activeProductFromSetup = activeProductRes.body;
+
+        // 2. Criar um produto INATIVO
+        const inactiveProductInput = {
+          name: "Produto Inativo para Gerenciamento",
+          description: "Este produto também deve aparecer na lista de gerenciamento.",
+          original_price: 300.00,
+          discount: 0,
+          stock: 5,
+          category_uuid: category1_uuid,
+          brand: "Marca Gerenciável",
+          is_active: false
+        };
+        const inactiveProductRes = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`).send(inactiveProductInput);
+        expect(inactiveProductRes.statusCode).toBe(201);
+        inactiveProductUuid = inactiveProductRes.body.uuid;
+      });
+
+      it("should return all products for the authenticated partner, including inactive ones", async () => {
+        // ACT: Chamamos o endpoint de gerenciamento do parceiro
+        const result = await request(app)
+          .get(`/ecommerce/business/products`) // Assumindo que a rota não precisa do ID, pois ele vem do token
+          .set('Authorization', `Bearer ${partner1_admin_token}`);
+        // ASSERT:
+        expect(result.statusCode).toBe(200);
+        // O resultado deve conter TODOS os produtos criados para este parceiro
+        expect(result.body.length).toBeGreaterThanOrEqual(2);
+
+        // Verificamos se os dois produtos que criamos no setup estão na lista
+        const foundActiveProduct = result.body.find((p: any) => p.uuid === activeProductFromSetup.uuid);
+        const foundInactiveProduct = result.body.find((p: any) => p.uuid === inactiveProductUuid);
+
+        expect(foundActiveProduct).toBeDefined();
+        expect(foundInactiveProduct).toBeDefined();
+
+        // Verificamos o status de cada um para confirmar que ambos foram retornados
+        expect(foundActiveProduct.is_active).toBe(true);
+        expect(foundInactiveProduct.is_active).toBe(false);
+
+        // Verificamos a estrutura de um dos produtos para garantir que está completa para gerenciamento
+        expect(foundActiveProduct).toHaveProperty('uuid');
+        expect(foundActiveProduct).toHaveProperty('name');
+        expect(foundActiveProduct).toHaveProperty('is_active'); // O status deve estar presente
+        expect(foundActiveProduct.images_url).toHaveProperty('thumbnail');
+        expect(foundActiveProduct.images_url).toHaveProperty('medium');
+        expect(foundActiveProduct.images_url).toHaveProperty('large');
+      });
+
+      it("should return an empty array for a partner with no products", async () => {
+        // ACT: Usamos o parceiro 2, que sabemos que não tem produtos.
+        const result = await request(app)
+          .get(`/ecommerce/business/products`)
+          .set('Authorization', `Bearer ${partner2_admin_token}`);
+
+        // ASSERT:
+        expect(result.statusCode).toBe(200);
+        expect(result.body).toEqual([]);
+      });
+    });
+    describe("E2E Find Own Product By ID (Admin)", () => {
+      let activeProductUuid: string;
+      let inactiveProductUuid: string;
+      let otherPartnerProductUuid: string;
+
+      // No setup, criamos produtos para dois parceiros diferentes para validar a lógica de permissão.
+      beforeAll(async () => {
+        // Produto ATIVO para o partner1
+        const activeProductInput = {
+          name: "Produto Ativo para Busca",
+          original_price: 100.00, discount: 10, stock: 50,
+          category_uuid: category1_uuid, brand: "Marca Ativa", is_active: true
+        };
+        const activeRes = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`).send(activeProductInput);
+        expect(activeRes.statusCode).toBe(201);
+        activeProductUuid = activeRes.body.uuid;
+
+        // Produto INATIVO para o partner1
+        const inactiveProductInput = {
+          name: "Produto Inativo para Busca",
+          original_price: 200.00, discount: 0, stock: 0,
+          category_uuid: category1_uuid, brand: "Marca Inativa", is_active: false
+        };
+        const inactiveRes = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`).send(inactiveProductInput);
+        expect(inactiveRes.statusCode).toBe(201);
+        inactiveProductUuid = inactiveRes.body.uuid;
+
+        // Produto para o partner2 (para o teste de segurança)
+        const otherProductInput = {
+          name: "Produto de Outro Parceiro",
+          original_price: 50.00, discount: 0, stock: 10,
+          category_uuid: category1_uuid, brand: "Outra Marca", is_active: true
+        };
+        const otherRes = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner2_admin_token}`).send(otherProductInput);
+        expect(otherRes.statusCode).toBe(201);
+        otherPartnerProductUuid = otherRes.body.uuid;
+      });
+
+      it("should find an active product by its ID for the owner", async () => {
+        // Assumindo que a rota de gerenciamento é /ecommerce/product:productId
+        const result = await request(app)
+          .get(`/ecommerce/product/${activeProductUuid}`)
+          .set('Authorization', `Bearer ${partner1_admin_token}`);
+
+        expect(result.statusCode).toBe(200);
+        expect(result.body.uuid).toBe(activeProductUuid);
+        expect(result.body.name).toBe('Produto Ativo para Busca');
+        expect(result.body.is_active).toBe(true); // O proprietário vê o status
+      });
+
+      it("should find an INACTIVE product by its ID for the owner", async () => {
+        const result = await request(app)
+          .get(`/ecommerce/product/${inactiveProductUuid}`)
+          .set('Authorization', `Bearer ${partner1_admin_token}`);
+
+        expect(result.statusCode).toBe(200);
+        expect(result.body.uuid).toBe(inactiveProductUuid);
+        expect(result.body.name).toBe('Produto Inativo para Busca');
+        expect(result.body.is_active).toBe(false);
+      });
+
+      it("should return a 404 error if the product does not exist", async () => {
+        const nonExistentUuid = new Uuid().uuid;
+        const result = await request(app)
+          .get(`/ecommerce/product/${nonExistentUuid}`)
+          .set('Authorization', `Bearer ${partner1_admin_token}`);
+
+        expect(result.statusCode).toBe(404);
+        expect(result.body.error).toBe("Product not found");
+      });
+
+    
+    });
 
   })
 })

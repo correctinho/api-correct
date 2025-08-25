@@ -1,23 +1,29 @@
-export type OutputFindBusinessProductDTO = {
-  uuid: string,
-  category_uuid: string,
-  brand: string,
-  name: string,
-  description: string,
-  original_price: number,
-  discount: number,
-  promotional_price: number,
-  stock: number,
-  is_mega_promotion: boolean,
-  weight: string,
-  height: string,
-  width: string,
-  created_at: string,
-  updated_at: string | null,
-  is_active: boolean,
+export type OutputFindOwnBusinessProductDTO = {
+  uuid: string;
+  name: string;
+  description: string | null;
+  original_price: number;
+  promotional_price: number;
+  stock: number;
+  brand: string;
+  is_active: boolean; // Importante para o parceiro ver o status
   images_url: {
-    thumbnail: string[],
-    medium: string[],
-    large: string[]
-  }
+    thumbnail: string[];
+    medium: string[];
+    large: string[];
+  };
+};
+
+export type OutputFindPublicProductDTO = {
+    uuid: string;
+    category_uuid: string;
+    brand: string;
+    name: string;
+    description: string | null;
+    original_price: number; // Em Reais (ex: 19.99)
+    discount: number; // Em porcentagem (ex: 10)
+    promotional_price: number; // Em Reais
+    stock: number;
+    is_mega_promotion: boolean;
+    main_image_url: string | null; // Apenas a URL da imagem principal (thumbnail ou medium)
 };
