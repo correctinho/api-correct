@@ -14,6 +14,7 @@ import { uploadProducImageController } from "../../modules/Ecommerce/Products/us
 import multer from "multer";
 import uploadConfig from '../../infra/shared/multer/multer.csv.memory.config'
 import { deleteProductController } from "../../modules/Ecommerce/Products/usecases/delete-product";
+import { updateProduct } from "../../modules/Ecommerce/Products/usecases/update-product";
 
 const ecommerceRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -58,6 +59,16 @@ ecommerceRouter.get('/ecommerce/product/:product_uuid', async (request, response
 
 //delete product
 ecommerceRouter.patch('/ecommerce/product/:product_uuid/delete', companyIsAuth, async (request, response) => {
+  await deleteProductController.handle(request, response)
+})
+
+//update product
+ecommerceRouter.put('/ecommerce/product/:productId', companyIsAuth, async (request, response) => {
+  await updateProduct.handle(request, response)
+})
+
+//delete product images
+ecommerceRouter.patch('/ecommerce/product/:productId/images/delete', companyIsAuth, async (request, response) => {
   await deleteProductController.handle(request, response)
 })
   export { ecommerceRouter }

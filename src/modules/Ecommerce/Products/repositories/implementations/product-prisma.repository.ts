@@ -1,9 +1,32 @@
 import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
 import { prismaClient } from '../../../../../infra/databases/prisma.config';
+import { ProductHistoryEntity } from '../../entities/product-history.entity';
 import { ProductEntity, ProductProps } from '../../entities/product.entity';
 import { IProductRepository } from '../product.repository';
 
 export class ProductPrismaRepository implements IProductRepository {
+  async updateWithHistory(entity: ProductEntity, history: ProductHistoryEntity[]): Promise<void> {
+    // 1. Preparamos os dados para a persistência usando o método .toJSON() de cada entidade.
+    const productDataToSave = entity.toJSON();
+    const historyDataToSave = history.map(h => h.toJSON());
+
+    // 2. Usamos o '$transaction' do Prisma para garantir que ambas as operações
+    //    (ou todas) sejam bem-sucedidas, ou nenhuma delas seja aplicada.
+
+    await prismaClient.$transaction([
+      // Operação 1: Atualiza o produto na tabela 'products'
+      prismaClient.products.update({
+        where: { uuid: productDataToSave.uuid },
+        data: productDataToSave,
+      }),
+
+      // Operação 2: Cria os múltiplos registros de histórico na tabela 'product_history'
+      prismaClient.productHistory.createMany({
+        data: historyDataToSave,
+      })
+    ]);
+
+  }
   async delete(entity: ProductEntity): Promise<void> {
     const data = entity.toJSON();
     await prismaClient.products.update({
