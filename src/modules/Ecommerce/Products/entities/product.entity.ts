@@ -46,6 +46,8 @@ export type ProductProps = {
   image_urls: string[];
   is_mega_promotion: boolean;
   is_active: boolean;
+  deleted_at?: Date | null;
+  deleted_by_uuid?: Uuid | null;
   created_at?: string;
   updated_at?: string;
   weight?: string;
@@ -68,6 +70,8 @@ export class ProductEntity {
   private _image_urls: string[];
   private _is_mega_promotion: boolean;
   private _is_active: boolean;
+  private _deleted_at: Date | null
+  private _deleted_by_uuid: Uuid | null;
   private _created_at: string;
   private _updated_at: string;
   private _weight?: string;
@@ -90,6 +94,8 @@ export class ProductEntity {
     this._image_urls = props.image_urls ?? [];
     this._is_mega_promotion = props.is_mega_promotion ?? false;
     this._is_active = props.is_active ?? true;
+    this._deleted_at = props.deleted_at ?? null;
+    this._deleted_by_uuid = props.deleted_by_uuid ?? null;
     this._weight = props.weight;
     this._height = props.height;
     this._width = props.width;
@@ -126,6 +132,8 @@ export class ProductEntity {
   get image_urls(): string[] { return this._image_urls; }
   get is_mega_promotion(): boolean { return this._is_mega_promotion; }
   get is_active(): boolean { return this._is_active; }
+  get deleted_at(): Date | null { return this._deleted_at; }
+  get deleted_by_uuid(): Uuid | null { return this._deleted_by_uuid; }
   get created_at(): string { return this._created_at; }
   get updated_at(): string { return this._updated_at; }
   get weight(): string | undefined { return this._weight; }
@@ -180,7 +188,24 @@ export class ProductEntity {
     this._is_active = false;
     this.touch();
   }
+  public delete(deletingUserId: Uuid): void {
+    if (this._deleted_at) {
+      throw new CustomError("Produto já foi deletado.", 400);
+    }
+    this._deleted_at = new Date();
+    this._deleted_by_uuid = deletingUserId; // <<< Armazena quem deletou
+    this.deactivate();
+    this.touch();
+  }
 
+  public restore(): void {
+    if (!this._deleted_at) {
+      throw new CustomError("Produto não está deletado.", 400);
+    }
+    this._deleted_at = null;
+    this._deleted_by_uuid = null; // <<< Limpa o campo
+    this.touch();
+  }
   private touch(): void {
     this._updated_at = newDateF(new Date());
   }
@@ -202,6 +227,8 @@ export class ProductEntity {
       image_urls: this._image_urls,
       is_mega_promotion: this._is_mega_promotion,
       is_active: this._is_active,
+      deleted_at: this._deleted_at,
+      deleted_by_uuid: this._deleted_by_uuid ? this._deleted_by_uuid.uuid : null,
       created_at: this._created_at,
       updated_at: this._updated_at,
       weight: this._weight,

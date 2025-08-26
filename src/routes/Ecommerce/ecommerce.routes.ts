@@ -13,6 +13,7 @@ import { findProductController } from "../../modules/Ecommerce/Products/usecases
 import { uploadProducImageController } from "../../modules/Ecommerce/Products/usecases/upload-product-images";
 import multer from "multer";
 import uploadConfig from '../../infra/shared/multer/multer.csv.memory.config'
+import { deleteProductController } from "../../modules/Ecommerce/Products/usecases/delete-product";
 
 const ecommerceRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -31,11 +32,6 @@ ecommerceRouter.get('/ecommerce/category', async (request, response) => {
 ecommerceRouter.get('/ecommerce/categories', async (request, response) => {
   await findAllCategoriesController.handle(request, response)
 })
-
-//Register product by business user - PRODUCTS ON SUPABASE
-// ecommerceRouter.post('/ecommerce/product/supabase', companyIsAuth, uploadImage.array('file', 5), async (request, response) => {
-//   await createProductController.handle(request, response)
-// })
 
 //REgister product by business user 
 ecommerceRouter.post('/ecommerce/product', companyIsAuth, uploadImage.array('file', 5), async (request, response) => {
@@ -60,4 +56,8 @@ ecommerceRouter.get('/ecommerce/product/:product_uuid', async (request, response
   await findProductController.handle(request, response)
 })
 
-export { ecommerceRouter }
+//delete product
+ecommerceRouter.patch('/ecommerce/product/:product_uuid/delete', companyIsAuth, async (request, response) => {
+  await deleteProductController.handle(request, response)
+})
+  export { ecommerceRouter }
