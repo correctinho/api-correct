@@ -880,4 +880,97 @@ describe("E2E Ecommerce tests", () => {
     });
 
   })
+  describe("E2E Update Product", () => {
+    let productToUpdateUuid: string;
+    let otherPartnerProductUuid: string;
+
+    // No setup, criamos produtos para dois parceiros diferentes
+    // para validar a lógica de permissão.
+    beforeAll(async () => {
+      // 1. Criar um produto para o partner1, que será atualizado no teste.
+      const productInput1 = {
+        name: "Produto Original",
+        description: "Descrição Original.",
+        original_price: 100.00, discount: 10, stock: 50,
+        category_uuid: category1_uuid, brand: "Marca Original", is_active: true
+      };
+      const res1 = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`).send(productInput1);
+      expect(res1.statusCode).toBe(201);
+      productToUpdateUuid = res1.body.uuid;
+
+      // 2. Criar um produto para o partner2, para o teste de segurança.
+      const productInput2 = {
+        name: "Produto de Outro Parceiro",
+        original_price: 25.00, discount: 0, stock: 5,
+        category_uuid: category1_uuid, brand: "Outra Marca", is_active: true
+      };
+      const res2 = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner2_admin_token}`).send(productInput2);
+      expect(res2.statusCode).toBe(201);
+      otherPartnerProductUuid = res2.body.uuid;
+    });
+
+    it("should successfully update a product and create a history record", async () => {
+      // --- ARRANGE ---
+      const updatePayload = {
+        name: "Produto com Nome Atualizado",
+        stock: 45,
+        original_price: 110.00, // Preço também mudou
+        discount: 15,
+      };
+
+      // --- ACT ---
+      // O parceiro 1 atualiza seu próprio produto.
+      const result = await request(app)
+        .put(`/ecommerce/product/${productToUpdateUuid}`)
+        .set('Authorization', `Bearer ${partner1_admin_token}`)
+        .send(updatePayload);
+      console.log('result.body');
+      console.log(result.body);
+      // --- ASSERT 1: Resposta da API ---
+      expect(result.statusCode).toBe(200);
+      expect(result.body.name).toBe("Produto com Nome Atualizado");
+      expect(result.body.stock).toBe(45);
+      expect(result.body.original_price).toBe(110.00);
+      expect(result.body.discount).toBe(15);
+
+      // --- ASSERT 2: Verificação da Rastreabilidade no Banco de Dados ---
+      const historyRecords = await prismaClient.productHistory.findMany({
+        where: { product_uuid: productToUpdateUuid },
+        orderBy: { changed_at: 'desc' }
+      });
+
+      // Esperamos 4 registros de histórico (name, stock, original_price, discount)
+      expect(historyRecords.length).toBe(4);
+
+      // Verificamos o conteúdo de um dos registros de histórico
+      const nameChangeRecord = historyRecords.find(r => r.field_changed === 'name');
+      expect(nameChangeRecord).toBeDefined();
+      expect(nameChangeRecord.old_value).toBe("Produto Original");
+      expect(nameChangeRecord.new_value).toBe("Produto com Nome Atualizado");
+      expect(nameChangeRecord.changed_by_uuid).toBe(partner1_admin_uuid);
+    });
+
+    it("should return a 404 error if trying to update a product that does not exist", async () => {
+      const nonExistentUuid = new Uuid().uuid;
+      const result = await request(app)
+        .put(`/ecommerce/product/${nonExistentUuid}`)
+        .set('Authorization', `Bearer ${partner1_admin_token}`)
+        .send({ data: { name: "Novo Nome" } });
+
+      expect(result.statusCode).toBe(404);
+      expect(result.body.error).toBe("Produto não encontrado.");
+    });
+
+    it("should return a 403 Forbidden error if trying to update another partner's product", async () => {
+      // O parceiro 1 tenta atualizar o produto que pertence ao parceiro 2.
+      const result = await request(app)
+        .put(`/ecommerce/product/${otherPartnerProductUuid}`)
+        .set('Authorization', `Bearer ${partner1_admin_token}`)
+        .send({ data: { name: "Nome Invasor" } });
+
+      expect(result.statusCode).toBe(403);
+      expect(result.body.error).toBe("Acesso negado.");
+    });
+  });
+
 })

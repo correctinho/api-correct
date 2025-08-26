@@ -7,6 +7,7 @@ import { ICompanyUserRepository } from '../../../../Company/CompanyUser/reposito
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { InputUploadProductImagesDTO, OutputUploadProductImagesDTO } from './dto/upload-product-images.dto';
+import { ProductHistoryEntity } from '../../entities/product-history.entity';
 
 // Definições de tamanho para as imagens
 const IMAGE_SIZES = {
@@ -94,6 +95,7 @@ export class UploadProductImagesUsecase {
         }
 
         const allUploadedUrls = [...product.image_urls]; // Começa com as URLs existentes
+        const historyEntries: ProductHistoryEntity[] = []; // <<< Array para guardar os registros de histórico
 
         for (const imageFile of data.files) {
             if (!['image/jpeg', 'image/png', 'image/webp'].includes(imageFile.mimetype.toLowerCase())) {
@@ -107,11 +109,28 @@ export class UploadProductImagesUsecase {
 
             const { urls } = await this.processAndUploadImage(imageFile.buffer, baseNameForStorage);
             allUploadedUrls.push(...urls);
-        }
 
+            historyEntries.push(ProductHistoryEntity.create({
+                product_uuid: product.uuid,
+                changed_by_uuid: new Uuid(data.business_user_uuid),
+                field_changed: 'image_added',
+                old_value: null,
+                // Guardamos um JSON com as URLs das 3 versões geradas
+                new_value: JSON.stringify(urls),
+            }));
+        }
+        if (historyEntries.length === 0) {
+            return {
+                productId: product.uuid.uuid,
+                images_url: product.image_urls,
+            };
+        }
         // Atualiza a entidade com a lista final de URLs
         product.setImagesUrl(allUploadedUrls);
-        await this.productRepository.update(product);
+        product.update({}, new Uuid(data.business_user_uuid)); // Chama update para registrar 'updated_by' e 'updated_at'
+
+        // <<< MUDANÇA CRÍTICA: Usamos o método que salva o histórico atomicamente >>>
+        await this.productRepository.updateWithHistory(product, historyEntries);
 
         return {
             productId: product.uuid.uuid,
