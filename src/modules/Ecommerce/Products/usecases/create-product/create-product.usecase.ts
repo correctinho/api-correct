@@ -31,6 +31,7 @@ export class CreateProductUsecase {
     const productCreateCommand: ProductCreateCommand = {
       name: data.name,
       description: data.description,
+      created_by_uuid: new Uuid(data.business_user_uuid),
       ean_code: data.ean_code,
       brand: data.brand,
       category_uuid: category.uuid,
@@ -66,6 +67,7 @@ export class CreateProductUsecase {
         height: savedProduct.height,
         width: savedProduct.width,
         brand: savedProduct.brand,
+        created_by_uuid: savedProduct.created_by_uuid.uuid,
         created_at: savedProduct.created_at,
         updated_at: savedProduct.updated_at
     };

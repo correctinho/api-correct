@@ -413,6 +413,7 @@ describe("E2E Ecommerce tests", () => {
         expect(result.body.promotional_price).toBe(expected_promotional_price);
         expect(result.body.discount).toBe(input.discount);
         expect(result.body.stock).toBe(input.stock);
+        expect(result.body.created_by_uuid).toBe(partner1_admin_uuid);
       });
       it('should return a 400 error if name is missing', async () => {
         const input = {
@@ -492,7 +493,7 @@ describe("E2E Ecommerce tests", () => {
       };
     });
     // ====================================================================
-    //UPLOAD PRODUCT IMAGES TESTS NOT IMPLEMENTED YET
+    //INSERT PRODUCT IMAGES TESTS NOT IMPLEMENTED YET
     // ====================================================================
 
     // describe("E2E Product Image Upload", () => {

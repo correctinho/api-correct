@@ -61,6 +61,7 @@ export type OutputCreateProductDTO = {
   height?: string;
   width?: string;
   brand: string | null;
+  created_by_uuid: string;
 };
 
 export type InputUploadProductImagesDTO = {

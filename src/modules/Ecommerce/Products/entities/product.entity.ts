@@ -15,6 +15,7 @@ export type FileDTO = {
 export type ProductCreateCommand = {
   category_uuid: Uuid;
   business_info_uuid: Uuid;
+  created_by_uuid: Uuid;
   ean_code?: string | null;
   brand: string;
   name: string;
@@ -35,6 +36,8 @@ export type ProductProps = {
   uuid?: Uuid;
   category_uuid: Uuid;
   business_info_uuid: Uuid;
+  created_by_uuid: Uuid;
+  updated_by_uuid: Uuid;
   ean_code: string | null;
   brand: string;
   name: string;
@@ -70,8 +73,10 @@ export class ProductEntity {
   private _image_urls: string[];
   private _is_mega_promotion: boolean;
   private _is_active: boolean;
-  private _deleted_at: Date | null
+  private _created_by_uuid: Uuid;
+  private _updated_by_uuid: Uuid;
   private _deleted_by_uuid: Uuid | null;
+  private _deleted_at: Date | null
   private _created_at: string;
   private _updated_at: string;
   private _weight?: string;
@@ -94,6 +99,8 @@ export class ProductEntity {
     this._image_urls = props.image_urls ?? [];
     this._is_mega_promotion = props.is_mega_promotion ?? false;
     this._is_active = props.is_active ?? true;
+    this._created_by_uuid = props.created_by_uuid;
+    this._updated_by_uuid = props.updated_by_uuid;
     this._deleted_at = props.deleted_at ?? null;
     this._deleted_by_uuid = props.deleted_by_uuid ?? null;
     this._weight = props.weight;
@@ -132,6 +139,8 @@ export class ProductEntity {
   get image_urls(): string[] { return this._image_urls; }
   get is_mega_promotion(): boolean { return this._is_mega_promotion; }
   get is_active(): boolean { return this._is_active; }
+  get created_by_uuid(): Uuid { return this._created_by_uuid; }
+  get updated_by_uuid(): Uuid { return this._updated_by_uuid; }
   get deleted_at(): Date | null { return this._deleted_at; }
   get deleted_by_uuid(): Uuid | null { return this._deleted_by_uuid; }
   get created_at(): string { return this._created_at; }
@@ -188,27 +197,55 @@ export class ProductEntity {
     this._is_active = false;
     this.touch();
   }
-  public delete(deletingUserId: Uuid): void {
-    if (this._deleted_at) {
-      throw new CustomError("Produto já foi deletado.", 400);
-    }
+  public delete(deletedBy: Uuid): void {
+    if (this._deleted_at) throw new CustomError("Produto já foi deletado.", 400);
     this._deleted_at = new Date();
-    this._deleted_by_uuid = deletingUserId; // <<< Armazena quem deletou
+    this._deleted_by_uuid = deletedBy; // <<< Registra quem deletou
     this.deactivate();
     this.touch();
   }
 
   public restore(): void {
-    if (!this._deleted_at) {
-      throw new CustomError("Produto não está deletado.", 400);
-    }
+    if (!this._deleted_at) throw new CustomError("Produto não está deletado.", 400);
     this._deleted_at = null;
-    this._deleted_by_uuid = null; // <<< Limpa o campo
+    this._deleted_by_uuid = null;
     this.touch();
   }
   private touch(): void {
     this._updated_at = newDateF(new Date());
   }
+
+  public update(data: Partial<ProductCreateCommand>, updatedBy: Uuid): void {
+    // Atualiza campos de texto simples
+    if (data.name !== undefined) this._name = data.name;
+    if (data.description !== undefined) this._description = data.description;
+    if (data.brand !== undefined) this._brand = data.brand;
+    if (data.stock !== undefined) this._stock = data.stock;
+    if (data.ean_code !== undefined) this._ean_code = data.ean_code;
+    // ... (outros campos simples como weight, height, etc.)
+
+    // Lógica especial para preços e descontos
+    let priceOrDiscountChanged = false;
+    if (data.original_price !== undefined) {
+      this._original_price = Math.round(data.original_price * 100);
+      priceOrDiscountChanged = true;
+    }
+    if (data.discount !== undefined) {
+      this._discount = Math.round(data.discount * 10000);
+      priceOrDiscountChanged = true;
+    }
+
+    // Se o preço original ou o desconto mudaram, o preço promocional DEVE ser recalculado
+    if (priceOrDiscountChanged) {
+      this._promotional_price = this._original_price - Math.round(this._original_price * (this.discount / 100));
+    }
+
+    // Registra quem fez a última alteração
+    this._updated_by_uuid = updatedBy;
+    this.touch();
+    this.validate();
+  }
+
 
   // --- Serialização e Fábricas ---
   public toJSON() {
@@ -216,6 +253,8 @@ export class ProductEntity {
       uuid: this._uuid.uuid,
       category_uuid: this._category_uuid.uuid,
       business_info_uuid: this._business_info_uuid.uuid,
+      created_by_uuid: this._created_by_uuid.uuid,
+      updated_by_uuid: this._updated_by_uuid.uuid,
       ean_code: this._ean_code,
       brand: this._brand,
       name: this._name,
@@ -262,6 +301,8 @@ export class ProductEntity {
       // Mapeamento explícito para garantir que todas as props obrigatórias sejam preenchidas
       category_uuid: command.category_uuid,
       business_info_uuid: command.business_info_uuid,
+      created_by_uuid: command.created_by_uuid,
+      updated_by_uuid: command.created_by_uuid,
       ean_code: command.ean_code ?? null,
       brand: command.brand,
       name: command.name,
