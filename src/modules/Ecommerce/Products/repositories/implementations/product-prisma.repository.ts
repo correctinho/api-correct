@@ -4,6 +4,20 @@ import { ProductEntity, ProductProps } from '../../entities/product.entity';
 import { IProductRepository } from '../product.repository';
 
 export class ProductPrismaRepository implements IProductRepository {
+  async delete(entity: ProductEntity): Promise<void> {
+    const data = entity.toJSON();
+    await prismaClient.products.update({
+      where: {
+        uuid: data.uuid,
+      },
+      data: {
+        is_active: data.is_active,
+        deleted_at: data.deleted_at,
+        deleted_by_uuid: data.deleted_by_uuid,
+        updated_at: data.updated_at,
+      },
+    });
+  }
 
   create(entity: ProductEntity): Promise<void> {
     throw new Error('Method not implemented.');
@@ -16,6 +30,7 @@ export class ProductPrismaRepository implements IProductRepository {
     await prismaClient.products.update({
       where: {
         uuid: dataToSave.uuid,
+        deleted_at: null, // Garantimos que não estamos atualizando um produto deletado
       },
       data: {
         // Passamos apenas os campos que podem ser atualizados.
@@ -43,6 +58,7 @@ export class ProductPrismaRepository implements IProductRepository {
     const productData = await prismaClient.products.findUnique({
       where: {
         uuid: id.uuid,
+        deleted_at: null,
       },
     });
 
@@ -116,6 +132,7 @@ export class ProductPrismaRepository implements IProductRepository {
     const productsData = await prismaClient.products.findMany({
       where: {
         business_info_uuid: businessInfoUuid,
+        deleted_at: null,
         // is_active: true, // Mantido comentado para o parceiro ver seus próprios produtos inativos
       },
       orderBy: [
@@ -161,6 +178,7 @@ export class ProductPrismaRepository implements IProductRepository {
       where: {
         business_info_uuid: businessInfoUuid,
         is_active: true, // A chave da lógica está aqui
+        deleted_at: null,
       },
       orderBy: [
         { is_mega_promotion: 'desc' },

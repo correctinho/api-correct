@@ -59,7 +59,7 @@ export class CreateProductUsecase {
         promotional_price: savedProduct.promotional_price,
         discount: savedProduct.discount,
         stock: savedProduct.stock,
-        images_url: savedProduct.images_url,
+        images_url: savedProduct.image_urls,
         is_mega_promotion: savedProduct.is_mega_promotion,
         is_active: savedProduct.is_active,
         weight: savedProduct.weight,

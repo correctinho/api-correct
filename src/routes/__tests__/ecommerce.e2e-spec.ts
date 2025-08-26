@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { IStorage, UploadResponse } from '../../infra/providers/storage/storage'; // Importe a interface e os tipos
 import { container } from "../../container";
+import { prismaClient } from "../../infra/databases/prisma.config";
 
 let correctAdminToken: string
 const inputNewAdmin = {
@@ -783,7 +784,98 @@ describe("E2E Ecommerce tests", () => {
         expect(result.body.error).toBe("Product not found");
       });
 
-    
+
+    });
+    describe("E2E Soft Delete Product", () => {
+      let productToDeleteUuid: string;
+      let otherPartnerProductUuid: string;
+
+      // No setup, criamos produtos para dois parceiros diferentes
+      // para validar a lógica de permissão.
+      beforeAll(async () => {
+        // 1. Criar um produto para o partner1, que será deletado no teste.
+        const productInput1 = {
+          name: "Produto a ser Deletado",
+          original_price: 50.00, discount: 0, stock: 10,
+          category_uuid: category1_uuid, brand: "Marca Deletável", is_active: true
+        };
+        const res1 = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`).send(productInput1);
+        expect(res1.statusCode).toBe(201);
+        productToDeleteUuid = res1.body.uuid;
+
+        // 2. Criar um produto para o partner2, para o teste de segurança.
+        const productInput2 = {
+          name: "Produto de Outro Parceiro",
+          original_price: 25.00, discount: 0, stock: 5,
+          category_uuid: category1_uuid, brand: "Outra Marca", is_active: true
+        };
+        const res2 = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner2_admin_token}`).send(productInput2);
+        expect(res2.statusCode).toBe(201);
+        otherPartnerProductUuid = res2.body.uuid;
+      });
+
+      it("should successfully soft delete a product for the owner", async () => {
+        // --- ACT ---
+        // O parceiro 1 deleta seu próprio produto.
+        const result = await request(app)
+          .patch(`/ecommerce/product/${productToDeleteUuid}/delete`)
+          .set('Authorization', `Bearer ${partner1_admin_token}`);
+
+        // --- ASSERT 1: Resposta da API ---
+        expect(result.statusCode).toBe(204); // Ou 204 No Content, que também é comum para delete
+        expect(result.body).toEqual({}); // Corpo vazio para 204
+
+        const findPartner1Products = await request(app)
+          .get(`/ecommerce/business/products`) // Assumindo que a rota não precisa do ID, pois ele vem do token
+          .set('Authorization', `Bearer ${partner1_admin_token}`);
+        const deletedProduct = findPartner1Products.body.find((p: any) => p.uuid === productToDeleteUuid);
+        expect(deletedProduct).toBeUndefined()
+
+        // --- ASSERT 2: Verificação do Estado Final ---
+        // Buscamos o produto novamente para verificar seu estado no banco.
+        // Usamos um endpoint de gerenciamento que busca produtos deletados.
+        // Esta é a única forma de verificar os campos de auditoria sem um endpoint específico.
+        const productFromDb = await prismaClient.products.findUnique({
+          where: { uuid: productToDeleteUuid },
+        });
+
+        expect(productFromDb).toBeDefined();
+        // O produto agora deve estar inativo e com a data de deleção preenchida.
+        expect(productFromDb.is_active).toBe(false);
+        expect(productFromDb.deleted_at).not.toBeNull();
+        expect(productFromDb.deleted_by_uuid).toBe(partner1_admin_uuid); // Valida a auditoria
+      });
+
+      it("should return a 404 error if trying to delete a product that does not exist", async () => {
+        const nonExistentUuid = new Uuid().uuid;
+        const result = await request(app)
+          .patch(`/ecommerce/product/${nonExistentUuid}/delete`)
+          .set('Authorization', `Bearer ${partner1_admin_token}`);
+
+        expect(result.statusCode).toBe(404);
+        expect(result.body.error).toBe("Produto não encontrado.");
+      });
+
+      it("should return a 403 Forbidden error if trying to delete another partner's product", async () => {
+        // O parceiro 1 tenta deletar o produto que pertence ao parceiro 2.
+        const result = await request(app)
+          .patch(`/ecommerce/product/${otherPartnerProductUuid}/delete`)
+          .set('Authorization', `Bearer ${partner1_admin_token}`);
+
+        expect(result.statusCode).toBe(403);
+        expect(result.body.error).toBe("A empresa não tem permissão para deletar este produto.");
+      });
+
+      it("should not return a soft-deleted product in the public listing", async () => {
+        // ACT: Buscamos a lista pública de produtos do parceiro 1.
+        const result = await request(app).get(`/ecommerce/business/${partner1_info_uuid}/products`);
+
+        expect(result.statusCode).toBe(200);
+
+        // ASSERT: O produto que acabamos de deletar NÃO deve estar na lista.
+        const foundDeletedProduct = result.body.find((p: any) => p.uuid === productToDeleteUuid);
+        expect(foundDeletedProduct).toBeUndefined();
+      });
     });
 
   })
