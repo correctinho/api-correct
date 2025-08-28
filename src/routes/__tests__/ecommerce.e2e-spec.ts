@@ -8,6 +8,7 @@ import fs from 'fs';
 import { IStorage, UploadResponse } from '../../infra/providers/storage/storage'; // Importe a interface e os tipos
 import { container } from "../../container";
 import { prismaClient } from "../../infra/databases/prisma.config";
+import { randomUUID } from "crypto";
 
 let correctAdminToken: string
 const inputNewAdmin = {
@@ -57,6 +58,13 @@ describe("E2E Ecommerce tests", () => {
     expect(authAdmin.status).toBe(200)
     correctAdminToken = authAdmin.body.token
 
+    const benefit0 = {
+      name: "Correct",
+      description: "Descrição do vale",
+      parent_uuid: null as any,
+      item_type: 'gratuito',
+      item_category: 'pre_pago',
+    }
     //create items
     const benefit1: InputCreateBenefitDto = {
       name: "Vale Alimentação",
@@ -88,7 +96,7 @@ describe("E2E Ecommerce tests", () => {
       item_category: 'pre_pago',
     }
 
-
+    const benefit0Response = await request(app).post('/benefit').set('Authorization', `Bearer ${correctAdminToken}`).send(benefit0);
     const benefit1Response = await request(app).post('/benefit').set('Authorization', `Bearer ${correctAdminToken}`).send(benefit1);
     const benefit2Response = await request(app).post('/benefit').set('Authorization', `Bearer ${correctAdminToken}`).send(benefit2);
     const benefit3Response = await request(app).post('/benefit').set('Authorization', `Bearer ${correctAdminToken}`).send(benefit3);
@@ -111,7 +119,7 @@ describe("E2E Ecommerce tests", () => {
         marketing_tax: 100,
         admin_tax: 150,
         market_place_tax: 120,
-        benefits_name: ['Adiantamento Salarial', 'Vale Alimentação']
+        benefits_name: ['Adiantamento Salarial', 'Vale Alimentação', 'Correct']
       },
 
       {
@@ -119,7 +127,7 @@ describe("E2E Ecommerce tests", () => {
         marketing_tax: 100,
         admin_tax: 150,
         market_place_tax: 120,
-        benefits_name: ['Adiantamento Salarial', 'Vale Refeição']
+        benefits_name: ['Adiantamento Salarial', 'Vale Refeição', 'Correct']
       },
 
       {
@@ -127,14 +135,14 @@ describe("E2E Ecommerce tests", () => {
         marketing_tax: 130,
         admin_tax: 140,
         market_place_tax: 130,
-        benefits_name: ['Convênio', 'Vale Alimentação']
+        benefits_name: ['Convênio', 'Vale Alimentação', 'Correct']
       },
       {
         name: "Restaurantes",
         marketing_tax: 180,
         admin_tax: 170,
         market_place_tax: 160,
-        benefits_name: ['Vale Refeição', 'Vale Alimentação']
+        benefits_name: ['Vale Refeição', 'Vale Alimentação', 'Correct']
       },
 
       {
@@ -142,7 +150,7 @@ describe("E2E Ecommerce tests", () => {
         marketing_tax: 200,
         admin_tax: 250,
         market_place_tax: 220,
-        benefits_name: ['Vale Refeição', 'Vale Alimentação']
+        benefits_name: ['Vale Refeição', 'Vale Alimentação', 'Correct']
       }
     ]
 
@@ -151,7 +159,6 @@ describe("E2E Ecommerce tests", () => {
       .post(`/branch`)
       .set('Authorization', `Bearer ${correctAdminToken}`)
       .send(branchesByName);
-
     expect(branches.statusCode).toBe(201)
 
     branch1_uuid = branches.body[0].uuid
@@ -378,8 +385,8 @@ describe("E2E Ecommerce tests", () => {
 
   })
   describe("E2E Products", () => {
-
-    describe("E2E Create Product", () => {
+    //*****UPLOAD PRODUCT IMAGES TESTS TO BE IMPLEMENTED*******  */
+    describe("E2E Create Physical Product", () => {
 
       it("should create a product and return values formatted in Reais", async () => {
         // --- ARRANGE ---
@@ -443,7 +450,7 @@ describe("E2E Ecommerce tests", () => {
         };
         const result = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`).send(input);
         expect(result.statusCode).toBe(400);
-        expect(result.body.error).toContain("Stock must be a non-negative integer.");
+        expect(result.body.error).toContain("Stock must be a non-negative integer for physical products.");
       });
 
       it('should return a 400 error if discount is greater than 100', async () => {
@@ -477,92 +484,6 @@ describe("E2E Ecommerce tests", () => {
       });
 
     })
-
-
-    const mockStorage: IStorage = {
-      upload: jest.fn(),
-      delete: jest.fn(),
-    };
-
-    jest.mock('../../infra/providers/storage/implementations/supabase/supabase.storage', () => {
-      // Retornamos uma classe falsa que, quando instanciada, retorna nosso objeto mockado.
-      return {
-        SupabaseStorage: jest.fn().mockImplementation(() => {
-          return mockStorage;
-        }),
-      };
-    });
-    // ====================================================================
-    //INSERT PRODUCT IMAGES TESTS NOT IMPLEMENTED YET
-    // ====================================================================
-
-    // describe("E2E Product Image Upload", () => {
-    //   let product_uuid: string;
-    //   let partner_token: string;
-
-    //   beforeAll(async () => {
-    //     container.setStorage(mockStorage);
-
-    //     // O resto do seu setup para criar um produto continua como antes
-    //     partner_token = partner1_admin_token;
-    //     const productInput = {
-    //       name: "Produto para Teste de Imagem",
-    //       description: "Descrição do produto.",
-    //       original_price: 150.00,
-    //       discount: 10,
-    //       stock: 20,
-    //       category_uuid: category1_uuid,
-    //       brand: "Marca de Teste",
-    //     };
-    //     const result = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner_token}`).send(productInput);
-    //     expect(result.statusCode).toBe(201);
-    //     product_uuid = result.body.uuid;
-    //   });
-
-    //   // Limpamos os mocks após cada teste para garantir o isolamento
-    //   afterEach(() => {
-    //     jest.clearAllMocks();
-    //   });
-
-    //   it("should successfully upload, process, and associate images with a product", async () => {
-    //     // --- ARRANGE ---
-    //     const fakeUploadResponse: UploadResponse = {
-    //       data: {
-    //         url: `https://fake-storage.com/products/fake-image.webp`,
-    //         path: `products/fake-image.webp`,
-    //       },
-    //       error: null,
-    //     };
-    //     (mockStorage.upload as jest.Mock).mockResolvedValue(fakeUploadResponse);
-
-    //     const imagePath = path.join(__dirname, '../../../test-files/test-image.jpg');
-    //     const imageBuffer = fs.readFileSync(imagePath);
-
-    //     // --- ACT ---
-    //     const result = await request(app)
-    //       .post(`/ecommerce/product/${product_uuid}/images`)
-    //       .set('Authorization', `Bearer ${partner_token}`)
-    //       // ====================================================================
-    //       // <<< CORREÇÃO FINAL AQUI >>>
-    //       // Alteramos o nome do campo de 'images' para 'file' para corresponder
-    //       // ao que o middleware `uploadImage.array('file', 5)` espera.
-    //       // ====================================================================
-    //       .attach('file', imageBuffer, 'test-image.jpg');
-
-    //     // --- ASSERT ---
-    //     expect(result.statusCode).toBe(200); // Controller retorna 200 (OK) para update
-
-    //     expect(result.body.images_url).toHaveLength(3);
-    //     expect(result.body.images_url[0]).toContain('fake-image.webp');
-
-    //     expect(mockStorage.upload).toHaveBeenCalledTimes(3);
-
-    //     const productAfter = await request(app).get(`/ecommerce/product/${product_uuid}`);
-    //     expect(productAfter.statusCode).toBe(200);
-    //     expect(productAfter.body.images_url).toHaveLength(3);
-    //   });
-
-    // });
 
     describe("E2E Get Public Business Products", () => {
       let activeProductUuid: string;
@@ -879,98 +800,265 @@ describe("E2E Ecommerce tests", () => {
       });
     });
 
-  })
-  describe("E2E Update Product", () => {
-    let productToUpdateUuid: string;
-    let otherPartnerProductUuid: string;
+    describe("E2E Update Product", () => {
+      let productToUpdateUuid: string;
+      let otherPartnerProductUuid: string;
 
-    // No setup, criamos produtos para dois parceiros diferentes
-    // para validar a lógica de permissão.
-    beforeAll(async () => {
-      // 1. Criar um produto para o partner1, que será atualizado no teste.
-      const productInput1 = {
-        name: "Produto Original",
-        description: "Descrição Original.",
-        original_price: 100.00, discount: 10, stock: 50,
-        category_uuid: category1_uuid, brand: "Marca Original", is_active: true
-      };
-      const res1 = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`).send(productInput1);
-      expect(res1.statusCode).toBe(201);
-      productToUpdateUuid = res1.body.uuid;
+      // No setup, criamos produtos para dois parceiros diferentes
+      // para validar a lógica de permissão.
+      beforeAll(async () => {
+        // 1. Criar um produto para o partner1, que será atualizado no teste.
+        const productInput1 = {
+          name: "Produto Original",
+          description: "Descrição Original.",
+          original_price: 100.00, discount: 10, stock: 50,
+          category_uuid: category1_uuid, brand: "Marca Original", is_active: true
+        };
+        const res1 = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`).send(productInput1);
+        expect(res1.statusCode).toBe(201);
+        productToUpdateUuid = res1.body.uuid;
 
-      // 2. Criar um produto para o partner2, para o teste de segurança.
-      const productInput2 = {
-        name: "Produto de Outro Parceiro",
-        original_price: 25.00, discount: 0, stock: 5,
-        category_uuid: category1_uuid, brand: "Outra Marca", is_active: true
-      };
-      const res2 = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner2_admin_token}`).send(productInput2);
-      expect(res2.statusCode).toBe(201);
-      otherPartnerProductUuid = res2.body.uuid;
-    });
-
-    it("should successfully update a product and create a history record", async () => {
-      // --- ARRANGE ---
-      const updatePayload = {
-        name: "Produto com Nome Atualizado",
-        stock: 45,
-        original_price: 110.00, // Preço também mudou
-        discount: 15,
-      };
-
-      // --- ACT ---
-      // O parceiro 1 atualiza seu próprio produto.
-      const result = await request(app)
-        .put(`/ecommerce/product/${productToUpdateUuid}`)
-        .set('Authorization', `Bearer ${partner1_admin_token}`)
-        .send(updatePayload);
-      console.log('result.body');
-      console.log(result.body);
-      // --- ASSERT 1: Resposta da API ---
-      expect(result.statusCode).toBe(200);
-      expect(result.body.name).toBe("Produto com Nome Atualizado");
-      expect(result.body.stock).toBe(45);
-      expect(result.body.original_price).toBe(110.00);
-      expect(result.body.discount).toBe(15);
-
-      // --- ASSERT 2: Verificação da Rastreabilidade no Banco de Dados ---
-      const historyRecords = await prismaClient.productHistory.findMany({
-        where: { product_uuid: productToUpdateUuid },
-        orderBy: { changed_at: 'desc' }
+        // 2. Criar um produto para o partner2, para o teste de segurança.
+        const productInput2 = {
+          name: "Produto de Outro Parceiro",
+          original_price: 25.00, discount: 0, stock: 5,
+          category_uuid: category1_uuid, brand: "Outra Marca", is_active: true
+        };
+        const res2 = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner2_admin_token}`).send(productInput2);
+        expect(res2.statusCode).toBe(201);
+        otherPartnerProductUuid = res2.body.uuid;
       });
 
-      // Esperamos 4 registros de histórico (name, stock, original_price, discount)
-      expect(historyRecords.length).toBe(4);
+      it("should successfully update a product and create a history record", async () => {
+        // --- ARRANGE ---
+        const updatePayload = {
+          name: "Produto com Nome Atualizado",
+          stock: 45,
+          original_price: 110.00, // Preço também mudou
+          discount: 15,
+        };
 
-      // Verificamos o conteúdo de um dos registros de histórico
-      const nameChangeRecord = historyRecords.find(r => r.field_changed === 'name');
-      expect(nameChangeRecord).toBeDefined();
-      expect(nameChangeRecord.old_value).toBe("Produto Original");
-      expect(nameChangeRecord.new_value).toBe("Produto com Nome Atualizado");
-      expect(nameChangeRecord.changed_by_uuid).toBe(partner1_admin_uuid);
+        // --- ACT ---
+        // O parceiro 1 atualiza seu próprio produto.
+        const result = await request(app)
+          .put(`/ecommerce/product/${productToUpdateUuid}`)
+          .set('Authorization', `Bearer ${partner1_admin_token}`)
+          .send(updatePayload);
+        // --- ASSERT 1: Resposta da API ---
+        expect(result.statusCode).toBe(200);
+        expect(result.body.name).toBe("Produto com Nome Atualizado");
+        expect(result.body.stock).toBe(45);
+        expect(result.body.original_price).toBe(110.00);
+        expect(result.body.discount).toBe(15);
+
+        // --- ASSERT 2: Verificação da Rastreabilidade no Banco de Dados ---
+        const historyRecords = await prismaClient.productHistory.findMany({
+          where: { product_uuid: productToUpdateUuid },
+          orderBy: { changed_at: 'desc' }
+        });
+
+        // Esperamos 4 registros de histórico (name, stock, original_price, discount)
+        expect(historyRecords.length).toBe(4);
+
+        // Verificamos o conteúdo de um dos registros de histórico
+        const nameChangeRecord = historyRecords.find(r => r.field_changed === 'name');
+        expect(nameChangeRecord).toBeDefined();
+        expect(nameChangeRecord.old_value).toBe("Produto Original");
+        expect(nameChangeRecord.new_value).toBe("Produto com Nome Atualizado");
+        expect(nameChangeRecord.changed_by_uuid).toBe(partner1_admin_uuid);
+      });
+
+      it("should return a 404 error if trying to update a product that does not exist", async () => {
+        const nonExistentUuid = new Uuid().uuid;
+        const result = await request(app)
+          .put(`/ecommerce/product/${nonExistentUuid}`)
+          .set('Authorization', `Bearer ${partner1_admin_token}`)
+          .send({ data: { name: "Novo Nome" } });
+
+        expect(result.statusCode).toBe(404);
+        expect(result.body.error).toBe("Produto não encontrado.");
+      });
+
+      it("should return a 403 Forbidden error if trying to update another partner's product", async () => {
+        // O parceiro 1 tenta atualizar o produto que pertence ao parceiro 2.
+        const result = await request(app)
+          .put(`/ecommerce/product/${otherPartnerProductUuid}`)
+          .set('Authorization', `Bearer ${partner1_admin_token}`)
+          .send({ data: { name: "Nome Invasor" } });
+
+        expect(result.statusCode).toBe(403);
+        expect(result.body.error).toBe("Acesso negado.");
+      });
+    });
+    describe("Service Products", () => {
+      it("should create a product of type SERVICE successfully", async () => {
+        // ARRANGE
+        const input = {
+          name: "Consultoria Estratégica",
+          description: "1 hora de consultoria para o seu negócio.",
+          original_price: 450.00,
+          discount: 0,
+          stock: 0, // O estoque é ignorado para serviços, mas o campo é obrigatório na API
+          category_uuid: category1_uuid,
+          brand: "Correct Consultoria",
+          product_type: 'SERVICE' // Definindo o tipo como SERVIÇO
+        };
+
+        // ACT
+        const result = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`).send(input);
+
+        // ASSERT
+        expect(result.statusCode).toBe(201);
+        expect(result.body.uuid).toBeDefined();
+        expect(result.body.name).toBe(input.name);
+        expect(result.body.product_type).toBe('SERVICE');
+        // A entidade define o estoque padrão para 1 para serviços, independentemente do input
+        expect(result.body.stock).toBe(1);
+      });
+    });
+  })
+  describe("E2E Cart Management", () => {
+    let product1_uuid: string;
+    let product2_uuid: string;
+    let service1_uuid: string;
+    let product_low_stock_uuid: string;
+    let non_employee_token: string; // Token para o nosso cliente de teste
+    let non_employee_user_info: string;
+    let non_employee_user_document: string;
+
+    // No setup, criamos o empregador, os produtos e o usuário cliente que fará as compras.
+    beforeAll(async () => {
+      //create non employee user auth
+      const inputNonEmployee: any = {
+        user_info_uuid: null,
+        document: '000.458.150-46',
+        email: 'non_employee@email.com',
+        password: 'senha123'
+      }
+      const non_employee = await request(app).post("/app-user").send(inputNonEmployee)
+      expect(non_employee.statusCode).toBe(201)
+
+      const authNonEmployeeInput = {
+        document: inputNonEmployee.document,
+        password: inputNonEmployee.password
+      }
+
+      //authenticate non employee user
+      const auth_non_employe = await request(app).post("/login-app-user").send(authNonEmployeeInput)
+      expect(auth_non_employe.statusCode).toBe(200)
+      non_employee_token = auth_non_employe.body.token
+
+      const nonEmployeeUserInput: any = {
+        full_name: "User Full Name",
+        gender: 'Male',
+        date_of_birth: '15/08/1998',
+        dependents_quantity: 1
+      }
+
+      const userInfoNonEmployee = await request(app).post("/app-user/info").set('Authorization', `Bearer ${non_employee_token}`).send(nonEmployeeUserInput)
+      expect(userInfoNonEmployee.statusCode).toBe(201)
+
+      const nonEmployeeUserDetails = await request(app)
+        .get("/app-user")
+        .set('Authorization', `Bearer ${non_employee_token}`)
+
+      non_employee_user_info = nonEmployeeUserDetails.body.UserAuthDetails.user_info_uuid
+      non_employee_user_document = nonEmployeeUserDetails.body.UserAuthDetails.document
+      expect(nonEmployeeUserDetails.statusCode).toBe(200)
+
+      // --- 2. SETUP DOS PRODUTOS ---
+      // Criamos os produtos que serão usados nos testes do carrinho.
+      const p1 = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`)
+        .send({ name: "Produto para Carrinho 1", original_price: 50.00, discount: 10, stock: 20, category_uuid: category1_uuid, brand: "Marca Carrinho" });
+      expect(p1.statusCode).toBe(201);
+      product1_uuid = p1.body.uuid;
+
+      const p2 = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`)
+        .send({ name: "Produto para Carrinho 2", original_price: 30.00, discount: 0, stock: 10, category_uuid: category1_uuid, brand: "Marca Carrinho" });
+      expect(p2.statusCode).toBe(201);
+      product2_uuid = p2.body.uuid;
+
+      const s1 = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`)
+        .send({ name: "Serviço para Carrinho", original_price: 100.00, discount: 0, stock: 0, category_uuid: category1_uuid, brand: "Marca Serviço", product_type: "SERVICE" });
+      expect(s1.statusCode).toBe(201);
+      service1_uuid = s1.body.uuid;
+
+      const p_low = await request(app).post('/ecommerce/product').set('Authorization', `Bearer ${partner1_admin_token}`)
+        .send({ name: "Produto Baixo Estoque", original_price: 10.00, discount: 0, stock: 2, category_uuid: category1_uuid, brand: "Marca Estoque" });
+      expect(p_low.statusCode).toBe(201);
+      product_low_stock_uuid = p_low.body.uuid;
     });
 
-    it("should return a 404 error if trying to update a product that does not exist", async () => {
-      const nonExistentUuid = new Uuid().uuid;
+    it("should add a new product to a user's cart for a specific business", async () => {
+      const input = {
+        productId: product1_uuid,
+        businessId: partner1_info_uuid,
+        quantity: 2
+      };
       const result = await request(app)
-        .put(`/ecommerce/product/${nonExistentUuid}`)
-        .set('Authorization', `Bearer ${partner1_admin_token}`)
-        .send({ data: { name: "Novo Nome" } });
-
-      expect(result.statusCode).toBe(404);
-      expect(result.body.error).toBe("Produto não encontrado.");
+        .post('/ecommerce/cart/item')
+        .set('Authorization', `Bearer ${non_employee_token}`) // <<< Usando o token do cliente
+        .send(input);
+      expect(result.statusCode).toBe(200);
+      expect(result.body.cartId).toBeDefined();
+      expect(result.body.items).toHaveLength(1);
+      expect(result.body.items[0].productId).toBe(product1_uuid);
+      expect(result.body.items[0].quantity).toBe(2);
+      expect(result.body.total).toBeCloseTo(90.00);
     });
 
-    it("should return a 403 Forbidden error if trying to update another partner's product", async () => {
-      // O parceiro 1 tenta atualizar o produto que pertence ao parceiro 2.
-      const result = await request(app)
-        .put(`/ecommerce/product/${otherPartnerProductUuid}`)
-        .set('Authorization', `Bearer ${partner1_admin_token}`)
-        .send({ data: { name: "Nome Invasor" } });
+    it("should increase the quantity if the same product is added again", async () => {
+      const input = {
+        productId: product1_uuid,
+        businessId: partner1_info_uuid,
+        quantity: 1
+      };
 
-      expect(result.statusCode).toBe(403);
-      expect(result.body.error).toBe("Acesso negado.");
+      const result = await request(app)
+        .post('/ecommerce/cart/item')
+        .set('Authorization', `Bearer ${non_employee_token}`)
+        .send(input);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.body.items).toHaveLength(1);
+      expect(result.body.items[0].quantity).toBe(3);
+      expect(result.body.total).toBeCloseTo(135.00);
+    });
+
+    it("should return a 400 error if stock is insufficient for a physical product", async () => {
+      const input = {
+        productId: product_low_stock_uuid,
+        businessId: partner1_info_uuid,
+        quantity: 3
+      };
+
+      const result = await request(app)
+        .post('/ecommerce/cart/item')
+        .set('Authorization', `Bearer ${non_employee_token}`)
+        .send(input);
+
+      expect(result.statusCode).toBe(400);
+      expect(result.body.error).toContain("Estoque insuficiente");
+    });
+
+    it("should succeed when adding a service, ignoring stock validation", async () => {
+      const input = {
+        productId: service1_uuid,
+        businessId: partner1_info_uuid,
+        quantity: 10
+      };
+
+      const result = await request(app)
+        .post('/ecommerce/cart/item')
+        .set('Authorization', `Bearer ${non_employee_token}`)
+        .send(input);
+
+      expect(result.statusCode).toBe(200);
+      // O carrinho agora terá 2 itens: o produto físico dos testes anteriores e o serviço
+      expect(result.body.items.length).toBeGreaterThanOrEqual(2);
+      expect(result.body.items.find((item: any) => item.productId === service1_uuid).quantity).toBe(10);
     });
   });
+
 
 })

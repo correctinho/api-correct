@@ -23,6 +23,7 @@ export class FindOwnBusinessProductsUsecase {
       return {
         uuid: product.uuid.uuid,
         name: product.name,
+        product_type: product.product_type,
         description: product.description,
         original_price: product.original_price, // Getter já retorna em Reais
         promotional_price: product.promotional_price, // Getter já retorna em Reais

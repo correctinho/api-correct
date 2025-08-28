@@ -1,3 +1,4 @@
+import { ProductType } from "@prisma/client";
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../errors/custom.error";
 import { newDateF } from "../../../../utils/date";
@@ -16,6 +17,7 @@ export type ProductCreateCommand = {
   category_uuid: Uuid;
   business_info_uuid: Uuid;
   created_by_uuid: Uuid;
+  product_type?: ProductType;
   ean_code?: string | null;
   brand: string;
   name: string;
@@ -38,6 +40,7 @@ export type ProductProps = {
   business_info_uuid: Uuid;
   created_by_uuid: Uuid;
   updated_by_uuid: Uuid;
+  product_type: ProductType;
   ean_code: string | null;
   brand: string;
   name: string;
@@ -62,6 +65,7 @@ export class ProductEntity {
   private _uuid: Uuid;
   private _category_uuid: Uuid;
   private _business_info_uuid: Uuid;
+  private _product_type: ProductType;
   private _ean_code: string | null;
   private _brand: string;
   private _name: string;
@@ -88,6 +92,7 @@ export class ProductEntity {
     this._uuid = props.uuid ?? new Uuid();
     this._category_uuid = props.category_uuid;
     this._business_info_uuid = props.business_info_uuid;
+    this._product_type = props.product_type ?? ProductType.PHYSICAL;
     this._ean_code = props.ean_code ?? null;
     this._brand = props.brand;
     this._name = props.name;
@@ -123,11 +128,17 @@ export class ProductEntity {
     if (this._promotional_price !== calculatedPromoPrice) {
       // throw new CustomError(`Preço promocional inconsistente...`, 400);
     }
+    if (this._product_type === ProductType.PHYSICAL) {
+      if (typeof this._stock !== 'number' || !Number.isInteger(this._stock) || this._stock < 0) {
+        throw new CustomError('O estoque é obrigatório e deve ser um número inteiro não negativo para produtos físicos.', 400);
+      }
+    }
   }
   // --- Getters (retornam valores formatados) ---
   get uuid(): Uuid { return this._uuid; }
   get category_uuid(): Uuid { return this._category_uuid; }
   get business_info_uuid(): Uuid { return this._business_info_uuid; }
+  get product_type(): ProductType { return this._product_type; }
   get ean_code(): string | null { return this._ean_code; }
   get brand(): string { return this._brand; }
   get name(): string { return this._name; }
@@ -154,6 +165,12 @@ export class ProductEntity {
   public changeName(name: string): void {
     this._name = name;
     this.touch();
+    this.validate();
+  }
+
+  public changeProductType(newType: ProductType): void {
+    this._product_type = newType;
+    this.touch(); // Atualiza a data de modificação
     this.validate();
   }
 
@@ -255,6 +272,7 @@ export class ProductEntity {
       business_info_uuid: this._business_info_uuid.uuid,
       created_by_uuid: this._created_by_uuid.uuid,
       updated_by_uuid: this._updated_by_uuid.uuid,
+      product_type: this._product_type,
       ean_code: this._ean_code,
       brand: this._brand,
       name: this._name,
@@ -276,7 +294,55 @@ export class ProductEntity {
     };
   }
 
+  // public static create(command: ProductCreateCommand): ProductEntity {
+  //   const stockForDb = command.product_type === ProductType.SERVICE ? 1 : command.stock;
+
+  //   if (!command.name || typeof command.name !== 'string' || command.name.trim() === '') {
+  //     throw new CustomError('Name is required and must be a non-empty string.', 400);
+  //   }
+  //   if (!command.brand || typeof command.brand !== 'string' || command.brand.trim() === '') {
+  //     throw new CustomError('Brand is required and must be a non-empty string.', 400);
+  //   }
+  //   if (typeof command.original_price !== 'number' || command.original_price < 0) {
+  //     throw new CustomError('Original price must be a non-negative number.', 400);
+  //   }
+  //   if (typeof command.stock !== 'number' || !Number.isInteger(command.stock) || command.stock < 0) {
+  //     throw new CustomError('Stock must be a non-negative integer.', 400);
+  //   }
+  //   // Validamos o 'command.discount', que é o valor original (ex: 20)
+  //   if (typeof command.discount !== 'number' || command.discount < 0 || command.discount > 100) {
+  //     throw new CustomError('Discount must be a number between 0 and 100.', 400);
+  //   }
+  //   // O método create é responsável por converter os preços para centavos
+  //   const originalPriceInCents = Math.round(command.original_price * 100);
+  //   const promotionalPrice = originalPriceInCents - Math.round(originalPriceInCents * (command.discount / 100));
+  //   const discountScaled = Math.round(command.discount * 10000);
+  //   const props: ProductProps = {
+  //     // Mapeamento explícito para garantir que todas as props obrigatórias sejam preenchidas
+  //     category_uuid: command.category_uuid,
+  //     business_info_uuid: command.business_info_uuid,
+  //     created_by_uuid: command.created_by_uuid,
+  //     updated_by_uuid: command.created_by_uuid,
+  //     product_type: command.product_type ?? ProductType.PHYSICAL,
+  //     ean_code: command.ean_code ?? null,
+  //     brand: command.brand,
+  //     name: command.name,
+  //     description: command.description ?? null,
+  //     original_price: originalPriceInCents,
+  //     discount: discountScaled,
+  //     promotional_price: promotionalPrice,
+  //     stock: stockForDb,
+  //     image_urls: [], // Inicia vazio, será preenchido após o upload
+  //     is_active: command.is_active ?? true,
+  //     is_mega_promotion: command.is_mega_promotion ?? false,
+  //     weight: command.weight,
+  //     height: command.height,
+  //     width: command.width,
+  //   };
+  //   return new ProductEntity(props);
+  // }
   public static create(command: ProductCreateCommand): ProductEntity {
+    // --- Validações de Dados de Entrada ---
     if (!command.name || typeof command.name !== 'string' || command.name.trim() === '') {
       throw new CustomError('Name is required and must be a non-empty string.', 400);
     }
@@ -286,23 +352,32 @@ export class ProductEntity {
     if (typeof command.original_price !== 'number' || command.original_price < 0) {
       throw new CustomError('Original price must be a non-negative number.', 400);
     }
-    if (typeof command.stock !== 'number' || !Number.isInteger(command.stock) || command.stock < 0) {
-      throw new CustomError('Stock must be a non-negative integer.', 400);
-    }
-    // Validamos o 'command.discount', que é o valor original (ex: 20)
     if (typeof command.discount !== 'number' || command.discount < 0 || command.discount > 100) {
       throw new CustomError('Discount must be a number between 0 and 100.', 400);
     }
-    // O método create é responsável por converter os preços para centavos
+
+    // <<< CORREÇÃO AQUI: Validação de estoque agora é condicional >>>
+    const productType = command.product_type ?? ProductType.PHYSICAL;
+    if (productType === ProductType.PHYSICAL) {
+      if (typeof command.stock !== 'number' || !Number.isInteger(command.stock) || command.stock < 0) {
+        throw new CustomError('Stock must be a non-negative integer for physical products.', 400);
+      }
+    }
+
+    // --- Conversão e Construção ---
     const originalPriceInCents = Math.round(command.original_price * 100);
     const promotionalPrice = originalPriceInCents - Math.round(originalPriceInCents * (command.discount / 100));
     const discountScaled = Math.round(command.discount * 10000);
+
+    // Para serviços, o estoque não é relevante, mas o banco exige um valor. Usamos 0 como padrão.
+    const stockForDb = productType === ProductType.SERVICE ? 1 : command.stock;
+
     const props: ProductProps = {
-      // Mapeamento explícito para garantir que todas as props obrigatórias sejam preenchidas
       category_uuid: command.category_uuid,
       business_info_uuid: command.business_info_uuid,
       created_by_uuid: command.created_by_uuid,
       updated_by_uuid: command.created_by_uuid,
+      product_type: productType,
       ean_code: command.ean_code ?? null,
       brand: command.brand,
       name: command.name,
@@ -310,8 +385,8 @@ export class ProductEntity {
       original_price: originalPriceInCents,
       discount: discountScaled,
       promotional_price: promotionalPrice,
-      stock: command.stock,
-      image_urls: [], // Inicia vazio, será preenchido após o upload
+      stock: stockForDb,
+      image_urls: [],
       is_active: command.is_active ?? true,
       is_mega_promotion: command.is_mega_promotion ?? false,
       weight: command.weight,
@@ -320,7 +395,6 @@ export class ProductEntity {
     };
     return new ProductEntity(props);
   }
-
   public static hydrate(props: ProductProps): ProductEntity {
     // Apenas chama o construtor, pois os dados do banco já estão em centavos
     return new ProductEntity(props);
