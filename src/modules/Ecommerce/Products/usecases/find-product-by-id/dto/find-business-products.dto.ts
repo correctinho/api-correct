@@ -20,6 +20,7 @@ export type OutputFindPublicProductDTO = {
 export type OutputFindProductDTO = {
     uuid: string;
     category_uuid: string;
+    product_type: string;
     brand: string;
     name: string;
     description: string | null;

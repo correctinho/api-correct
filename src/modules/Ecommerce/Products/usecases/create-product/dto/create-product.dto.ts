@@ -1,8 +1,10 @@
+import { ProductType } from "@prisma/client";
 
 
 export type InputCreateProductDTO = {
   category_uuid: string;      // UUID da Categoria
   business_user_uuid: string; // UUID do usuário de negócio (virá do token)
+  product_type: ProductType
   ean_code?: string | null;
   brand: string;
   name: string;
@@ -33,6 +35,7 @@ export type OutputCreateProductDTO = {
   original_price: number; // Em Reais (ex: 19.99)
   promotional_price: number; // Em Reais
   discount: number; // Em porcentagem (ex: 10)
+  product_type: ProductType
   stock: number;
   images_url: string[]
   is_mega_promotion: boolean;

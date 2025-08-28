@@ -17,6 +17,7 @@ export class FindProductByIdUsecase{
     return {
       uuid: product.uuid.uuid,
       category_uuid: product.category_uuid.uuid,
+      product_type: product.product_type,
       brand: product.brand,
       name: product.name,
       description: product.description,

@@ -23,7 +23,6 @@ export class UpdateProductController {
             const output = await usecase.execute(input);
             return response.status(200).json(output);
         } catch (err: any) {
-            console.log('Error in UpdateProductController:', err);
             return response.status(err.statusCode).json({
                 error: err.message || "Internal Server Error",
             });

@@ -15,6 +15,8 @@ import multer from "multer";
 import uploadConfig from '../../infra/shared/multer/multer.csv.memory.config'
 import { deleteProductController } from "../../modules/Ecommerce/Products/usecases/delete-product";
 import { updateProduct } from "../../modules/Ecommerce/Products/usecases/update-product";
+import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
+import { addItemToCart } from "../../modules/Ecommerce/Carts/usecases";
 
 const ecommerceRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -71,4 +73,9 @@ ecommerceRouter.put('/ecommerce/product/:productId', companyIsAuth, async (reque
 ecommerceRouter.patch('/ecommerce/product/:productId/images/delete', companyIsAuth, async (request, response) => {
   await deleteProductController.handle(request, response)
 })
-  export { ecommerceRouter }
+
+//add item to cart by appuser
+ecommerceRouter.post('/ecommerce/cart/item', appUserIsAuth, async (request, response) => {
+  await addItemToCart.handle(request, response) 
+})
+export { ecommerceRouter }

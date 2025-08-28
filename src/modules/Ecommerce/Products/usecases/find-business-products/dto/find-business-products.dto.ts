@@ -1,6 +1,7 @@
 export type OutputFindOwnBusinessProductDTO = {
   uuid: string;
   name: string;
+  product_type: string;
   description: string | null;
   original_price: number;
   promotional_price: number;
@@ -17,6 +18,7 @@ export type OutputFindOwnBusinessProductDTO = {
 export type OutputFindPublicProductDTO = {
     uuid: string;
     category_uuid: string;
+    product_type: string;
     brand: string;
     name: string;
     description: string | null;
