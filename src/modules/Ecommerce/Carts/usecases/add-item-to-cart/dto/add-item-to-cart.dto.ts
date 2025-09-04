@@ -10,6 +10,7 @@ export type OutputAddItemToCartDTO = {
     cartId: string;
     total: number;
     items: {
+        itemId: string
         productId: string;
         name: string;
         quantity: number;

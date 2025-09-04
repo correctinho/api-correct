@@ -29,8 +29,12 @@ export class CartItemEntity {
         // A verificação de estoque agora só acontece para produtos do tipo FÍSICO.
         // Serviços não terão seu estoque validado.
         if (this._product.product_type === ProductType.PHYSICAL) {
+            // Esta validação garante a integridade dos dados do produto em si.
+            if (typeof this._product.stock !== 'number' || !Number.isInteger(this._product.stock) || this._product.stock < 0) {
+                throw new CustomError('O estoque é obrigatório e deve ser um número inteiro não negativo para produtos físicos.', 400);
+            }
             if (this._quantity > this._product.stock) {
-                throw new CustomError(`Estoque insuficiente para o produto "${this._product.name}". Disponível: ${this._product.stock}`, 400);
+                throw new CustomError(`Estoque insuficiente para o produto "${this._product.name}". Disponível: ${this._product.stock}, Solicitado: ${this._quantity}`, 400);
             }
         }
     }
@@ -59,6 +63,10 @@ export class CartItemEntity {
 
     // --- Fábrica ---
     public static create(props: CartItemProps): CartItemEntity {
+        return new CartItemEntity(props);
+    }
+
+    public static hydrate(props: CartItemProps): CartItemEntity {
         return new CartItemEntity(props);
     }
 }

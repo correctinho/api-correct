@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { ICartRepository } from "../repositories/cart.repository";
-import { IProductRepository } from "../../Products/repositories/product.repository";
 import { AddItemToCartUsecase } from "./add-item-to-cart.usecase";
+import { ICartRepository } from "../../repositories/cart.repository";
+import { IProductRepository } from "../../../Products/repositories/product.repository";
 export class AddItemToCartController {
     constructor(
         private readonly cartRepository: ICartRepository,

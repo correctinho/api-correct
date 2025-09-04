@@ -6,6 +6,82 @@ import { CartEntity } from "../../entities/cart.entity";
 import { ICartRepository } from "../cart.repository";
 
 export class CartPrismaRepository implements ICartRepository {
+     async findCartByItemId(cartItemId: Uuid): Promise<CartEntity | null> {
+        // 1. Buscamos o item do carrinho pelo seu UUID para encontrar o carrinho pai
+        const cartItemData = await prismaClient.cartItem.findUnique({
+            where: { uuid: cartItemId.uuid },
+            // Usamos 'include' para trazer o carrinho pai e todos os seus itens de uma só vez, com seus produtos
+            include: {
+                cart: {
+                    include: {
+                        cartItems: {
+                            include: {
+                                product: true, // Inclui os dados completos do produto para cada item
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        // Se o item não for encontrado, o carrinho também não existe
+        if (!cartItemData || !cartItemData.cart) {
+            return null;
+        }
+
+        const cartData = cartItemData.cart;
+
+        // 2. Hidratação em cascata: Product -> CartItem -> Cart
+        const hydratedItems = cartData.cartItems.map(item => {
+            // Passo 2a: Mapear os dados brutos do Prisma para ProductProps
+            const productProps: ProductProps = {
+                uuid: new Uuid(item.product.uuid),
+                category_uuid: new Uuid(item.product.category_uuid),
+                business_info_uuid: new Uuid(item.product.business_info_uuid),
+                created_by_uuid: new Uuid(item.product.created_by_uuid),
+                updated_by_uuid: new Uuid(item.product.updated_by_uuid),
+                product_type: item.product.product_type,
+                ean_code: item.product.ean_code,
+                brand: item.product.brand,
+                name: item.product.name,
+                description: item.product.description,
+                original_price: item.product.original_price,
+                discount: item.product.discount,
+                promotional_price: item.product.promotional_price,
+                stock: item.product.stock,
+                image_urls: item.product.image_urls,
+                is_mega_promotion: item.product.is_mega_promotion,
+                is_active: item.product.is_active,
+                deleted_at: item.product.deleted_at,
+                deleted_by_uuid: item.product.deleted_by_uuid ? new Uuid(item.product.deleted_by_uuid) : null,
+                created_at: item.product.created_at,
+                updated_at: item.product.updated_at,
+                weight: item.product.weight ?? undefined,
+                height: item.product.height ?? undefined,
+                width: item.product.width ?? undefined,
+            };
+
+            // Passo 2b: Hidratar a ProductEntity a partir dos dados mapeados
+            const productEntity = ProductEntity.hydrate(productProps);
+
+            // Passo 2c: Hidratar a CartItemEntity, passando a ProductEntity real e preservando o UUID do item
+            return CartItemEntity.hydrate({
+                uuid: new Uuid(item.uuid), // Preservamos o UUID original do item no banco
+                product: productEntity,
+                quantity: item.quantity
+            });
+        });
+
+        // 3. Hidratamos o carrinho principal com os itens já devidamente hidratados
+        return CartEntity.hydrate({
+            uuid: new Uuid(cartData.uuid),
+            user_info_uuid: new Uuid(cartData.user_info_uuid),
+            business_info_uuid: new Uuid(cartData.business_info_uuid),
+            items: hydratedItems,
+            created_at: cartData.created_at,
+            updated_at: cartData.updated_at,
+        });
+    }
     async findByUserAndBusiness(userId: Uuid, businessId: Uuid): Promise<CartEntity | null> {
         const cartData = await prismaClient.cart.findUnique({
             where: {
@@ -72,7 +148,7 @@ export class CartPrismaRepository implements ICartRepository {
         const cartJson = cart.toJSON();
 
         // Mapeamos os itens para o formato que o Prisma espera para uma criação aninhada com relação.
-        const itemsData = cart.items.map(item => ( {
+        const itemsData = cart.items.map(item => ({
             uuid: item.uuid.uuid,
             quantity: item.quantity,
             // Usamos 'connect' para associar ao produto existente.

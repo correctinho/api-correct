@@ -329,7 +329,6 @@ describe("E2E Ecommerce tests", () => {
         expect(result.statusCode).toBe(401)
       });
     })
-
     describe("E2E Find Category", () => {
       let category1_uuid: string;
       let category2_uuid: string;
@@ -382,7 +381,6 @@ describe("E2E Ecommerce tests", () => {
         expect(foundCat2).toBeDefined();
       });
     });
-
   })
   describe("E2E Products", () => {
     //*****UPLOAD PRODUCT IMAGES TESTS TO BE IMPLEMENTED*******  */
@@ -484,7 +482,6 @@ describe("E2E Ecommerce tests", () => {
       });
 
     })
-
     describe("E2E Get Public Business Products", () => {
       let activeProductUuid: string;
 
@@ -555,7 +552,6 @@ describe("E2E Ecommerce tests", () => {
         expect(result.body.error).toBe("Parceiro não encontrado ou inativo.");
       });
     });
-
     describe("E2E Get Own Business Products (Admin)", () => {
       let activeProductFromSetup: any;
       let inactiveProductUuid: string;
@@ -988,77 +984,212 @@ describe("E2E Ecommerce tests", () => {
       expect(p_low.statusCode).toBe(201);
       product_low_stock_uuid = p_low.body.uuid;
     });
+    describe("E2E Add Item to Cart", () => {
+      it("should add a new product to a user's cart for a specific business", async () => {
+        const input = {
+          productId: product1_uuid,
+          businessId: partner1_info_uuid,
+          quantity: 2
+        };
+        const result = await request(app)
+          .post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`) // <<< Usando o token do cliente
+          .send(input);
+        expect(result.statusCode).toBe(200);
+        expect(result.body.cartId).toBeDefined();
+        expect(result.body.items).toHaveLength(1);
+        expect(result.body.items[0].productId).toBe(product1_uuid);
+        expect(result.body.items[0].quantity).toBe(2);
+        expect(result.body.total).toBeCloseTo(90.00);
+      });
 
-    it("should add a new product to a user's cart for a specific business", async () => {
-      const input = {
-        productId: product1_uuid,
-        businessId: partner1_info_uuid,
-        quantity: 2
-      };
-      const result = await request(app)
-        .post('/ecommerce/cart/item')
-        .set('Authorization', `Bearer ${non_employee_token}`) // <<< Usando o token do cliente
-        .send(input);
-      expect(result.statusCode).toBe(200);
-      expect(result.body.cartId).toBeDefined();
-      expect(result.body.items).toHaveLength(1);
-      expect(result.body.items[0].productId).toBe(product1_uuid);
-      expect(result.body.items[0].quantity).toBe(2);
-      expect(result.body.total).toBeCloseTo(90.00);
+      it("should increase the quantity if the same product is added again", async () => {
+        const input = {
+          productId: product1_uuid,
+          businessId: partner1_info_uuid,
+          quantity: 1
+        };
+
+        const result = await request(app)
+          .post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send(input);
+
+        expect(result.statusCode).toBe(200);
+        expect(result.body.items).toHaveLength(1);
+        expect(result.body.items[0].quantity).toBe(3);
+        expect(result.body.total).toBeCloseTo(135.00);
+      });
+
+      it("should return a 400 error if stock is insufficient for a physical product", async () => {
+        const input = {
+          productId: product_low_stock_uuid,
+          businessId: partner1_info_uuid,
+          quantity: 3
+        };
+
+        const result = await request(app)
+          .post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send(input);
+
+        expect(result.statusCode).toBe(400);
+        expect(result.body.error).toContain("Estoque insuficiente");
+      });
+
+      it("should succeed when adding a service, ignoring stock validation", async () => {
+        const input = {
+          productId: service1_uuid,
+          businessId: partner1_info_uuid,
+          quantity: 10
+        };
+
+        const result = await request(app)
+          .post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send(input);
+
+        expect(result.statusCode).toBe(200);
+        // O carrinho agora terá 2 itens: o produto físico dos testes anteriores e o serviço
+        expect(result.body.items.length).toBeGreaterThanOrEqual(2);
+        expect(result.body.items.find((item: any) => item.productId === service1_uuid).quantity).toBe(10);
+      });
     });
 
-    it("should increase the quantity if the same product is added again", async () => {
-      const input = {
-        productId: product1_uuid,
-        businessId: partner1_info_uuid,
-        quantity: 1
-      };
+    describe("E2E Update Cart Item Quantity", () => {
+      let cartId: string;
+      let cartItemIdToUpdate: string; // O UUID do item do carrinho (não do produto)
+      let anotherUserToken: string; // Token para o segundo usuário do teste de segurança
+      let initialCartState: any;
+      // Usamos um beforeAll para criar o segundo usuário necessário para o teste de segurança.
+      beforeAll(async () => {
+        // ARRANGE: Criamos um segundo usuário completo, distinto do 'non_employee_token' principal,
+        // seguindo o passo a passo correto da API.
+        const doc = `909.735.990-22`; // CPF válido para teste
+        const email = `another_user_${randomUUID()}@test.com`; // Email único
 
-      const result = await request(app)
-        .post('/ecommerce/cart/item')
-        .set('Authorization', `Bearer ${non_employee_token}`)
-        .send(input);
+        // Passo 1: Criar a autenticação
+        const createUserRes = await request(app).post("/app-user").send({ document: doc, email: email, password: '123' });
+        expect(createUserRes.statusCode).toBe(201);
 
-      expect(result.statusCode).toBe(200);
-      expect(result.body.items).toHaveLength(1);
-      expect(result.body.items[0].quantity).toBe(3);
-      expect(result.body.total).toBeCloseTo(135.00);
+        // Passo 2: Autenticar para obter o token
+        const authRes = await request(app).post("/login-app-user").send({ document: doc, password: '123' });
+        expect(authRes.statusCode).toBe(200);
+        anotherUserToken = authRes.body.token;
+
+        // Passo 3: Criar as informações do usuário (UserInfo)
+        const userInfoInput = {
+          full_name: "Outro Usuário de Teste",
+          gender: 'Male',
+          date_of_birth: '10/10/1990',
+          dependents_quantity: 0,
+          company_owner: false,
+        };
+        const createUserInfoRes = await request(app).post("/app-user/info").set('Authorization', `Bearer ${anotherUserToken}`).send(userInfoInput);
+        expect(createUserInfoRes.statusCode).toBe(201);
+      });
+
+      // Usamos beforeEach para garantir que cada teste comece com um carrinho limpo e conhecido.
+      beforeEach(async () => {
+        // ARRANGE: Criamos um carrinho com um item (product1, quantidade 3) para cada teste,
+        // usando o usuário principal 'non_employee_token'.
+        const res = await request(app).post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send({ productId: product1_uuid, businessId: partner1_info_uuid, quantity: 3 });
+        expect(res.statusCode).toBe(200);
+        initialCartState = res.body;
+        cartId = res.body.cartId;
+        const item = res.body.items.find((item: any) => item.productId === product1_uuid);
+        expect(item).toBeDefined();
+        cartItemIdToUpdate = item.itemId;
+      });
+
+      it("should correctly update the quantity of an item in the cart", async () => {
+        // ACT
+        const updateInput = { newQuantity: 5 };
+        const result = await request(app)
+          .patch(`/ecommerce/cart/item/${cartItemIdToUpdate}`)
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send(updateInput);
+
+        // ASSERT
+        expect(result.statusCode).toBe(200);
+
+        const updatedItem = result.body.items.find((item: any) => item.itemId === cartItemIdToUpdate);
+        expect(updatedItem).toBeDefined();
+        expect(updatedItem.quantity).toBe(5);
+
+        // --- LÓGICA DE ASSERÇÃO DINÂMICA ---
+
+        // 1. Encontramos o estado inicial do item que foi atualizado
+        const initialItem = initialCartState.items.find((item: any) => item.itemId === cartItemIdToUpdate);
+        const initialItemTotal = initialItem.totalPrice; // Ex: 135.00
+
+        // 2. Calculamos o total de todos os OUTROS itens no carrinho, que não foram tocados
+        const totalOfOtherItems = initialCartState.total - initialItemTotal; // Ex: 1135.00 - 135.00 = 1000.00
+
+        // 3. Calculamos o novo total esperado para o carrinho completo
+        const expectedTotal = totalOfOtherItems + updatedItem.totalPrice; // Ex: 1000.00 + 225.00 = 1225.00
+
+        // 4. Comparamos o total recebido com o nosso total esperado dinamicamente
+        expect(result.body.total).toBeCloseTo(expectedTotal);
+      });
+      it("should remove the item if its quantity is updated to zero", async () => {
+        // ACT: Chamamos o endpoint PATCH com a nova quantidade 0.
+        const updateInput = { newQuantity: 0 };
+        const result = await request(app)
+          .patch(`/ecommerce/cart/item/${cartItemIdToUpdate}`)
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send(updateInput);
+
+        // ASSERT
+        expect(result.statusCode).toBe(200);
+
+        // --- LÓGICA DE ASSERÇÃO DINÂMICA PARA REMOÇÃO ---
+
+        // 1. Verificamos que o item específico não está mais na lista de itens do carrinho.
+        const removedItem = result.body.items.find((item: any) => item.itemId === cartItemIdToUpdate);
+        expect(removedItem).toBeUndefined();
+
+        // 2. Verificamos se o tamanho da lista de itens diminuiu em 1.
+        expect(result.body.items).toHaveLength(initialCartState.items.length - 1);
+
+        // 3. Calculamos o novo total esperado do carrinho.
+        const initialItem = initialCartState.items.find((item: any) => item.itemId === cartItemIdToUpdate);
+        const expectedTotal = initialCartState.total - initialItem.totalPrice;
+
+        expect(result.body.total).toBeCloseTo(expectedTotal);
+      });
+
+      it("should return a 404 error if the cart item does not exist", async () => {
+        // ARRANGE: Criamos um UUID aleatório que garantidamente não existe no banco.
+        const nonExistentItemId = new Uuid().uuid;
+
+        // ACT
+        const result = await request(app)
+          .patch(`/ecommerce/cart/item/${nonExistentItemId}`)
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send({ newQuantity: 1 });
+
+        // ASSERT
+        expect(result.statusCode).toBe(404);
+        expect(result.body.error).toContain("Item do carrinho não encontrado");
+      });
+
+      it("should return a 404 error if trying to update an item in another user's cart", async () => {
+        // ACT: O segundo usuário (criado no beforeAll) tenta modificar o item do carrinho do primeiro usuário.
+        const result = await request(app)
+          .patch(`/ecommerce/cart/item/${cartItemIdToUpdate}`)
+          .set('Authorization', `Bearer ${anotherUserToken}`) // <<< Usando o token do segundo usuário
+          .send({ newQuantity: 10 });
+        // ASSERT: A API deve retornar um erro 404 para não vazar a informação de que o item existe.
+        // Esta é uma prática de segurança importante.
+        expect(result.statusCode).toBe(404);
+        expect(result.body.error).toContain("Item do carrinho não encontrado");
+      });
     });
 
-    it("should return a 400 error if stock is insufficient for a physical product", async () => {
-      const input = {
-        productId: product_low_stock_uuid,
-        businessId: partner1_info_uuid,
-        quantity: 3
-      };
-
-      const result = await request(app)
-        .post('/ecommerce/cart/item')
-        .set('Authorization', `Bearer ${non_employee_token}`)
-        .send(input);
-
-      expect(result.statusCode).toBe(400);
-      expect(result.body.error).toContain("Estoque insuficiente");
-    });
-
-    it("should succeed when adding a service, ignoring stock validation", async () => {
-      const input = {
-        productId: service1_uuid,
-        businessId: partner1_info_uuid,
-        quantity: 10
-      };
-
-      const result = await request(app)
-        .post('/ecommerce/cart/item')
-        .set('Authorization', `Bearer ${non_employee_token}`)
-        .send(input);
-
-      expect(result.statusCode).toBe(200);
-      // O carrinho agora terá 2 itens: o produto físico dos testes anteriores e o serviço
-      expect(result.body.items.length).toBeGreaterThanOrEqual(2);
-      expect(result.body.items.find((item: any) => item.productId === service1_uuid).quantity).toBe(10);
-    });
-  });
 
 
+  })
 })

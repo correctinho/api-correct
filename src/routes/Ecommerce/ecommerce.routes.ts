@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { createCategoryController } from "../../modules/Ecommerce/Categories/usecases/createCategory";
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
 import { findCategoryController } from "../../modules/Ecommerce/Categories/usecases/findCategory";
 import { findAllCategoriesController } from "../../modules/Ecommerce/Categories/usecases/findAllCategories";
@@ -16,7 +15,9 @@ import uploadConfig from '../../infra/shared/multer/multer.csv.memory.config'
 import { deleteProductController } from "../../modules/Ecommerce/Products/usecases/delete-product";
 import { updateProduct } from "../../modules/Ecommerce/Products/usecases/update-product";
 import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
-import { addItemToCart } from "../../modules/Ecommerce/Carts/usecases";
+import { createCategoryController } from "../../modules/Ecommerce/Categories/usecases/createCategory";
+import { addItemToCart } from "../../modules/Ecommerce/Carts/usecases/add-item-to-cart";
+import { updateCartItem } from "../../modules/Ecommerce/Carts/usecases/update-cart-item-quantity";
 
 const ecommerceRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -76,6 +77,10 @@ ecommerceRouter.patch('/ecommerce/product/:productId/images/delete', companyIsAu
 
 //add item to cart by appuser
 ecommerceRouter.post('/ecommerce/cart/item', appUserIsAuth, async (request, response) => {
-  await addItemToCart.handle(request, response) 
+  await addItemToCart.handle(request, response)
+})
+
+ecommerceRouter.patch('/ecommerce/cart/item/:itemId', appUserIsAuth, async (request, response) => {
+  await updateCartItem.handle(request, response)
 })
 export { ecommerceRouter }
