@@ -1,8 +1,8 @@
-import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
-import { CustomError } from "../../../../errors/custom.error";
-import { IProductRepository } from "../../Products/repositories/product.repository";
-import { CartEntity } from "../entities/cart.entity";
-import { ICartRepository } from "../repositories/cart.repository";
+import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
+import { CustomError } from "../../../../../errors/custom.error";
+import { IProductRepository } from "../../../Products/repositories/product.repository";
+import { CartEntity } from "../../entities/cart.entity";
+import { ICartRepository } from "../../repositories/cart.repository";
 import { InputAddItemToCartDTO, OutputAddItemToCartDTO } from "./dto/add-item-to-cart.dto";
 
 export class AddItemToCartUsecase {
@@ -42,6 +42,7 @@ export class AddItemToCartUsecase {
             cartId: finalCartState.uuid,
             total: finalCartState.total_in_cents / 100,
             items: finalCartState.items.map(item => ({
+                itemId: item.item_uuid,
                 productId: item.product_uuid,
                 name: cart.items.find(i => i.uuid.uuid === item.item_uuid)?.product.name || '',
                 quantity: item.quantity,

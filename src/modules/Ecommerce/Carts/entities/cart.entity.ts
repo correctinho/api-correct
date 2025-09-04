@@ -65,30 +65,36 @@ export class CartEntity {
         this.touch();
     }
 
-    public removeItem(productId: Uuid): void {
-        this._items = this._items.filter(item => item.product.uuid.uuid !== productId.uuid);
+    public removeItem(cartItemId: Uuid): void {
+        this._items = this._items.filter(item => item.uuid.uuid !== cartItemId.uuid);
         this.touch();
     }
 
-    public updateItemQuantity(productId: Uuid, newQuantity: number): void {
-        const itemToUpdate = this._items.find(item => item.product.uuid.uuid === productId.uuid);
+    public updateItemQuantity(cartItemId: Uuid, newQuantity: number): void {
+        // ====================================================================
+        // <<< ADICIONE ESTES LOGS DE DIAGNÓSTICO AQUI >>>
+        // ====================================================================
+        console.log(`--- [ENTITY DEBUG] 'updateItemQuantity' foi chamado com o ID: ${cartItemId.uuid} ---`);
+        console.log("IDs dos itens atualmente no carrinho:", this._items.map(i => i.uuid.uuid));
+        // ====================================================================
+        const itemToUpdate = this._items.find(item => item.uuid.uuid === cartItemId.uuid);
         if (!itemToUpdate) {
             throw new CustomError("Item não encontrado no carrinho.", 404);
         }
         if (newQuantity <= 0) {
-            // Se a nova quantidade for zero ou menos, remove o item
-            this.removeItem(productId);
+            // A remoção agora usa o ID correto do item do carrinho.
+            this.removeItem(cartItemId);
         } else {
             itemToUpdate.changeQuantity(newQuantity);
         }
         this.touch();
     }
-    
+
     public clear(): void {
         this._items = [];
         this.touch();
     }
-    
+
     private touch(): void {
         this._updated_at = newDateF(new Date());
     }
