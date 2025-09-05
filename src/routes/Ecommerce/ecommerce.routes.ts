@@ -20,6 +20,7 @@ import { addItemToCart } from "../../modules/Ecommerce/Carts/usecases/add-item-t
 import { updateCartItem } from "../../modules/Ecommerce/Carts/usecases/update-cart-item-quantity";
 import { deleteCartItemController } from "../../modules/Ecommerce/Carts/usecases/delete-cart-item";
 import { listCartsController } from "../../modules/Ecommerce/Carts/usecases/list-user-carts";
+import { getCartDetailsController } from "../../modules/Ecommerce/Carts/usecases/get-cart-details";
 
 const ecommerceRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -95,5 +96,10 @@ ecommerceRouter.delete('/ecommerce/cart/item/:itemId', appUserIsAuth, async (req
 //get user carts
 ecommerceRouter.get('/ecommerce/user/carts', appUserIsAuth, async (request, response) => {
   await listCartsController.handle(request, response)
+})
+
+//get cart details by id
+ecommerceRouter.get('/ecommerce/cart/:cartId', appUserIsAuth, async (request, response) => {
+  await getCartDetailsController.handle(request, response)
 })
 export { ecommerceRouter }

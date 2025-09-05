@@ -6,6 +6,75 @@ import { CartEntity } from "../../entities/cart.entity";
 import { ICartRepository } from "../cart.repository";
 
 export class CartPrismaRepository implements ICartRepository {
+    async findCartById(cartId: Uuid): Promise<CartEntity | null> {
+        const cartData = await prismaClient.cart.findUnique({
+            where: { uuid: cartId.uuid },
+            include: {
+                business: {
+                    select: {
+                        fantasy_name: true
+                    }
+                },
+                cartItems: {
+                    where: { deleted_at: null },
+                    include: {
+                        product: true,
+                    },
+                },
+            },
+        });
+
+        if (!cartData) {
+            return null;
+        }
+
+        // A lógica de hidratação completa que já validamos
+        const hydratedItems = cartData.cartItems.map(item => {
+            // ... (mapeamento completo das props do produto)
+            const productProps: ProductProps = {
+                uuid: new Uuid(item.product.uuid),
+                category_uuid: new Uuid(item.product.category_uuid),
+                business_info_uuid: new Uuid(item.product.business_info_uuid),
+                created_by_uuid: new Uuid(item.product.created_by_uuid),
+                updated_by_uuid: new Uuid(item.product.updated_by_uuid),
+                product_type: item.product.product_type,
+                ean_code: item.product.ean_code,
+                brand: item.product.brand,
+                name: item.product.name,
+                description: item.product.description,
+                original_price: item.product.original_price,
+                discount: item.product.discount,
+                promotional_price: item.product.promotional_price,
+                stock: item.product.stock,
+                image_urls: item.product.image_urls,
+                is_mega_promotion: item.product.is_mega_promotion,
+                is_active: item.product.is_active,
+                deleted_at: item.product.deleted_at,
+                deleted_by_uuid: item.product.deleted_by_uuid ? new Uuid(item.product.deleted_by_uuid) : null,
+                created_at: item.product.created_at,
+                updated_at: item.product.updated_at,
+                weight: item.product.weight ?? undefined,
+                height: item.product.height ?? undefined,
+                width: item.product.width ?? undefined,
+            };
+            const productEntity = ProductEntity.hydrate(productProps);
+            return CartItemEntity.hydrate({
+                uuid: new Uuid(item.uuid),
+                product: productEntity,
+                quantity: item.quantity,
+            });
+        });
+
+        return CartEntity.hydrate({
+            uuid: new Uuid(cartData.uuid),
+            user_info_uuid: new Uuid(cartData.user_info_uuid),
+            business_info_uuid: new Uuid(cartData.business_info_uuid),
+            items: hydratedItems,
+            created_at: cartData.created_at,
+            updated_at: cartData.updated_at,
+            business_name: cartData.business.fantasy_name,
+        });
+    }
     async findAllByUserId(userId: Uuid): Promise<CartEntity[]> {
         const cartsData = await prismaClient.cart.findMany({
             where: { user_info_uuid: userId.uuid },

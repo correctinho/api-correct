@@ -7,4 +7,5 @@ export interface ICartRepository extends RepositoryInterface<CartEntity> {
     findCartByItemId(cartItemId: Uuid): Promise<CartEntity | null>
     deleteCartItem(cartItemId: Uuid): Promise<void>
     findAllByUserId(userId: Uuid): Promise<CartEntity[]>;
+    findCartById(cartId: Uuid): Promise<CartEntity | null>;
 }
