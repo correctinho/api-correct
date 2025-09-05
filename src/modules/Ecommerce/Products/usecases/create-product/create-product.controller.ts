@@ -18,11 +18,8 @@ export class CreateProductController {
 
       const data = req.body;
       data.business_user_uuid = req.companyUser.companyUserId
-      data.uploaded_images = req.files as Express.Multer.File[];
-
 
       const usecase = new CreateProductUsecase(
-        this.storage,
         this.productRepository,
         this.categoryRepository,
         this.businessUserRepository,
@@ -31,7 +28,6 @@ export class CreateProductController {
       const result = await usecase.execute(data);
       return res.status(201).json(result);
     } catch (err: any) {
-      console.log({err})
       return res.status(err.statusCode).json({
         error: err.message || "Internal Server Error",
       });

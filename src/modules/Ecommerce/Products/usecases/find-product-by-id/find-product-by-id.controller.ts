@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import {  FindProductByIdUsecase } from "./find-product-by-id.usecase";
 import { IProductRepository } from "../../repositories/product.repository";
+import { FindProductByIdUsecase } from "./find-product-by-id.usecase";
 
 export class FindProductController {
   constructor(

@@ -8,7 +8,6 @@ import { InputCreateBenefitDto } from "../../modules/benefits/usecases/create-be
 import path from 'path'
 import { randomUUID } from 'crypto'
 import { calculateCycleSettlementDateAsDate } from "../../utils/date";
-import { prismaClient } from "../../infra/databases/prisma.config";
 
 let userToken1: string;
 let userToken2: string;
