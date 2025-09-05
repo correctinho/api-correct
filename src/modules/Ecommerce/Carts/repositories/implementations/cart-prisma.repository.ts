@@ -6,15 +6,16 @@ import { CartEntity } from "../../entities/cart.entity";
 import { ICartRepository } from "../cart.repository";
 
 export class CartPrismaRepository implements ICartRepository {
-     async findCartByItemId(cartItemId: Uuid): Promise<CartEntity | null> {
+    async findCartByItemId(cartItemId: Uuid): Promise<CartEntity | null> {
         // 1. Buscamos o item do carrinho pelo seu UUID para encontrar o carrinho pai
         const cartItemData = await prismaClient.cartItem.findUnique({
-            where: { uuid: cartItemId.uuid },
+            where: { uuid: cartItemId.uuid, deleted_at: null },
             // Usamos 'include' para trazer o carrinho pai e todos os seus itens de uma só vez, com seus produtos
             include: {
                 cart: {
                     include: {
                         cartItems: {
+                            where: { deleted_at: null },
                             include: {
                                 product: true, // Inclui os dados completos do produto para cada item
                             },
@@ -89,9 +90,13 @@ export class CartPrismaRepository implements ICartRepository {
                     user_info_uuid: userId.uuid,
                     business_info_uuid: businessId.uuid,
                 },
+
             },
             include: {
                 cartItems: {
+                    where: {
+                        deleted_at: null // <<< GARANTE QUE SÓ TRAZEMOS ITENS ATIVOS
+                    },
                     include: {
                         product: true,
                     },
@@ -100,9 +105,8 @@ export class CartPrismaRepository implements ICartRepository {
         });
 
         if (!cartData) return null;
-
+       
         const items = cartData.cartItems.map(item => {
-            // 1. Preparamos as props para a hidratação do produto
             const productProps: ProductProps = {
                 uuid: new Uuid(item.product.uuid),
                 category_uuid: new Uuid(item.product.category_uuid),
@@ -129,11 +133,17 @@ export class CartPrismaRepository implements ICartRepository {
                 height: item.product.height,
                 width: item.product.width,
             };
-            // 2. Criamos uma instância de entidade real
             const productEntity = ProductEntity.hydrate(productProps);
-            // 3. Criamos o item do carrinho com a entidade de produto correta
-            return CartItemEntity.create({ product: productEntity, quantity: item.quantity });
+
+            // >>> A CORREÇÃO FINAL ESTÁ AQUI <<<
+            // Devemos usar '.hydrate' para reconstruir o item com seu UUID existente do banco.
+            return CartItemEntity.hydrate({
+                uuid: new Uuid(item.uuid), // Preserva o UUID original
+                product: productEntity,
+                quantity: item.quantity
+            });
         });
+
 
         return CartEntity.hydrate({
             uuid: new Uuid(cartData.uuid),
@@ -144,23 +154,69 @@ export class CartPrismaRepository implements ICartRepository {
             updated_at: cartData.updated_at,
         });
     }
+    // async create(cart: CartEntity): Promise<void> {
+    //     const cartJson = cart.toJSON();
+
+    //     // Mapeamos os itens para o formato que o Prisma espera para uma criação aninhada com relação.
+    //     const itemsData = cart.items.map(item => ({
+    //         uuid: item.uuid.uuid,
+    //         quantity: item.quantity,
+    //         // Usamos 'connect' para associar ao produto existente.
+    //         product: {
+    //             connect: {
+    //                 uuid: item.product.uuid.uuid
+    //             }
+    //         }
+    //     }));
+
+    //     await prismaClient.cart.upsert({
+    //         where: { uuid: cartJson.uuid },
+    //         create: {
+    //             uuid: cartJson.uuid,
+    //             user_info_uuid: cartJson.user_info_uuid,
+    //             business_info_uuid: cartJson.business_info_uuid,
+    //             created_at: cartJson.created_at,
+    //             updated_at: cartJson.updated_at,
+    //             cartItems: {
+    //                 create: itemsData,
+    //             },
+    //         },
+    //         update: {
+    //             updated_at: cartJson.updated_at,
+    //             cartItems: {
+    //                 // Deleta os itens antigos e cria os novos para simplificar a lógica de update
+    //                 deleteMany: {},
+    //                 create: itemsData,
+    //             },
+    //         },
+    //     });
+    // }
+    async deleteCartItem(itemId: Uuid): Promise<void> {
+        await prismaClient.cartItem.update({
+            where: {
+                uuid: itemId.uuid,
+            },
+            data: {
+                deleted_at: new Date(),
+            },
+        });
+    }
+
+
     async create(cart: CartEntity): Promise<void> {
         const cartJson = cart.toJSON();
+        const entityItemUuids = cart.items.map(item => item.uuid.uuid);
 
-        // Mapeamos os itens para o formato que o Prisma espera para uma criação aninhada com relação.
+        // Mapeamos os dados dos itens para o formato do Prisma
         const itemsData = cart.items.map(item => ({
             uuid: item.uuid.uuid,
-            quantity: item.quantity,
-            // Usamos 'connect' para associar ao produto existente.
-            product: {
-                connect: {
-                    uuid: item.product.uuid.uuid
-                }
-            }
+            product_uuid: item.product.uuid.uuid,
+            quantity: item.quantity
         }));
 
         await prismaClient.cart.upsert({
             where: { uuid: cartJson.uuid },
+            // Dados para criar um carrinho novo
             create: {
                 uuid: cartJson.uuid,
                 user_info_uuid: cartJson.user_info_uuid,
@@ -171,16 +227,29 @@ export class CartPrismaRepository implements ICartRepository {
                     create: itemsData,
                 },
             },
+            // Lógica para atualizar um carrinho existente
             update: {
                 updated_at: cartJson.updated_at,
                 cartItems: {
-                    // Deleta os itens antigos e cria os novos para simplificar a lógica de update
-                    deleteMany: {},
-                    create: itemsData,
-                },
-            },
+                    // Passo 1: Soft-delete dos itens que não estão mais na entidade
+                    updateMany: {
+                        where: {
+                            uuid: { notIn: entityItemUuids },
+                            deleted_at: null
+                        },
+                        data: { deleted_at: new Date() }
+                    },
+                    // Passo 2: Upsert dos itens que estão na entidade
+                    upsert: itemsData.map(item => ({
+                        where: { cart_product_unique: { cart_uuid: cartJson.uuid, product_uuid: item.product_uuid } },
+                        update: { quantity: item.quantity, deleted_at: null },
+                        create: { uuid: item.uuid, product_uuid: item.product_uuid, quantity: item.quantity },
+                    }))
+                }
+            }
         });
     }
+
     update(entity: CartEntity): Promise<void> {
         throw new Error("Method not implemented.");
     }
