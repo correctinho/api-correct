@@ -1406,5 +1406,84 @@ describe("E2E Ecommerce tests", () => {
         expect(result.body).toHaveLength(0); // Esperamos um array vazio
       });
     });
+    describe("E2E Get Cart Details", () => {
+      // Limpamos os carrinhos antes de cada teste para garantir o isolamento.
+      beforeEach(async () => {
+        await prismaClient.cartItem.deleteMany({});
+        await prismaClient.cart.deleteMany({});
+      });
+
+      it("should return the detailed information of a specific cart for the authenticated user", async () => {
+        // ARRANGE: Criamos um carrinho com 2 itens para ter um estado conhecido.
+        const res1 = await request(app).post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send({ productId: product1_uuid, businessId: partner1_info_uuid, quantity: 2 });
+        expect(res1.statusCode).toBe(200);
+
+        const res2 = await request(app).post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send({ productId: product2_uuid, businessId: partner1_info_uuid, quantity: 1 });
+        expect(res2.statusCode).toBe(200);
+
+        const cartId = res2.body.cartId;
+
+        // ACT: Buscamos os detalhes deste carrinho específico.
+        const result = await request(app)
+          .get(`/ecommerce/cart/${cartId}`) // <<< Rota corrigida
+          .set('Authorization', `Bearer ${non_employee_token}`);
+
+        // ASSERT: Verificamos se a resposta está completa e correta.
+        expect(result.statusCode).toBe(200);
+        expect(result.body.cartId).toBe(cartId);
+        expect(result.body.businessInfo.id).toBe(partner1_info_uuid);
+        expect(result.body.items).toHaveLength(2);
+
+        // Verifica o primeiro item
+        const item1 = result.body.items.find((i: any) => i.productId === product1_uuid);
+        expect(item1.quantity).toBe(2);
+        expect(item1.stock).toBeDefined();
+        expect(item1.isActive).toBe(true);
+
+        // Verifica o segundo item
+        const item2 = result.body.items.find((i: any) => i.productId === product2_uuid);
+        expect(item2.quantity).toBe(1);
+
+        // Verifica o cálculo do total
+        // Total: (2 * 45.00) + (1 * 30.00) = 90 + 30 = 120.00
+        expect(result.body.priceSummary.total).toBeCloseTo(120.00);
+        expect(result.body.checkoutReady).toBe(true);
+      });
+
+      it("should return a 404 error if the cart ID does not exist", async () => {
+        // ARRANGE
+        const nonExistentCartId = new Uuid().uuid;
+
+        // ACT
+        const result = await request(app)
+          .get(`/ecommerce/cart/${nonExistentCartId}`)
+          .set('Authorization', `Bearer ${non_employee_token}`);
+
+        // ASSERT
+        expect(result.statusCode).toBe(404);
+        expect(result.body.error).toContain("Carrinho não encontrado");
+      });
+
+      it("should return a 404 error if trying to get a cart from another user", async () => {
+        // ARRANGE: O usuário principal cria um carrinho.
+        const res = await request(app).post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send({ productId: product1_uuid, businessId: partner1_info_uuid, quantity: 1 });
+        expect(res.statusCode).toBe(200);
+        const cartId = res.body.cartId;
+
+        // ACT: O SEGUNDO usuário (anotherUserToken) tenta buscar o carrinho do primeiro.
+        const result = await request(app)
+          .get(`/ecommerce/cart/${cartId}`)
+          .set('Authorization', `Bearer ${anotherUserToken}`);
+
+        // ASSERT: A API deve retornar 404 para não vazar a informação de que o carrinho existe.
+        expect(result.statusCode).toBe(404);
+      });
+    });
   })
 })
