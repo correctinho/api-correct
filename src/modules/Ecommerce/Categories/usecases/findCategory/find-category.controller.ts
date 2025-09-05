@@ -8,7 +8,7 @@ export class FindCategoryController {
   async handle(req: Request, res: Response) {
     try {
       const data = req.body
-
+      data.category_uuid = req.query.category_uuid as string
       const usecase = new FindCategoryUsecase(this.categoryRepository);
       const result = await usecase.execute(data);
       return res.status(200).json(result);

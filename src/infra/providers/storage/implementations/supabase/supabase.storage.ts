@@ -1,5 +1,5 @@
 // ../../../../../infra/providers/storage/implementations/supabase/supabase.storage.ts
-import { FileDTO } from '../../../../../modules/Ecommerce/Products/entities/products.entity';
+import { FileDTO } from '../../../../../modules/Ecommerce/Products/entities/product.entity';
 import { IStorage, UploadResponse, StorageUploadData } from '../../storage';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
