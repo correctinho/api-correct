@@ -916,6 +916,7 @@ describe("E2E Ecommerce tests", () => {
   describe("E2E Cart Management", () => {
     let product1_uuid: string;
     let product2_uuid: string;
+    let product3_uuid: string;
     let service1_uuid: string;
     let product_low_stock_uuid: string;
     let non_employee_token: string; // Token para o nosso cliente de teste
@@ -983,6 +984,7 @@ describe("E2E Ecommerce tests", () => {
         .send({ name: "Produto Baixo Estoque", original_price: 10.00, discount: 0, stock: 2, category_uuid: category1_uuid, brand: "Marca Estoque" });
       expect(p_low.statusCode).toBe(201);
       product_low_stock_uuid = p_low.body.uuid;
+
     });
     describe("E2E Add Item to Cart", () => {
       it("should add a new product to a user's cart for a specific business", async () => {
@@ -1073,7 +1075,7 @@ describe("E2E Ecommerce tests", () => {
         expect(result.body.items.find((item: any) => item.productId === service1_uuid).quantity).toBe(10);
       });
     });
-    
+
     let anotherUserToken: string; // Token para o segundo usuário do teste de segurança
     describe("E2E Update Cart Item Quantity", () => {
 
@@ -1249,24 +1251,24 @@ describe("E2E Ecommerce tests", () => {
       it("should return a 404 error if the cart item does not exist", async () => {
         // ARRANGE: Criamos um UUID aleatório que garantidamente não existe no banco.
         const nonExistentItemId = new Uuid().uuid;
-        
+
         // ACT: Tentamos deletar o item que não existe.
         const result = await request(app)
-            .delete(`/ecommerce/cart/item/${nonExistentItemId}`)
-            .set('Authorization', `Bearer ${non_employee_token}`);
+          .delete(`/ecommerce/cart/item/${nonExistentItemId}`)
+          .set('Authorization', `Bearer ${non_employee_token}`);
 
         // ASSERT: A API deve responder com o erro esperado.
         expect(result.statusCode).toBe(404);
         expect(result.body.error).toContain("Item do carrinho não encontrado");
-    });
+      });
 
-    it("should return a 404 error if trying to delete an item in another user's cart", async () => {
+      it("should return a 404 error if trying to delete an item in another user's cart", async () => {
         // ARRANGE: 
         // 1. Criamos um carrinho com um item para o nosso usuário principal.
         const res = await request(app).post('/ecommerce/cart/item')
-            .set('Authorization', `Bearer ${non_employee_token}`)
-            .send({ productId: product1_uuid, businessId: partner1_info_uuid, quantity: 1 });
-        
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send({ productId: product1_uuid, businessId: partner1_info_uuid, quantity: 1 });
+
         // 2. Validamos que a criação foi bem-sucedida.
         expect(res.statusCode).toBe(200);
         const itemToDeleteId = res.body.items[0].itemId;
@@ -1276,12 +1278,133 @@ describe("E2E Ecommerce tests", () => {
 
         // ACT: O segundo usuário tenta deletar o item do carrinho do primeiro usuário.
         const result = await request(app)
-            .delete(`/ecommerce/cart/item/${itemToDeleteId}`)
-            .set('Authorization', `Bearer ${anotherUserToken}`); // <<< Usando o token do OUTRO usuário
+          .delete(`/ecommerce/cart/item/${itemToDeleteId}`)
+          .set('Authorization', `Bearer ${anotherUserToken}`); // <<< Usando o token do OUTRO usuário
 
         // ASSERT: A API deve retornar 404 para não vazar a informação de que o item existe.
         expect(result.statusCode).toBe(404);
+      });
     });
+    describe("E2E List User Carts", () => {
+      beforeAll(async () => {
+        //SETUP DE UM NOVO PARCEIRO 2 PRODUTO 3 ---
+        // Criamos um segundo parceiro para simular um segundo carrinho.
+        const partner2Input = {
+          fantasy_name: "Cafeteria Teste 2",
+          document: "partner_2_test_doc_e2e", // Documento único para o teste
+          line1: "Avenida Afonso Pena",
+          line2: "4000",
+          neighborhood: "Jardim dos Estados",
+          postal_code: "79020-001",
+          city: "Campo Grande",
+          state: "MS",
+          country: "Brasil",
+          classification: "Alimentação",
+          colaborators_number: 3,
+          email: "partner2.e2e@test.com",
+          phone_1: "67999998888",
+          business_type: "comercio",
+          branches_uuid: [branch2_uuid], // Supondo que `branch2_uuid` exista no seu setup
+          partnerConfig: {
+            main_branch: branch2_uuid,
+            partner_category: ['comercio'],
+            use_marketing: false,
+            use_market_place: false
+          }
+        };
+        const createPartner2Res = await request(app).post("/business/register").send(partner2Input);
+        expect(createPartner2Res.statusCode).toBe(201);
+        partner2_info_uuid = createPartner2Res.body.BusinessInfo.uuid;
+
+        const activatePartner2Res = await request(app).put("/business/info/correct")
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .query({ business_info_uuid: partner2_info_uuid })
+          .send({ status: "active" });
+        expect(activatePartner2Res.statusCode).toBe(200);
+
+        const createPartner2AdminRes = await request(app).post("/business/admin/correct")
+          .set('Authorization', `Bearer ${correctAdminToken}`)
+          .send({ password: "123", business_info_uuid: partner2_info_uuid, email: partner2Input.email, name: "Admin Parceiro 2" });
+        expect(createPartner2AdminRes.statusCode).toBe(201);
+
+        const authPartner2Res = await request(app).post("/business/admin/login")
+          .send({ business_document: partner2Input.document, password: "123", email: partner2Input.email });
+        expect(authPartner2Res.statusCode).toBe(200);
+        partner2_admin_token = authPartner2Res.body.token;
+
+        // Criamos um produto que pertence ao Parceiro 2.
+        const p3 = await request(app).post('/ecommerce/product')
+          .set('Authorization', `Bearer ${partner2_admin_token}`) // <<< Usando o token do Parceiro 2
+          .send({ name: "Produto da Loja 2", original_price: 10.00, discount: 0, stock: 50, category_uuid: category1_uuid, brand: "Marca 2" });
+        expect(p3.statusCode).toBe(201);
+        product3_uuid = p3.body.uuid;
+
+      });
+      // Limpamos os carrinhos antes de cada teste para garantir o isolamento completo
+      beforeEach(async () => {
+        await prismaClient.cartItem.deleteMany({});
+        await prismaClient.cart.deleteMany({});
+      });
+
+      it("should return a list of summarized carts for the authenticated user", async () => {
+        // ARRANGE: Criamos um cenário com 2 carrinhos para o mesmo usuário em lojas diferentes.
+
+        // Carrinho 1: 3 itens na Loja 1
+        const res1_1 = await request(app).post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send({ productId: product1_uuid, businessId: partner1_info_uuid, quantity: 1 });
+        expect(res1_1.statusCode).toBe(200);
+
+        const res1_2 = await request(app).post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send({ productId: product2_uuid, businessId: partner1_info_uuid, quantity: 2 });
+        expect(res1_2.statusCode).toBe(200);
+
+        // Carrinho 2: 5 itens na Loja 2
+        const res2_1 = await request(app).post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send({ productId: product3_uuid, businessId: partner2_info_uuid, quantity: 5 });
+        expect(res2_1.statusCode).toBe(200);
+
+        // ACT: Buscamos a lista de carrinhos do usuário.
+        const result = await request(app)
+          .get('/ecommerce/user/carts') // <<< Rota corrigida
+          .set('Authorization', `Bearer ${non_employee_token}`);
+
+        // ASSERT
+        expect(result.statusCode).toBe(200);
+        expect(result.body).toBeInstanceOf(Array);
+        expect(result.body).toHaveLength(2); // Esperamos 2 carrinhos
+
+        // Verificamos os dados do primeiro carrinho (Loja 1)
+        const cart1 = result.body.find((c: any) => c.businessInfo.id === partner1_info_uuid);
+        expect(cart1).toBeDefined();
+        expect(cart1.itemCount).toBe(3); // 1 do produto1 + 2 do produto2
+        // Total: (1 * 45.00) + (2 * 30.00) = 45 + 60 = 105.00
+        expect(cart1.priceSummary.total).toBeCloseTo(105.00);
+
+        // Verificamos os dados do segundo carrinho (Loja 2)
+        const cart2 = result.body.find((c: any) => c.businessInfo.id === partner2_info_uuid);
+        expect(cart2).toBeDefined();
+        expect(cart2.itemCount).toBe(5);
+        // Preço do product3 precisa ser definido no setup, ex: 10.00. Total: 5 * 10.00 = 50.00
+        expect(cart2.priceSummary.total).toBeCloseTo(50.00);
+      });
+
+      it("should return an empty array if the user has no active carts", async () => {
+        // ARRANGE: Usamos o token de um usuário que sabemos não ter interagido com carrinhos.
+        // `anotherUserToken` foi criado nos testes de Update/Delete e não mexeu com carrinhos.
+
+        // ACT: Buscamos a lista de carrinhos deste usuário "limpo".
+        const result = await request(app)
+          .get('/ecommerce/user/carts') // <<< Rota corrigida
+          .set('Authorization', `Bearer ${anotherUserToken}`);
+
+        // ASSERT
+        expect(result.statusCode).toBe(200);
+        expect(result.body).toBeInstanceOf(Array);
+        expect(result.body).toHaveLength(0); // Esperamos um array vazio
+      });
     });
   })
 })
