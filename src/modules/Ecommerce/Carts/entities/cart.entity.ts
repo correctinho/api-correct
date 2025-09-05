@@ -10,6 +10,7 @@ export type CartProps = {
     business_info_uuid: Uuid;
     items?: CartItemEntity[];
     created_at?: string;
+    business_name?: string
     updated_at?: string;
 };
 
@@ -22,6 +23,7 @@ export class CartEntity {
     private _user_info_uuid: Uuid;
     private _business_info_uuid: Uuid;
     private _items: CartItemEntity[];
+    private _business_name: string;
     private _created_at: string;
     private _updated_at: string;
 
@@ -30,6 +32,7 @@ export class CartEntity {
         this._user_info_uuid = props.user_info_uuid;
         this._business_info_uuid = props.business_info_uuid;
         this._items = props.items ?? [];
+        this._business_name = props.business_name ?? 'Nome Indisponível';
         this._created_at = props.created_at ?? newDateF(new Date());
         this._updated_at = props.updated_at ?? newDateF(new Date());
     }
@@ -44,7 +47,8 @@ export class CartEntity {
         // Arredonda para 2 casas decimais para evitar imprecisões de float
         return Math.round(totalInReais * 100) / 100;
     }
-
+    get business_name(): string { return this._business_name; }
+    
     public addItem(product: ProductEntity, quantity: number = 1): void {
         if (product.business_info_uuid.uuid !== this._business_info_uuid.uuid) {
             throw new CustomError("Este produto não pertence à loja deste carrinho.", 400);

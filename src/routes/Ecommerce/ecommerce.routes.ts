@@ -19,6 +19,7 @@ import { createCategoryController } from "../../modules/Ecommerce/Categories/use
 import { addItemToCart } from "../../modules/Ecommerce/Carts/usecases/add-item-to-cart";
 import { updateCartItem } from "../../modules/Ecommerce/Carts/usecases/update-cart-item-quantity";
 import { deleteCartItemController } from "../../modules/Ecommerce/Carts/usecases/delete-cart-item";
+import { listCartsController } from "../../modules/Ecommerce/Carts/usecases/list-user-carts";
 
 const ecommerceRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -81,12 +82,18 @@ ecommerceRouter.post('/ecommerce/cart/item', appUserIsAuth, async (request, resp
   await addItemToCart.handle(request, response)
 })
 
+//update item quantity in cart
 ecommerceRouter.patch('/ecommerce/cart/item/:itemId', appUserIsAuth, async (request, response) => {
   await updateCartItem.handle(request, response)
 })
 
+//delete item from cart
 ecommerceRouter.delete('/ecommerce/cart/item/:itemId', appUserIsAuth, async (request, response) => {
   await deleteCartItemController.handle(request, response)
 })
 
+//get user carts
+ecommerceRouter.get('/ecommerce/user/carts', appUserIsAuth, async (request, response) => {
+  await listCartsController.handle(request, response)
+})
 export { ecommerceRouter }
