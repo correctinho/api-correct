@@ -17,22 +17,18 @@ export class AddItemToCartUsecase {
         if (!product || !product.is_active) {
             throw new CustomError("Produto não encontrado ou inativo.", 404);
         }
-
         const userId = new Uuid(input.userId);
         const businessId = new Uuid(input.businessId);
 
         // 2. Tenta encontrar um carrinho existente ou cria um novo
-        let cart = await this.cartRepository.findByUserAndBusiness(userId, businessId);
-        if (!cart) {
-            cart = CartEntity.create({
+        const cart = await this.cartRepository.findByUserAndBusiness(userId, businessId)
+            || CartEntity.create({
                 user_info_uuid: userId,
-                business_info_uuid: businessId,
+                business_info_uuid: businessId
             });
-        }
 
         // 3. Delega a lógica de negócio para a entidade do carrinho
         cart.addItem(product, input.quantity);
-
         // 4. Salva o estado atualizado do carrinho
         await this.cartRepository.create(cart);
 

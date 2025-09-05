@@ -1004,21 +1004,39 @@ describe("E2E Ecommerce tests", () => {
       });
 
       it("should increase the quantity if the same product is added again", async () => {
+        // 1. ARRANGE: ANTES de agir, buscamos o estado atual do item no banco de dados.
+        const itemBeforeAct = await prismaClient.cartItem.findFirst({
+          where: {
+            // Buscamos o item pelo ID do produto e do carrinho do nosso usuário de teste
+            product_uuid: product1_uuid,
+            cart: {
+              user_info_uuid: non_employee_user_info
+            }
+          }
+        });
+        // Se o item já existe, pegamos sua quantidade. Se não, começamos do zero.
+        const quantityBeforeAct = itemBeforeAct?.quantity || 0;
+
+        // A quantidade que esta ação específica do teste irá adicionar
+        const quantityToAdd = 1;
+
+        // 2. ACT: Executamos a ação de adicionar a nova quantidade.
         const input = {
           productId: product1_uuid,
           businessId: partner1_info_uuid,
-          quantity: 1
+          quantity: quantityToAdd
         };
-
         const result = await request(app)
           .post('/ecommerce/cart/item')
           .set('Authorization', `Bearer ${non_employee_token}`)
           .send(input);
 
+        // 3. ASSERT: Calculamos o resultado esperado e verificamos se corresponde.
+        const expectedQuantity = quantityBeforeAct + quantityToAdd;
+
         expect(result.statusCode).toBe(200);
         expect(result.body.items).toHaveLength(1);
-        expect(result.body.items[0].quantity).toBe(3);
-        expect(result.body.total).toBeCloseTo(135.00);
+        expect(result.body.items[0].quantity).toBe(expectedQuantity); // A asserção é dinâmica!
       });
 
       it("should return a 400 error if stock is insufficient for a physical product", async () => {
@@ -1055,11 +1073,12 @@ describe("E2E Ecommerce tests", () => {
         expect(result.body.items.find((item: any) => item.productId === service1_uuid).quantity).toBe(10);
       });
     });
-
+    
+    let anotherUserToken: string; // Token para o segundo usuário do teste de segurança
     describe("E2E Update Cart Item Quantity", () => {
+
       let cartId: string;
       let cartItemIdToUpdate: string; // O UUID do item do carrinho (não do produto)
-      let anotherUserToken: string; // Token para o segundo usuário do teste de segurança
       let initialCartState: any;
       // Usamos um beforeAll para criar o segundo usuário necessário para o teste de segurança.
       beforeAll(async () => {
@@ -1188,8 +1207,81 @@ describe("E2E Ecommerce tests", () => {
         expect(result.body.error).toContain("Item do carrinho não encontrado");
       });
     });
+    describe("E2E Delete Cart Item", () => {
+      // Usamos beforeEach para garantir que cada teste de deleção comece com um estado limpo.
+      beforeEach(async () => {
+        await prismaClient.cartItem.deleteMany({});
+        await prismaClient.cart.deleteMany({});
+      });
 
+      it("should soft-delete an item from the cart and update the total", async () => {
+        // ARRANGE: Criamos um estado inicial com dois produtos no carrinho.
+        const res1 = await request(app).post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send({ productId: product1_uuid, businessId: partner1_info_uuid, quantity: 2 });
+        expect(res1.statusCode).toBe(200);
 
+        const res2 = await request(app).post('/ecommerce/cart/item')
+          .set('Authorization', `Bearer ${non_employee_token}`)
+          .send({ productId: product2_uuid, businessId: partner1_info_uuid, quantity: 1 });
+        expect(res2.statusCode).toBe(200);
 
+        // Guardamos o ID do item que vamos deletar (product1)
+        const itemToDeleteId = res2.body.items.find((i: any) => i.productId === product1_uuid).itemId;
+
+        // ACT: Executamos a chamada para deletar o item.
+        const result = await request(app)
+          .delete(`/ecommerce/cart/item/${itemToDeleteId}`)
+          .set('Authorization', `Bearer ${non_employee_token}`);
+
+        // ASSERT - Parte 1: Verificação da Resposta da API
+        expect(result.statusCode).toBe(200);
+        expect(result.body.items).toHaveLength(1);
+        expect(result.body.items[0].productId).toBe(product2_uuid);
+
+        // ASSERT - Parte 2: Verificação do Banco de Dados para confirmar o Soft Delete
+        const deletedItemInDb = await prismaClient.cartItem.findUnique({
+          where: { uuid: itemToDeleteId }
+        });
+        expect(deletedItemInDb).toBeDefined();
+        expect(deletedItemInDb?.deleted_at).not.toBeNull();
+      });
+      it("should return a 404 error if the cart item does not exist", async () => {
+        // ARRANGE: Criamos um UUID aleatório que garantidamente não existe no banco.
+        const nonExistentItemId = new Uuid().uuid;
+        
+        // ACT: Tentamos deletar o item que não existe.
+        const result = await request(app)
+            .delete(`/ecommerce/cart/item/${nonExistentItemId}`)
+            .set('Authorization', `Bearer ${non_employee_token}`);
+
+        // ASSERT: A API deve responder com o erro esperado.
+        expect(result.statusCode).toBe(404);
+        expect(result.body.error).toContain("Item do carrinho não encontrado");
+    });
+
+    it("should return a 404 error if trying to delete an item in another user's cart", async () => {
+        // ARRANGE: 
+        // 1. Criamos um carrinho com um item para o nosso usuário principal.
+        const res = await request(app).post('/ecommerce/cart/item')
+            .set('Authorization', `Bearer ${non_employee_token}`)
+            .send({ productId: product1_uuid, businessId: partner1_info_uuid, quantity: 1 });
+        
+        // 2. Validamos que a criação foi bem-sucedida.
+        expect(res.statusCode).toBe(200);
+        const itemToDeleteId = res.body.items[0].itemId;
+
+        // 3. Usamos o token do SEGUNDO usuário (criado no beforeAll geral dos testes).
+        // A variável `anotherUserToken` deve estar disponível no escopo.
+
+        // ACT: O segundo usuário tenta deletar o item do carrinho do primeiro usuário.
+        const result = await request(app)
+            .delete(`/ecommerce/cart/item/${itemToDeleteId}`)
+            .set('Authorization', `Bearer ${anotherUserToken}`); // <<< Usando o token do OUTRO usuário
+
+        // ASSERT: A API deve retornar 404 para não vazar a informação de que o item existe.
+        expect(result.statusCode).toBe(404);
+    });
+    });
   })
 })

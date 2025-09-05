@@ -45,17 +45,14 @@ export class CartEntity {
         return Math.round(totalInReais * 100) / 100;
     }
 
-    // --- Métodos de Negócio ---
-
     public addItem(product: ProductEntity, quantity: number = 1): void {
         if (product.business_info_uuid.uuid !== this._business_info_uuid.uuid) {
             throw new CustomError("Este produto não pertence à loja deste carrinho.", 400);
         }
 
         const existingItem = this._items.find(item => item.product.uuid.uuid === product.uuid.uuid);
-
         if (existingItem) {
-            // Se o item já existe, apenas aumenta a quantidade
+            // O método correto para somar a quantidade é 'increaseQuantity'.
             existingItem.increaseQuantity(quantity);
         } else {
             // Se não existe, cria um novo CartItem
@@ -71,12 +68,6 @@ export class CartEntity {
     }
 
     public updateItemQuantity(cartItemId: Uuid, newQuantity: number): void {
-        // ====================================================================
-        // <<< ADICIONE ESTES LOGS DE DIAGNÓSTICO AQUI >>>
-        // ====================================================================
-        console.log(`--- [ENTITY DEBUG] 'updateItemQuantity' foi chamado com o ID: ${cartItemId.uuid} ---`);
-        console.log("IDs dos itens atualmente no carrinho:", this._items.map(i => i.uuid.uuid));
-        // ====================================================================
         const itemToUpdate = this._items.find(item => item.uuid.uuid === cartItemId.uuid);
         if (!itemToUpdate) {
             throw new CustomError("Item não encontrado no carrinho.", 404);
