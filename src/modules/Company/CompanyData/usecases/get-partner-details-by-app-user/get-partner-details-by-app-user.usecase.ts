@@ -45,28 +45,7 @@ export class GetPartnerDetailsByAppUserUsecase {
         country: partner.Address?.country,
         created_at: partner.Address?.created_at,
         updated_at: partner.Address?.updated_at,
-      },
-      products: partner.Products.map((product: Product) => ({
-        uuid: product.uuid,
-        category_uuid: product.category_uuid,
-        ean_code: product.ean_code,
-        brand: product.brand,
-        name: product.name,
-        description: product.description,
-        original_price: product.original_price,
-        promotional_price: product.promotional_price,
-        discount: product.discount,
-        image_urls: product.image_urls,
-        is_mega_promotion: product.is_mega_promotion,
-        stock: product.stock,
-        weight: product.weight,
-        height: product.height,
-        width: product.width,
-        business_info_uuid: product.business_info_uuid,
-        is_active: product.is_active,
-        created_at: product.created_at,
-        updated_at: product.updated_at,
-      })),
+      }      
     };
   }
 }

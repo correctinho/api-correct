@@ -62,5 +62,5 @@ interface Partner {
 export interface OutputGetPartnerDetailsByAppUserResponse {
   partner: Partner;
   address: Address | null; // Pode ser nulo se não houver endereço
-  products: Product[];
+  //products: Product[];
 }
