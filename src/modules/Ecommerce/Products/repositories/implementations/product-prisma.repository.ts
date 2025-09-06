@@ -204,26 +204,45 @@ export class ProductPrismaRepository implements IProductRepository {
       return ProductEntity.hydrate(productProps);
     });
   }
+  async findActiveProductsByBusinessId(
+    businessInfoUuid: string,
+    options: { page: number; limit: number }
+  ): Promise<{ products: ProductEntity[], total: number }> {
 
-  async findActiveProductsByBusinessId(businessInfoUuid: string): Promise<ProductEntity[]> {
-    const productsData = await prismaClient.products.findMany({
-      where: {
-        business_info_uuid: businessInfoUuid,
-        is_active: true, // A chave da lógica está aqui
-        deleted_at: null,
-      },
-      orderBy: [
-        { is_mega_promotion: 'desc' },
-        { created_at: 'desc' },
-      ],
-    });
+    // Calcula os parâmetros para a consulta do Prisma
+    const take = options.limit;
+    const skip = (options.page - 1) * options.limit;
+
+    // Condições de busca que serão usadas tanto para a listagem quanto para a contagem
+    const whereConditions = {
+      business_info_uuid: businessInfoUuid,
+      is_active: true,
+      deleted_at: null as Date | null,
+    };
+
+    // Usamos uma transação para executar a busca e a contagem de forma atômica
+    const [productsData, total] = await prismaClient.$transaction([
+      prismaClient.products.findMany({
+        where: whereConditions,
+        orderBy: [
+          { is_mega_promotion: 'desc' },
+          { created_at: 'desc' },
+        ],
+        skip: skip,
+        take: take,
+      }),
+      prismaClient.products.count({
+        where: whereConditions,
+      })
+    ]);
 
     if (!productsData || productsData.length === 0) {
-      return [];
+      return { products: [], total: 0 };
     }
 
-    // Mapeamos os dados brutos do banco para reconstruir nossas Entidades de Domínio.
-    return productsData.map(product => {
+    // A lógica de hidratação permanece a mesma
+    const products = productsData.map(product => {
+      // Mapeamento explícito dos dados do Prisma para as props da entidade
       const productProps: ProductProps = {
         uuid: new Uuid(product.uuid),
         category_uuid: new Uuid(product.category_uuid),
@@ -242,15 +261,67 @@ export class ProductPrismaRepository implements IProductRepository {
         image_urls: product.image_urls,
         is_mega_promotion: product.is_mega_promotion,
         is_active: product.is_active,
-        weight: product.weight,
-        height: product.height,
-        width: product.width,
+        deleted_at: product.deleted_at,
+        deleted_by_uuid: product.deleted_by_uuid ? new Uuid(product.deleted_by_uuid) : null,
         created_at: product.created_at,
         updated_at: product.updated_at,
+        weight: product.weight ?? undefined,
+        height: product.height ?? undefined,
+        width: product.width ?? undefined,
       };
+
+      // Hidrata a entidade de domínio com as props mapeadas
       return ProductEntity.hydrate(productProps);
     });
+
+    return { products, total };
   }
+  // async findActiveProductsByBusinessId(businessInfoUuid: string): Promise<ProductEntity[]> {
+  //   const productsData = await prismaClient.products.findMany({
+  //     where: {
+  //       business_info_uuid: businessInfoUuid,
+  //       is_active: true, // A chave da lógica está aqui
+  //       deleted_at: null,
+  //     },
+  //     orderBy: [
+  //       { is_mega_promotion: 'desc' },
+  //       { created_at: 'desc' },
+  //     ],
+  //   });
+
+  //   if (!productsData || productsData.length === 0) {
+  //     return [];
+  //   }
+
+  //   // Mapeamos os dados brutos do banco para reconstruir nossas Entidades de Domínio.
+  //   return productsData.map(product => {
+  //     const productProps: ProductProps = {
+  //       uuid: new Uuid(product.uuid),
+  //       category_uuid: new Uuid(product.category_uuid),
+  //       business_info_uuid: new Uuid(product.business_info_uuid),
+  //       created_by_uuid: new Uuid(product.created_by_uuid),
+  //       updated_by_uuid: new Uuid(product.updated_by_uuid),
+  //       product_type: product.product_type,
+  //       ean_code: product.ean_code,
+  //       brand: product.brand,
+  //       name: product.name,
+  //       description: product.description,
+  //       original_price: product.original_price,
+  //       discount: product.discount,
+  //       promotional_price: product.promotional_price,
+  //       stock: product.stock,
+  //       image_urls: product.image_urls,
+  //       is_mega_promotion: product.is_mega_promotion,
+  //       is_active: product.is_active,
+  //       weight: product.weight,
+  //       height: product.height,
+  //       width: product.width,
+  //       created_at: product.created_at,
+  //       updated_at: product.updated_at,
+  //     };
+  //     return ProductEntity.hydrate(productProps);
+  //   });
+  // }
   // async upsert(entity: ProductEntity): Promise<ProductEntity> {
   //   const product = await prismaClient.products.upsert({
   //     where: {

@@ -14,13 +14,15 @@ export class FindBusinessProductsController {
     try {
       let products: any = [];
       if (req.params.business_info_uuid) {
-        const business_info_uuid = req.params.business_info_uuid;
-
+        const data = req.body
+        data.business_info_uuid = req.params.business_info_uuid;
+        data.page = req.query.page
+        
         const usecase = new FindPublicBusinessProductsUsecase(
           this.productRepository,
           this.companyDataRepository)
 
-        products = await usecase.execute(business_info_uuid);
+        products = await usecase.execute(data);
       } else {
         const business_info_uuid = req.companyUser.businessInfoUuid
         const usecase = new FindOwnBusinessProductsUsecase(
