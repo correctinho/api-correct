@@ -7,7 +7,9 @@ export interface IProductRepository extends RepositoryInterface<ProductEntity> {
    createProduct(entity: ProductEntity): Promise<ProductEntity>
    //upsert(entity: ProductEntity): Promise<ProductEntity>;
    findBusinessProducts(businessInfoUuid: string): Promise<ProductEntity[] | []>;
-   findActiveProductsByBusinessId(businessInfoUuid: string): Promise<ProductEntity[] | []>;
-   delete(entity: ProductEntity): Promise<void>;
+   findActiveProductsByBusinessId(
+      businessInfoUuid: string,
+      options: { page: number; limit: number }
+   ): Promise<{ products: ProductEntity[], total: number }>; delete(entity: ProductEntity): Promise<void>;
    updateWithHistory(entity: ProductEntity, history: ProductHistoryEntity[]): Promise<void>;
 }
