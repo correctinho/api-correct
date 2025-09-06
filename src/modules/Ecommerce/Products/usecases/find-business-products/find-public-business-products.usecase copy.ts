@@ -1,7 +1,7 @@
 import { IProductRepository } from "../../repositories/product.repository";
 import { CustomError } from "../../../../../errors/custom.error";
 import { ICompanyDataRepository } from "../../../../Company/CompanyData/repositories/company-data.repository";
-import { InputFindPublicProductDTO, OutputFindPublicProductDTO } from "./dto/find-business-products.dto";
+import { OutputFindPublicProductDTO } from "./dto/find-business-products.dto";
 
 export class FindPublicBusinessProductsUsecase {
   constructor(
@@ -9,34 +9,22 @@ export class FindPublicBusinessProductsUsecase {
     private readonly companyDataRepository: ICompanyDataRepository
   ) { }
 
-  // A assinatura do execute e o tipo de retorno mudam
-  async execute(input: InputFindPublicProductDTO): Promise<OutputFindPublicProductDTO> {
-    // 1. Validação do parceiro (continua a mesma)
-    const business = await this.companyDataRepository.findById(input.business_info_uuid);
+  async execute(business_info_uuid: string): Promise<OutputFindPublicProductDTO[]> { // O DTO de saída pode ser mais específico
+    // 1. Valida se a empresa parceira existe e está ativa
+    const business = await this.companyDataRepository.findById(business_info_uuid);
     if (!business || business.status !== 'active') {
       throw new CustomError("Parceiro não encontrado ou inativo.", 404);
     }
 
-    // 2. Define e valida os parâmetros de paginação
-    const page = input.page && input.page > 0 ? input.page : 1;
-    const requestedLimit = input.limit && input.limit > 0 ? input.limit : 20;
-    const limit = Math.min(requestedLimit, 30);
-    
-    // 3. Chama o repositório com as opções de paginação
-    const { products, total } = await this.productRepository.findActiveProductsByBusinessId(
-      input.business_info_uuid,
-      { page, limit }
+    // 2. Chama o repositório com o filtro 'onlyActive: true'
+    const products = await this.productRepository.findActiveProductsByBusinessId(
+      business_info_uuid,
     );
 
-    if (products.length === 0) {
-      return {
-        data: [],
-        meta: { totalItems: 0, currentPage: page, totalPages: 0, limit }
-      };
-    }
+    if (products.length === 0) return [];
 
-    // 4. Mapeia os resultados para o DTO
-    const productsDto = products.map(product => {
+    // 3. Mapeia o resultado para o formato de DTO público
+    return products.map(product => {
       // Lógica para selecionar a imagem principal (ex: a de tamanho médio)
       const mainImageUrl = product.image_urls.find(image => image.endsWith('medium.webp')) || null;
 
@@ -54,18 +42,6 @@ export class FindPublicBusinessProductsUsecase {
         is_mega_promotion: product.is_mega_promotion,
         main_image_url: mainImageUrl
       };
-
     });
-
-    // 5. Constrói e retorna o objeto de resposta paginado
-    return {
-      data: productsDto,
-      meta: {
-        totalItems: total,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        limit: limit
-      }
-    };
   }
 }

@@ -523,10 +523,10 @@ describe("E2E Ecommerce tests", () => {
         // ASSERT:
         expect(result.statusCode).toBe(200);
         // 1. A verificação mais importante: deve retornar 2 produtos, o que foi criado agora e o que foi criado anteriormente.
-        expect(result.body).toHaveLength(2);
+        expect(result.body.data).toHaveLength(2);
 
         // 2. Verificamos se o produto retornado é o correto.
-        const product = result.body.find((p: any) => p.uuid === activeProductUuid);
+        const product = result.body.data.find((p: any) => p.uuid === activeProductUuid);
         expect(product.uuid).toBe(activeProductUuid);
         expect(product.name).toBe("Produto Visível Publicamente");
 
@@ -541,7 +541,7 @@ describe("E2E Ecommerce tests", () => {
 
         // ASSERT:
         expect(result.statusCode).toBe(200);
-        expect(result.body).toEqual([]);
+        expect(result.body.data).toEqual([]);
       });
 
       it("should return a 404 error if the business does not exist or is inactive", async () => {
@@ -791,7 +791,7 @@ describe("E2E Ecommerce tests", () => {
         expect(result.statusCode).toBe(200);
 
         // ASSERT: O produto que acabamos de deletar NÃO deve estar na lista.
-        const foundDeletedProduct = result.body.find((p: any) => p.uuid === productToDeleteUuid);
+        const foundDeletedProduct = result.body.data.find((p: any) => p.uuid === productToDeleteUuid);
         expect(foundDeletedProduct).toBeUndefined();
       });
     });

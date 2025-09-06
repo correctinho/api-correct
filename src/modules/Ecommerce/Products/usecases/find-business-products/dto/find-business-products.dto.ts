@@ -15,7 +15,13 @@ export type OutputFindOwnBusinessProductDTO = {
   };
 };
 
-export type OutputFindPublicProductDTO = {
+export interface InputFindPublicProductDTO {
+  business_info_uuid: string;
+  page?: number;
+  limit?: number;
+}
+export interface OutputFindPublicProductDTO {
+  data: { // Os produtos ficam dentro da chave 'data'
     uuid: string;
     category_uuid: string;
     product_type: string;
@@ -27,5 +33,13 @@ export type OutputFindPublicProductDTO = {
     promotional_price: number; // Em Reais
     stock: number;
     is_mega_promotion: boolean;
-    main_image_url: string | null; // Apenas a URL da imagem principal (thumbnail ou medium)
-};
+    main_image_url: string | null;
+  }[];
+  meta: { // Metadados da paginação
+    totalItems: number;
+    currentPage: number;
+    totalPages: number;
+    limit: number;
+  }
+}
+
