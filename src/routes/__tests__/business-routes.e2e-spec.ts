@@ -2711,6 +2711,17 @@ describe("E2E Business tests", () => {
       const newCreditForSeller = sellerCreditsAfter.body.find((c: any) => c.original_transaction_uuid === transactionId);
       expect(newCreditForSeller).toBeDefined();
       expect(newCreditForSeller.balance).toBeCloseTo(result.body.amountPaidFromCredits);
+
+      // ASSERT 3: Validar o registro da transação no banco (A Garantia Final)
+      const transactionInDb = await prismaClient.transactions.findUnique({
+        where: { uuid: transactionId }
+      });
+
+      expect(transactionInDb).toBeDefined();
+      expect(transactionInDb?.status).toBe("success");
+
+      // Verificamos se o UUID do parceiro pagador foi corretamente salvo na transação.
+      expect(transactionInDb?.payer_business_info_uuid).toBe(partnerPayerInfoUuid);
     });
 
     it("should return a 402 error if total funds are insufficient", async () => {

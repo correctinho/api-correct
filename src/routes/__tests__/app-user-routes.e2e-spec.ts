@@ -8,6 +8,7 @@ import { InputCreateBenefitDto } from "../../modules/benefits/usecases/create-be
 import path from 'path'
 import { randomUUID } from 'crypto'
 import { calculateCycleSettlementDateAsDate } from "../../utils/date";
+import { prismaClient } from "../../infra/databases/prisma.config";
 
 let userToken1: string;
 let userToken2: string;
@@ -3552,7 +3553,6 @@ describe("E2E App User tests", () => {
             benefit_uuid: alimentacao_benefit_user2_uuid
           };
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(paymentInput);
-
           // 4. ASSERT: Validar a resposta da API (em Reais)
           expect(result.statusCode).toBe(200);
           expect(result.body.result).toBeTruthy();
@@ -3575,6 +3575,17 @@ describe("E2E App User tests", () => {
           // d) Saldo do benefício "Vale Alimentação" do usuário
           const alimentacaoBenefitAfter = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: alimentacao_benefit_user2_uuid });
           expect(alimentacaoBenefitAfter.body.balance * 100).toBe(employee2_alimentacao_initial_balance_in_cents - transaction1_net_price_in_cents);
+
+          // 6. ASSERT: Validar o estado final do registro da transação no banco
+          const transactionInDb = await prismaClient.transactions.findUnique({
+            where: { uuid: transaction1_uuid }
+          });
+
+          expect(transactionInDb).toBeDefined();
+          expect(transactionInDb?.status).toBe("success");
+
+          // >>> A GARANTIA FINAL E MAIS IMPORTANTE PARA A NOSSA CORREÇÃO <<<
+          expect(transactionInDb?.user_item_uuid).toBe(alimentacao_benefit_user2_uuid);
         });
 
       })
@@ -3761,6 +3772,18 @@ describe("E2E App User tests", () => {
           // Comparamos a data retornada pela API com a data calculada pelo teste.
           // Usamos toISOString() para uma comparação de texto precisa e padronizada.
           expect(new Date(newCredit.availability_date).toISOString()).toBe(expectedSettlementDate.toISOString());
+
+          // 6. ASSERT: Validar o estado final do registro da transação (A GARANTIA)
+          const transactionInDb = await prismaClient.transactions.findUnique({
+            where: { uuid: post_paid_transaction_uuid }
+          });
+
+          expect(transactionInDb).toBeDefined();
+          expect(transactionInDb?.status).toBe("success");
+
+          // >>> A GARANTIA FINAL PARA A NOSSA CORREÇÃO <<<
+          // Verificamos se o UUID do benefício pós-pago foi corretamente salvo na transação.
+          expect(transactionInDb?.user_item_uuid).toBe(convenio_benefit_user2_uuid);
         });
       });
 
@@ -3820,7 +3843,6 @@ describe("E2E App User tests", () => {
 
           // ASSERT (As asserções do pagamento principal continuam aqui, como já estavam)
           expect(result.statusCode).toBe(200);
-          // ... (resto das suas asserções para o pagamento)
         });
 
         describe("E2E Post-Paid Account Histories", () => {
@@ -3850,7 +3872,7 @@ describe("E2E App User tests", () => {
           });
         });
       });
-      
+
     })
   })
 })
