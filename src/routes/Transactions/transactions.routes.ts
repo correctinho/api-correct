@@ -11,6 +11,7 @@ import { sseSubscribe } from "../../infra/sse/sse.config";
 
 const transactionsRouter = Router()
 
+
 // Create POS transaction order by partner - TESTED
 transactionsRouter.post("/pos-transaction", companyIsAuth, async (request, response) => {
   await posTransactionController.handle(request, response)

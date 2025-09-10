@@ -2,8 +2,8 @@ import RepositoryInterface from "../../../../@shared/domain/repository/repositor
 import { AppUserAuthSignUpEntity } from "../entities/app-user-auth.entity"
 
 
-export interface IAppUserAuthRepository extends RepositoryInterface<AppUserAuthSignUpEntity>{
+export interface IAppUserAuthRepository extends RepositoryInterface<AppUserAuthSignUpEntity> {
     findByDocument(document: string): Promise<AppUserAuthSignUpEntity>
     findByEmail(email: string): Promise<AppUserAuthSignUpEntity>
-
+    updateTransactionPin(userId: string, pinHash: string): Promise<void>
 }

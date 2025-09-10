@@ -12,6 +12,7 @@ export type AppUserAuthProps = {
     document: string,
     email: string,
     password: string,
+    transaction_pin?: string | null
     is_active: boolean
     created_at?: string
     updated_at?: string
@@ -23,6 +24,7 @@ export class AppUserAuthSignUpEntity {
     private _document: string
     private _email: string
     private _password: string
+    private _transaction_pin?: string | null
     private _is_active: boolean
     private _created_at?: string
     private _updated_at?: string
@@ -33,6 +35,7 @@ export class AppUserAuthSignUpEntity {
         this._document = props.document
         this._email = props.email
         this._password = props.password
+        this._transaction_pin = props.transaction_pin ?? null
         this._is_active = props.is_active ?? true
         this._created_at = newDateF(new Date())
         this._updated_at = newDateF(new Date())
@@ -58,7 +61,9 @@ export class AppUserAuthSignUpEntity {
     get password(): string {
         return this._password
     }
-
+    get transaction_pin(): string | null | undefined {
+        return this._transaction_pin
+    }
     get is_active(): boolean {
         return this._is_active
     }
