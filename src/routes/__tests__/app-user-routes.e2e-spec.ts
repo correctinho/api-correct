@@ -9,6 +9,7 @@ import path from 'path'
 import { randomUUID } from 'crypto'
 import { calculateCycleSettlementDateAsDate } from "../../utils/date";
 import { prismaClient } from "../../infra/databases/prisma.config";
+import { PasswordBCrypt } from "../../infra/shared/crypto/password.bcrypt";
 
 let userToken1: string;
 let userToken2: string;
@@ -499,6 +500,83 @@ describe("E2E App User tests", () => {
 
 
 
+    })
+    describe("Set App user Transaction PIN", () => {
+      describe("Set App user Transaction PIN", () => {
+        beforeAll(async () => {
+
+          //create app user 2
+          const appUser2 = await request(app).post("/app-user").send(inputNewAppUser2)
+          expect(appUser2.statusCode).toBe(201)
+
+          //authenticate app user 2
+          const authAppUser2 = await request(app).post("/login-app-user").send(authenticateAppUser2)
+          userToken2 = authAppUser2.body.token
+          expect(authAppUser2.statusCode).toBe(200)
+        })
+        it("should set transaction pin for a new user and verify the hash in the database", async () => {
+          // ARRANGE
+          const input = {
+            newPin: '1234',
+            password: 'senha123', // Senha correta do userToken1
+          };
+
+          // ACT
+          const result = await request(app)
+            .post("/app-user/transaction-pin")
+            .set('Authorization', `Bearer ${userToken1}`)
+            .send(input);
+
+          // ASSERT - Resposta da API
+          expect(result.statusCode).toBe(200);
+          expect(result.body.success).toBe(true);
+          expect(result.body.message).toBe("PIN de transação criado com sucesso.");
+
+          // ASSERT - Verificação do Banco de Dados (A GARANTIA)
+          const userAuth = await prismaClient.userAuth.findUnique({
+            where: { document: "87548876076" }
+          });
+
+          expect(userAuth).toBeDefined();
+          expect(userAuth?.transaction_pin).not.toBeNull(); // Garante que o PIN foi salvo
+          expect(userAuth?.transaction_pin).not.toBe('1234'); // Garante que o PIN NÃO foi salvo em texto puro
+          // Verifica se o hash salvo corresponde ao PIN enviado
+          const hashService = new PasswordBCrypt();
+          const isPinCorrect = await hashService.compare('1234', userAuth!.transaction_pin!);
+          expect(isPinCorrect).toBe(true);
+        });
+        it("should update an existing transaction pin", async () => {
+          // ARRANGE: Primeiro, garantimos que o usuário já tem um PIN.
+          const initialInput = { newPin: '1111', password: inputNewAppUser2.password };
+          const initialRes = await request(app).post("/app-user/transaction-pin").set('Authorization', `Bearer ${userToken2}`).send(initialInput);
+          expect(initialRes.statusCode).toBe(200);
+
+          // ACT: Agora, o usuário tenta alterar o PIN.
+          const updateInput = { newPin: '9876', password: inputNewAppUser2.password };
+          const result = await request(app).post("/app-user/transaction-pin").set('Authorization', `Bearer ${userToken2}`).send(updateInput);
+          // ASSERT
+          expect(result.statusCode).toBe(200);
+          expect(result.body.success).toBe(true);
+          // A mensagem deve refletir uma alteração, não uma criação.
+          expect(result.body.message).toBe("PIN de transação alterado com sucesso.");
+        });
+
+        it("should return a 403 error if the password is wrong", async () => {
+          // ARRANGE
+          const input = {
+            newPin: '1234',
+            password: 'senha-errada', // << Senha incorreta
+          };
+
+          // ACT
+          const result = await request(app).post("/app-user/transaction-pin").set('Authorization', `Bearer ${userToken1}`).send(input);
+
+          // ASSERT
+          expect(result.statusCode).toBe(403);
+          expect(result.body.error).toBe("Invalid password.");
+        });
+
+      })
     })
   })
 

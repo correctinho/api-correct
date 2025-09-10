@@ -18,6 +18,7 @@ import { getUserInfobyUser } from "../../modules/AppUser/AppUserManagement/useca
 import { getUserAddressController } from "../../modules/AppUser/AppUserManagement/usecases/UserAddress/get-app-user-address";
 import { updateUserAddressController } from "../../modules/AppUser/AppUserManagement/usecases/UserAddress/update-app-user-address";
 import { createUserInfoByEmployerController } from "../../modules/AppUser/AppUserManagement/usecases/UserInfo/create-user-info-by-employer";
+import { setTransactionPinController } from "../../modules/AppUser/AppUserManagement/usecases/TransactionPIN/set-transaction-pin";
 
 const appUserRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -40,7 +41,10 @@ appUserRouter.get("/app-user", appUserIsAuth, async (request, response) => {
     await userDetailsController.handle(request, response)
 })
 
-
+//Set User Authenticated Transaction PIN
+appUserRouter.post("/app-user/transaction-pin", appUserIsAuth, async (request, response) => {
+    await setTransactionPinController.handle(request, response)
+})
 //**********User Info*********** */
 
 //user Details by document - TESTED
