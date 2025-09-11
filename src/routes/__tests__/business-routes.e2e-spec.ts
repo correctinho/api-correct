@@ -2637,7 +2637,21 @@ describe("E2E Business tests", () => {
       // a) Venda PRÉ-PAGA de R$ 100 para dar saldo LÍQUIDO ao Parceiro Pagador
       const txPrePaidRes = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partnerPayerAdminToken}`).send({ original_price: 100, discount_percentage: 0, net_price: 100 });
       expect(txPrePaidRes.statusCode).toBe(201);
-      const processPrePaidRes = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeUserToken}`).send({ transactionId: txPrePaidRes.body.transaction_uuid, benefit_uuid: prepaidBenefitUserItemUuid });
+
+      // Set Transaction pin for current employee
+      const newPinInput = {
+        newPin: "1234",
+        password: "123" //passowrd for current app user, beware of any changes
+      }
+      const newPinRes = await request(app)
+        .post("/app-user/transaction-pin")
+        .set('Authorization', `Bearer ${employeeUserToken}`)
+        .send(newPinInput);
+
+      // ASSERT - Resposta da API
+      expect(newPinRes.statusCode).toBe(200);
+
+      const processPrePaidRes = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeUserToken}`).send({ transactionId: txPrePaidRes.body.transaction_uuid, benefit_uuid: prepaidBenefitUserItemUuid, incoming_pin: "1234" });
       expect(processPrePaidRes.statusCode).toBe(200);
 
       //check payer account
@@ -2647,7 +2661,7 @@ describe("E2E Business tests", () => {
       // b) Venda PÓS-PAGA de R$ 70 para dar CRÉDITOS ao Parceiro Pagador
       const txPostPaidRes = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partnerPayerAdminToken}`).send({ original_price: 70, discount_percentage: 0, net_price: 70 });
       expect(txPostPaidRes.statusCode).toBe(201);
-      const processPostPaidRes = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeUserToken}`).send({ transactionId: txPostPaidRes.body.transaction_uuid, benefit_uuid: postpaidBenefitUserItemUuid });
+      const processPostPaidRes = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeUserToken}`).send({ transactionId: txPostPaidRes.body.transaction_uuid, benefit_uuid: postpaidBenefitUserItemUuid, incoming_pin: "1234" });
       expect(processPostPaidRes.statusCode).toBe(200);
 
     });
@@ -2886,14 +2900,29 @@ describe("E2E Business tests", () => {
 
       // 6. Gerar duas transações para popular o histórico
       // Transação 1 (mais antiga)
-      const tx1Res = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${historyPartnerAdminToken}`).send({ original_price: 150, discount_percentage: 0, net_price: 150 });
-      await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${historyEmployeeUserToken}`).send({ transactionId: tx1Res.body.transaction_uuid, benefit_uuid: historyPrepaidBenefitUserItemUuid });
+      //Set PIN for transaction
+      // Set Transaction pin for current employee
+      const newPinInput = {
+        newPin: "1234",
+        password: "123" //passowrd for current app user, beware of any changes
+      }
+      const newPinRes = await request(app)
+        .post("/app-user/transaction-pin")
+        .set('Authorization', `Bearer ${historyEmployeeUserToken}`)
+        .send(newPinInput);
 
+      // ASSERT - Resposta da API
+      expect(newPinRes.statusCode).toBe(200);
+
+      const tx1Res = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${historyPartnerAdminToken}`).send({ original_price: 150, discount_percentage: 0, net_price: 150 });
+      const processTx1 = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${historyEmployeeUserToken}`).send({ transactionId: tx1Res.body.transaction_uuid, benefit_uuid: historyPrepaidBenefitUserItemUuid, incoming_pin: "1234" });
+      expect(processTx1.statusCode).toBe(200);
       await new Promise(resolve => setTimeout(resolve, 50)); // Pequeno delay para garantir timestamps diferentes
 
       // Transação 2 (mais recente)
       const tx2Res = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${historyPartnerAdminToken}`).send({ original_price: 80, discount_percentage: 0, net_price: 80 });
-      await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${historyEmployeeUserToken}`).send({ transactionId: tx2Res.body.transaction_uuid, benefit_uuid: historyPrepaidBenefitUserItemUuid });
+      const processTx2 = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${historyEmployeeUserToken}`).send({ transactionId: tx2Res.body.transaction_uuid, benefit_uuid: historyPrepaidBenefitUserItemUuid, incoming_pin: "1234" });
+      expect(processTx2.statusCode).toBe(200);
     });
 
 

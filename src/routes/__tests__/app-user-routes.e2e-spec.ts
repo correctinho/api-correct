@@ -3537,12 +3537,43 @@ describe("E2E App User tests", () => {
           expect(result.statusCode).toBe(400)
           expect(result.body.error).toBe("Benefit UUID is required")
         })
+        it("Should throw an error if transaction pin is not provided", async () => {
+          const input = {
+            transactionId: randomUUID(),
+            benefit_uuid: randomUUID(),
+          }
 
-        it("Should throw an error if transaction does not exist", async () => {
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(400)
+          expect(result.body.error).toBe("Transaction PIN is required")
+        })
+        it("Should throw an error if user does not have a pin set", async () => {
 
           const input = {
             transactionId: randomUUID(),
-            benefit_uuid: randomUUID()
+            benefit_uuid: randomUUID(),
+            incoming_pin: "0000"
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(403)
+          expect(result.body.error).toBe("User does not have a transaction PIN set")
+        })
+
+        it("Should throw an error if transaction does not exist", async () => {
+          const employePin = {
+            newPin: '1234',
+            password: authenticateAppUser1.password,
+          };
+          const resultPin = await request(app)
+            .post("/app-user/transaction-pin")
+            .set('Authorization', `Bearer ${employeeAuthToken}`)
+            .send(employePin)
+          expect(resultPin.statusCode).toBe(200);
+
+          const input = {
+            transactionId: randomUUID(),
+            benefit_uuid: randomUUID(),
+            incoming_pin: employePin.newPin
           }
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
           expect(result.statusCode).toBe(404)
@@ -3553,17 +3584,32 @@ describe("E2E App User tests", () => {
 
           const input = {
             transactionId: transaction1_uuid,
-            benefit_uuid: randomUUID()
+            benefit_uuid: randomUUID(),
+            incoming_pin: "1234"
           }
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
           expect(result.statusCode).toBe(404)
           expect(result.body.error).toBe("User item not found")
         })
+
         it("Should throw an error if user item is blocked or inactive", async () => {
+          //Set pin code for employee 2
+          // set incoming pin for employee 1
+          // ARRANGE
+          const employe2Pin = {
+            newPin: '1234',
+            password: authenticateAppUser2.password,
+          };
+          const resultPin = await request(app)
+            .post("/app-user/transaction-pin")
+            .set('Authorization', `Bearer ${employeeAuthToken2}`)
+            .send(employe2Pin);
+          expect(resultPin.statusCode).toBe(200);
 
           const input = {
             transactionId: transaction1_uuid,
-            benefit_uuid: blocked_adiantamento_benefit_user2_uuid
+            benefit_uuid: blocked_adiantamento_benefit_user2_uuid,
+            incoming_pin: employe2Pin.newPin
           }
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
           expect(result.statusCode).toBe(403)
@@ -3572,13 +3618,14 @@ describe("E2E App User tests", () => {
         it("Should throw an error if balance is not enough", async () => {
           const input = {
             transactionId: transaction1_uuid,
-            benefit_uuid: correct_benefit_user2_uuid
+            benefit_uuid: correct_benefit_user2_uuid,
+            incoming_pin: '1234'
           }
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
           expect(result.statusCode).toBe(403)
           expect(result.body.error).toBe("User item balance is not enough")
         })
-        //BELOW TEST STILL MUST BE IMPLEMENTED
+        // //BELOW TEST STILL MUST BE IMPLEMENTED
         it("deve lançar um erro se o parceiro não aceitar o benefício utilizado", async () => {
           // --- ARRANGE (Preparação) ---
 
@@ -3612,7 +3659,8 @@ describe("E2E App User tests", () => {
           // 3. O funcionário 1 (employeeAuthToken) tentará pagar com "Convênio", que não é aceito.
           const paymentInput = {
             transactionId: transactionId,
-            benefit_uuid: convenio_benefit_user1_uuid // O usuário TEM este benefício
+            benefit_uuid: convenio_benefit_user1_uuid, // O usuário TEM este benefício
+            incoming_pin: '1234'
           };
 
           // --- ACT (Ação) ---
@@ -3628,7 +3676,8 @@ describe("E2E App User tests", () => {
           // 3. ACT: Executar o pagamento
           const paymentInput = {
             transactionId: transaction1_uuid,
-            benefit_uuid: alimentacao_benefit_user2_uuid
+            benefit_uuid: alimentacao_benefit_user2_uuid,
+            incoming_pin: '1234'
           };
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(paymentInput);
           // 4. ASSERT: Validar a resposta da API (em Reais)
@@ -3808,10 +3857,12 @@ describe("E2E App User tests", () => {
           expected_partner_credit_amount_in_cents = Math.round(transactionInput.net_price * 100) - expected_post_paid_fee_in_cents;
 
 
+
           // 2. ACT: Employee processes the payment
           const paymentInput = {
             transactionId: post_paid_transaction_uuid,
             benefit_uuid: convenio_benefit_user2_uuid,
+            incoming_pin: '1234'
           };
 
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(paymentInput);
@@ -3916,6 +3967,7 @@ describe("E2E App User tests", () => {
           const paymentInput = {
             transactionId: post_paid_transaction_uuid,
             benefit_uuid: convenio_benefit_user2_uuid,
+            incoming_pin: '1234'
           };
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(paymentInput);
 

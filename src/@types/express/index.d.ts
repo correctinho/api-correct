@@ -27,6 +27,8 @@ declare global {
       appUser: {
         appUserId: string
         document: string,
+        password: string
+        transaction_pin: string | null
         email:string,
         created_at: string,
         updated_at: string | null
