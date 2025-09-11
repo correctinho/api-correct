@@ -396,6 +396,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         where: { uuid: transactionId },
         data: {
           status: "success",
+          user_item_uuid: debitedUserItemId,
           // Apenas atualizamos o que muda no final do processamento
           paid_at: newDateF(new Date()),
           updated_at: newDateF(new Date())
@@ -530,7 +531,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
       // 4.3. Atualizar a transação principal para "success"
       await tx.transactions.update({
         where: { uuid: transactionId },
-        data: { status: "success", paid_at: newDateF(new Date()), updated_at: newDateF(new Date()) }
+        data: { status: "success", user_item_uuid: debitedUserItemId, paid_at: newDateF(new Date()), updated_at: newDateF(new Date()) }
       });
 
       // 5. Retorno
@@ -690,7 +691,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
       // --- PASSO 5: FINALIZAÇÃO DA TRANSAÇÃO ORIGINAL ---
       await tx.transactions.update({
         where: { uuid: transactionJson.uuid },
-        data: { status: "success", paid_at: newDateF(new Date()), updated_at: newDateF(new Date()) },
+        data: { status: "success", paid_at: newDateF(new Date()), updated_at: newDateF(new Date()), payer_business_info_uuid: payerAccount.toJSON().business_info_uuid },
       });
 
       // --- PASSO 6: RETORNO PARA O USE CASE ---

@@ -5,15 +5,25 @@ import { IAppUserAuthRepository } from "../app-use-auth-repository";
 import { newDateF } from "../../../../../utils/date";
 
 export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
+    async updateTransactionPin(userId: string, pinHash: string): Promise<void> {
+        await prismaClient.userAuth.updateMany({
+            where: {
+                uuid: userId
+            },
+            data: {
+                transaction_pin: pinHash
+            }
+        });
+    }
 
     async find(id: Uuid): Promise<AppUserAuthSignUpEntity | null> {
         const user = await prismaClient.userAuth.findUnique({
-            where:{
+            where: {
                 uuid: id.uuid
             }
         })
 
-        if(!user) return null
+        if (!user) return null
 
         return {
             uuid: new Uuid(user.uuid),
@@ -21,6 +31,7 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
             document: user.document,
             email: user.email,
             password: user.password,
+            transaction_pin: user.transaction_pin,
             is_active: user.is_active,
             created_at: user.created_at,
             updated_at: user.updated_at
@@ -32,7 +43,7 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
 
 
     async create(data: AppUserAuthSignUpEntity): Promise<void> {
-       const user = await prismaClient.userAuth.create({
+        const user = await prismaClient.userAuth.create({
             data: {
                 uuid: data.uuid.uuid,
                 user_info_uuid: data.user_info_uuid ? data.user_info_uuid.uuid : null,
@@ -66,7 +77,7 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
                 email: email
             }
         })
-        if(!appUser) return null
+        if (!appUser) return null
 
 
         return {
@@ -89,11 +100,11 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
             }
         })
 
-        if(!appUser) return null
+        if (!appUser) return null
 
         return {
             uuid: new Uuid(appUser.uuid),
-            user_info_uuid:   appUser.user_info_uuid ? new Uuid(appUser.user_info_uuid) : null,
+            user_info_uuid: appUser.user_info_uuid ? new Uuid(appUser.user_info_uuid) : null,
             document: appUser.document,
             email: appUser.email,
             password: appUser.password,

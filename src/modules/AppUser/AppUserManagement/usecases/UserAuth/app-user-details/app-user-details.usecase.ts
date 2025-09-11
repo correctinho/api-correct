@@ -96,6 +96,7 @@ export class AppUserDetailsUsecase {
                 uuid: findUser.uuid.uuid,
                 user_info_uuid: findUser.user_info_uuid ? findUser.user_info_uuid.uuid : null,
                 document: findUser.document,
+                pin_code: findUser.transaction_pin ? true : false,
                 email: findUser.email,
                 created_at: findUser.created_at,
                 updated_at: findUser.updated_at

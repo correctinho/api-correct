@@ -8,6 +8,8 @@ import { InputCreateBenefitDto } from "../../modules/benefits/usecases/create-be
 import path from 'path'
 import { randomUUID } from 'crypto'
 import { calculateCycleSettlementDateAsDate } from "../../utils/date";
+import { prismaClient } from "../../infra/databases/prisma.config";
+import { PasswordBCrypt } from "../../infra/shared/crypto/password.bcrypt";
 
 let userToken1: string;
 let userToken2: string;
@@ -498,6 +500,83 @@ describe("E2E App User tests", () => {
 
 
 
+    })
+    describe("Set App user Transaction PIN", () => {
+      describe("Set App user Transaction PIN", () => {
+        beforeAll(async () => {
+
+          //create app user 2
+          const appUser2 = await request(app).post("/app-user").send(inputNewAppUser2)
+          expect(appUser2.statusCode).toBe(201)
+
+          //authenticate app user 2
+          const authAppUser2 = await request(app).post("/login-app-user").send(authenticateAppUser2)
+          userToken2 = authAppUser2.body.token
+          expect(authAppUser2.statusCode).toBe(200)
+        })
+        it("should set transaction pin for a new user and verify the hash in the database", async () => {
+          // ARRANGE
+          const input = {
+            newPin: '1234',
+            password: 'senha123', // Senha correta do userToken1
+          };
+
+          // ACT
+          const result = await request(app)
+            .post("/app-user/transaction-pin")
+            .set('Authorization', `Bearer ${userToken1}`)
+            .send(input);
+
+          // ASSERT - Resposta da API
+          expect(result.statusCode).toBe(200);
+          expect(result.body.success).toBe(true);
+          expect(result.body.message).toBe("PIN de transação criado com sucesso.");
+
+          // ASSERT - Verificação do Banco de Dados (A GARANTIA)
+          const userAuth = await prismaClient.userAuth.findUnique({
+            where: { document: "87548876076" }
+          });
+
+          expect(userAuth).toBeDefined();
+          expect(userAuth?.transaction_pin).not.toBeNull(); // Garante que o PIN foi salvo
+          expect(userAuth?.transaction_pin).not.toBe('1234'); // Garante que o PIN NÃO foi salvo em texto puro
+          // Verifica se o hash salvo corresponde ao PIN enviado
+          const hashService = new PasswordBCrypt();
+          const isPinCorrect = await hashService.compare('1234', userAuth!.transaction_pin!);
+          expect(isPinCorrect).toBe(true);
+        });
+        it("should update an existing transaction pin", async () => {
+          // ARRANGE: Primeiro, garantimos que o usuário já tem um PIN.
+          const initialInput = { newPin: '1111', password: inputNewAppUser2.password };
+          const initialRes = await request(app).post("/app-user/transaction-pin").set('Authorization', `Bearer ${userToken2}`).send(initialInput);
+          expect(initialRes.statusCode).toBe(200);
+
+          // ACT: Agora, o usuário tenta alterar o PIN.
+          const updateInput = { newPin: '9876', password: inputNewAppUser2.password };
+          const result = await request(app).post("/app-user/transaction-pin").set('Authorization', `Bearer ${userToken2}`).send(updateInput);
+          // ASSERT
+          expect(result.statusCode).toBe(200);
+          expect(result.body.success).toBe(true);
+          // A mensagem deve refletir uma alteração, não uma criação.
+          expect(result.body.message).toBe("PIN de transação alterado com sucesso.");
+        });
+
+        it("should return a 403 error if the password is wrong", async () => {
+          // ARRANGE
+          const input = {
+            newPin: '1234',
+            password: 'senha-errada', // << Senha incorreta
+          };
+
+          // ACT
+          const result = await request(app).post("/app-user/transaction-pin").set('Authorization', `Bearer ${userToken1}`).send(input);
+
+          // ASSERT
+          expect(result.statusCode).toBe(403);
+          expect(result.body.error).toBe("Invalid password.");
+        });
+
+      })
     })
   })
 
@@ -3458,12 +3537,43 @@ describe("E2E App User tests", () => {
           expect(result.statusCode).toBe(400)
           expect(result.body.error).toBe("Benefit UUID is required")
         })
+        it("Should throw an error if transaction pin is not provided", async () => {
+          const input = {
+            transactionId: randomUUID(),
+            benefit_uuid: randomUUID(),
+          }
 
-        it("Should throw an error if transaction does not exist", async () => {
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(400)
+          expect(result.body.error).toBe("Transaction PIN is required")
+        })
+        it("Should throw an error if user does not have a pin set", async () => {
 
           const input = {
             transactionId: randomUUID(),
-            benefit_uuid: randomUUID()
+            benefit_uuid: randomUUID(),
+            incoming_pin: "0000"
+          }
+          const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
+          expect(result.statusCode).toBe(403)
+          expect(result.body.error).toBe("User does not have a transaction PIN set")
+        })
+
+        it("Should throw an error if transaction does not exist", async () => {
+          const employePin = {
+            newPin: '1234',
+            password: authenticateAppUser1.password,
+          };
+          const resultPin = await request(app)
+            .post("/app-user/transaction-pin")
+            .set('Authorization', `Bearer ${employeeAuthToken}`)
+            .send(employePin)
+          expect(resultPin.statusCode).toBe(200);
+
+          const input = {
+            transactionId: randomUUID(),
+            benefit_uuid: randomUUID(),
+            incoming_pin: employePin.newPin
           }
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
           expect(result.statusCode).toBe(404)
@@ -3474,17 +3584,32 @@ describe("E2E App User tests", () => {
 
           const input = {
             transactionId: transaction1_uuid,
-            benefit_uuid: randomUUID()
+            benefit_uuid: randomUUID(),
+            incoming_pin: "1234"
           }
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken}`).send(input)
           expect(result.statusCode).toBe(404)
           expect(result.body.error).toBe("User item not found")
         })
+
         it("Should throw an error if user item is blocked or inactive", async () => {
+          //Set pin code for employee 2
+          // set incoming pin for employee 1
+          // ARRANGE
+          const employe2Pin = {
+            newPin: '1234',
+            password: authenticateAppUser2.password,
+          };
+          const resultPin = await request(app)
+            .post("/app-user/transaction-pin")
+            .set('Authorization', `Bearer ${employeeAuthToken2}`)
+            .send(employe2Pin);
+          expect(resultPin.statusCode).toBe(200);
 
           const input = {
             transactionId: transaction1_uuid,
-            benefit_uuid: blocked_adiantamento_benefit_user2_uuid
+            benefit_uuid: blocked_adiantamento_benefit_user2_uuid,
+            incoming_pin: employe2Pin.newPin
           }
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
           expect(result.statusCode).toBe(403)
@@ -3493,13 +3618,14 @@ describe("E2E App User tests", () => {
         it("Should throw an error if balance is not enough", async () => {
           const input = {
             transactionId: transaction1_uuid,
-            benefit_uuid: correct_benefit_user2_uuid
+            benefit_uuid: correct_benefit_user2_uuid,
+            incoming_pin: '1234'
           }
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(input)
           expect(result.statusCode).toBe(403)
           expect(result.body.error).toBe("User item balance is not enough")
         })
-        //BELOW TEST STILL MUST BE IMPLEMENTED
+        // //BELOW TEST STILL MUST BE IMPLEMENTED
         it("deve lançar um erro se o parceiro não aceitar o benefício utilizado", async () => {
           // --- ARRANGE (Preparação) ---
 
@@ -3533,7 +3659,8 @@ describe("E2E App User tests", () => {
           // 3. O funcionário 1 (employeeAuthToken) tentará pagar com "Convênio", que não é aceito.
           const paymentInput = {
             transactionId: transactionId,
-            benefit_uuid: convenio_benefit_user1_uuid // O usuário TEM este benefício
+            benefit_uuid: convenio_benefit_user1_uuid, // O usuário TEM este benefício
+            incoming_pin: '1234'
           };
 
           // --- ACT (Ação) ---
@@ -3549,10 +3676,10 @@ describe("E2E App User tests", () => {
           // 3. ACT: Executar o pagamento
           const paymentInput = {
             transactionId: transaction1_uuid,
-            benefit_uuid: alimentacao_benefit_user2_uuid
+            benefit_uuid: alimentacao_benefit_user2_uuid,
+            incoming_pin: '1234'
           };
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(paymentInput);
-
           // 4. ASSERT: Validar a resposta da API (em Reais)
           expect(result.statusCode).toBe(200);
           expect(result.body.result).toBeTruthy();
@@ -3575,6 +3702,17 @@ describe("E2E App User tests", () => {
           // d) Saldo do benefício "Vale Alimentação" do usuário
           const alimentacaoBenefitAfter = await request(app).get("/user-item").set('Authorization', `Bearer ${employeeAuthToken2}`).query({ userItemId: alimentacao_benefit_user2_uuid });
           expect(alimentacaoBenefitAfter.body.balance * 100).toBe(employee2_alimentacao_initial_balance_in_cents - transaction1_net_price_in_cents);
+
+          // 6. ASSERT: Validar o estado final do registro da transação no banco
+          const transactionInDb = await prismaClient.transactions.findUnique({
+            where: { uuid: transaction1_uuid }
+          });
+
+          expect(transactionInDb).toBeDefined();
+          expect(transactionInDb?.status).toBe("success");
+
+          // >>> A GARANTIA FINAL E MAIS IMPORTANTE PARA A NOSSA CORREÇÃO <<<
+          expect(transactionInDb?.user_item_uuid).toBe(alimentacao_benefit_user2_uuid);
         });
 
       })
@@ -3719,10 +3857,12 @@ describe("E2E App User tests", () => {
           expected_partner_credit_amount_in_cents = Math.round(transactionInput.net_price * 100) - expected_post_paid_fee_in_cents;
 
 
+
           // 2. ACT: Employee processes the payment
           const paymentInput = {
             transactionId: post_paid_transaction_uuid,
             benefit_uuid: convenio_benefit_user2_uuid,
+            incoming_pin: '1234'
           };
 
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(paymentInput);
@@ -3761,6 +3901,18 @@ describe("E2E App User tests", () => {
           // Comparamos a data retornada pela API com a data calculada pelo teste.
           // Usamos toISOString() para uma comparação de texto precisa e padronizada.
           expect(new Date(newCredit.availability_date).toISOString()).toBe(expectedSettlementDate.toISOString());
+
+          // 6. ASSERT: Validar o estado final do registro da transação (A GARANTIA)
+          const transactionInDb = await prismaClient.transactions.findUnique({
+            where: { uuid: post_paid_transaction_uuid }
+          });
+
+          expect(transactionInDb).toBeDefined();
+          expect(transactionInDb?.status).toBe("success");
+
+          // >>> A GARANTIA FINAL PARA A NOSSA CORREÇÃO <<<
+          // Verificamos se o UUID do benefício pós-pago foi corretamente salvo na transação.
+          expect(transactionInDb?.user_item_uuid).toBe(convenio_benefit_user2_uuid);
         });
       });
 
@@ -3815,12 +3967,12 @@ describe("E2E App User tests", () => {
           const paymentInput = {
             transactionId: post_paid_transaction_uuid,
             benefit_uuid: convenio_benefit_user2_uuid,
+            incoming_pin: '1234'
           };
           const result = await request(app).post("/pos-transaction/processing").set('Authorization', `Bearer ${employeeAuthToken2}`).send(paymentInput);
 
           // ASSERT (As asserções do pagamento principal continuam aqui, como já estavam)
           expect(result.statusCode).toBe(200);
-          // ... (resto das suas asserções para o pagamento)
         });
 
         describe("E2E Post-Paid Account Histories", () => {
@@ -3850,7 +4002,7 @@ describe("E2E App User tests", () => {
           });
         });
       });
-      
+
     })
   })
 })
