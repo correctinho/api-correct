@@ -48,6 +48,7 @@ export type OutputAppUserDetailsDTO = {
     uuid: string,
     user_info_uuid: string | null,
     document: string,
+    pin_code?: boolean
     email: string,
     created_at?: string,
     updated_at?: string,

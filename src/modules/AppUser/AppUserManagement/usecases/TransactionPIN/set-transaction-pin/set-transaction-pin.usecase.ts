@@ -12,7 +12,6 @@ export class SetAppUserTransactionPinUsecase {
     ) { }
 
     async execute(input: InputSetAppUserPinDTO): Promise<OutputSetAppUserPinDTO> {
-        console.log("Input received for setting transaction PIN:", input);
         // Passo 2: Validações de entrada PRIMEIRO.
         if (!input.userId || !input.newPin || !input.password) {
             throw new CustomError("User ID, new PIN, and password are required.", 400);

@@ -25,72 +25,76 @@ export const appUserIsAuth = async (req: Request, res: Response, next: NextFunct
   const verifyToken = new AppUserJWToken().validate(token)
 
   if (verifyToken) {
-      req.appUser = {
-        appUserId: verifyToken.sub,
-        document: '',
-        email: '',
-        created_at: '',
-        updated_at: '',
-        user_info_uuid: ''
-      }
-
-      const appUserAuthRepository = new AppUserAuthPrismaRepository()
-      const ensureValidAAppUser = new EnsureValidAppUserController(appUserAuthRepository)
-
-      const user = await ensureValidAAppUser.handle(req, res) as AppUserAuthSignUpEntity
-      req.appUser = {
-        appUserId: user.uuid.uuid,
-        document: user.document,
-        email: user.email,
-        user_info_uuid: user.user_info_uuid ? user.user_info_uuid.uuid : null,
-        created_at: user.created_at,
-        updated_at: user.updated_at ? user.updated_at : null,
-
-      }
-      return next()
+    req.appUser = {
+      appUserId: verifyToken.sub,
+      document: '',
+      email: '',
+      password: '',
+      transaction_pin: null,
+      created_at: '',
+      updated_at: '',
+      user_info_uuid: ''
     }
 
-    //jwt go mode
+    const appUserAuthRepository = new AppUserAuthPrismaRepository()
+    const ensureValidAAppUser = new EnsureValidAppUserController(appUserAuthRepository)
 
-    // try {
-    //   const response = await api.post("/api/v1/jwt/decode", {
-    //     token: token
-    //   });
-    //   const verifyToken = response.data;
+    const user = await ensureValidAAppUser.handle(req, res) as AppUserAuthSignUpEntity
+    req.appUser = {
+      appUserId: user.uuid.uuid,
+      document: user.document,
+      email: user.email,
+      password: '',
+      transaction_pin: user.transaction_pin ? user.transaction_pin : null,
+      user_info_uuid: user.user_info_uuid ? user.user_info_uuid.uuid : null,
+      created_at: user.created_at,
+      updated_at: user.updated_at ? user.updated_at : null,
 
-    //   if (verifyToken) {
-    //     req.appUser = {
-    //       appUserId: verifyToken.data.user_uuid,
-    //       document: '',
-    //       email: '',
-    //       created_at: '',
-    //       updated_at: '',
-    //       user_info_uuid: ''
-    //     }
-
-    //     const appUserAuthRepository = new AppUserAuthPrismaRepository()
-    //     const ensureValidAAppUser = new EnsureValidAppUserController(appUserAuthRepository)
-
-    //     const user = await ensureValidAAppUser.handle(req, res) as AppUserAuthSignUpEntity
-    //     req.appUser = {
-    //       appUserId: user.uuid.uuid,
-    //       document: user.document,
-    //       email: user.email,
-    //       user_info_uuid: user.user_info_uuid ? user.user_info_uuid.uuid : null,
-    //       created_at: user.created_at,
-    //       updated_at: user.updated_at ? user.updated_at : null,
-
-    //     }
-    //     return next()
-    //   }
-    // } catch (err: any) {
-
-    //   console.log("Erro ao verificar token do app user");
-
-    // }
-
-
-    return res.status(401).json({
-      error: "Authentication Error"
-    })
+    }
+    return next()
   }
+
+  //jwt go mode
+
+  // try {
+  //   const response = await api.post("/api/v1/jwt/decode", {
+  //     token: token
+  //   });
+  //   const verifyToken = response.data;
+
+  //   if (verifyToken) {
+  //     req.appUser = {
+  //       appUserId: verifyToken.data.user_uuid,
+  //       document: '',
+  //       email: '',
+  //       created_at: '',
+  //       updated_at: '',
+  //       user_info_uuid: ''
+  //     }
+
+  //     const appUserAuthRepository = new AppUserAuthPrismaRepository()
+  //     const ensureValidAAppUser = new EnsureValidAppUserController(appUserAuthRepository)
+
+  //     const user = await ensureValidAAppUser.handle(req, res) as AppUserAuthSignUpEntity
+  //     req.appUser = {
+  //       appUserId: user.uuid.uuid,
+  //       document: user.document,
+  //       email: user.email,
+  //       user_info_uuid: user.user_info_uuid ? user.user_info_uuid.uuid : null,
+  //       created_at: user.created_at,
+  //       updated_at: user.updated_at ? user.updated_at : null,
+
+  //     }
+  //     return next()
+  //   }
+  // } catch (err: any) {
+
+  //   console.log("Erro ao verificar token do app user");
+
+  // }
+
+
+  return res.status(401).json({
+    error: "Authentication Error"
+  })
+}
