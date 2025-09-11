@@ -50,7 +50,7 @@ ecommerceRouter.post('/ecommerce/product/:product_uuid/images', companyIsAuth, u
   await uploadProducImageController.handle(request, response)
 })
 
-// find buiness products
+// find public business products
 ecommerceRouter.get('/ecommerce/business/:business_info_uuid/products', async (request, response) => {
   await findBusinessProducts.handle(request, response)
 })
