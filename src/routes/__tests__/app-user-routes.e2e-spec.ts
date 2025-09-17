@@ -2238,8 +2238,6 @@ describe("E2E App User tests", () => {
   let post_paid_user_item_uuid: string
 
   describe("E2E tests User Items", () => {
-
-
     describe("E2E test User items by Employer", () => {
       // describe("E2E tests create user item by employer", () => {
       //   it("Should throw an error if user info id is missing", async () => {
