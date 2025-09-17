@@ -8,6 +8,8 @@ import { geTransactionReceiptController } from "../../modules/Payments/Transacti
 import { generateReceiptPDFController } from "../../modules/Payments/Transactions/useCases/get-transaction-receipt/generate-receipt-pdf";
 import { processPaymentByPartnerController } from "../../modules/Payments/Transactions/useCases/process-payment-by-partner";
 import { sseSubscribe } from "../../infra/sse/sse.config";
+import { createPixChargeController } from "../../modules/Payments/Pix/usecases/create-pix-charge";
+import { processPixWebhook } from "../../modules/Payments/Pix/usecases/process-pix-webhook";
 
 const transactionsRouter = Router()
 
@@ -44,5 +46,15 @@ transactionsRouter.get("/transaction/:transactionId/download", async (request, r
 
 // Endpoint para o PDV se inscrever e ouvir atualizações de uma transação via SSE
 transactionsRouter.get("/transactions/:transactionId/subscribe", sseSubscribe);
+
+// Create Pix Charge
+transactionsRouter.post('/transaction/pix/charge', appUserIsAuth, async (request, response) => {
+  await createPixChargeController.handle(request, response)
+})
+
+transactionsRouter.post(
+    "/webhooks/sicredi-pix",
+    (req, res) => processPixWebhook.handle(req, res)
+);
 
 export { transactionsRouter }
