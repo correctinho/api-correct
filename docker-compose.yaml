@@ -3,6 +3,7 @@ version: '3.7'
 volumes:
   n8n_data:
   traefik_data:
+  redis_data: {}
   postgres-correct_vol:
     driver: local
   minio_data: {} # Volume adicionado para o MinIO
@@ -22,6 +23,7 @@ services:
       - correct_net
     depends_on:
       - postgresdb
+      - redis
     environment:
       DATABASE_URL: postgresql://postgres:admin@postgresdb:5432/syscorrect-db?schema=public
       SECRET_KEY_TOKEN_ADMIN: correct_admin_token
@@ -43,6 +45,17 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: syscorrect-db
+
+  redis: # <<< NOVO SERVIÇO REDIS
+    image: redis:alpine # Usamos a imagem alpine por ser mais leve
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - correct_net
+    volumes:
+      - redis_data:/data # Monta o volume para persistir os dados
+
 
   # traefik:
   #   image: "traefik"
