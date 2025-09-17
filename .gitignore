@@ -9,3 +9,5 @@ logs
 .rabbmitmq_data/*
 
 /dist
+
+/certs
