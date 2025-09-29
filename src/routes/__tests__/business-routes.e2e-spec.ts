@@ -3844,14 +3844,27 @@ describe('E2E Business tests', () => {
             // ASSERT - Resposta da API
             expect(newPinRes.statusCode).toBe(200);
 
+            const historyPrepaidBenefitUserItem = await prismaClient.userItem.findUnique({
+                where:{
+                    uuid: historyPrepaidBenefitUserItemUuid
+                }
+            })
+            expect(historyPrepaidBenefitUserItem).toBeDefined();
+            const historyPrepaidBenefitUserItemBalance = historyPrepaidBenefitUserItem.balance;
+
             const tx1Res = await request(app)
                 .post('/pos-transaction')
                 .set('Authorization', `Bearer ${historyPartnerAdminToken}`)
                 .send({
-                    original_price: 150,
+                    original_price: (historyPrepaidBenefitUserItemBalance / 100) - 100,
                     discount_percentage: 0,
-                    net_price: 150,
+                    net_price: (historyPrepaidBenefitUserItemBalance / 100) - 100,
                 });
+            const tx1Prisma = await prismaClient.transactions.findUnique({
+                where: { uuid: tx1Res.body.transaction_uuid },
+            });
+            expect(tx1Prisma).toBeDefined();
+            expect(tx1Res.statusCode).toBe(201);
             const processTx1 = await request(app)
                 .post('/pos-transaction/processing')
                 .set('Authorization', `Bearer ${historyEmployeeUserToken}`)
@@ -3935,21 +3948,31 @@ describe('E2E Business tests', () => {
             const result = await request(app)
                 .get('/business/account/history')
                 .set('Authorization', `Bearer ${historyPartnerAdminToken}`);
-
             expect(result.statusCode).toBe(200);
             expect(Array.isArray(result.body)).toBe(true);
             expect(result.body.length).toBe(2);
+
+            const tx1Id = result.body[1].related_transaction_uuid; // A mais antiga
+            const tx2Id = result.body[0].related_transaction_uuid; // A mais recente
+
 
             // --- Validação da ordem e dos valores ---
             // A taxa do branch3 (Mercearias) é 1.4% (admin_tax).
             const firstEntry = result.body[0]; // A mais recente
             const secondEntry = result.body[1]; // A mais antiga
-
-            // Transação 2 (mais recente): 80.00 - 1.4% = 78.88
-            const expectedAmountTx2 = 78.88;
-            // Transação 1 (mais antiga): 150.00 - 1.4% = 147.90
-            const expectedAmountTx1 = 147.9;
-
+            
+            const tx1InDb = await prismaClient.transactions.findUnique({
+                where: { uuid: tx1Id },
+            });
+            const tx2InDb = await prismaClient.transactions.findUnique({
+                where: { uuid: tx2Id },
+            });
+            expect(tx1InDb).toBeDefined();
+            expect(tx2InDb).toBeDefined();
+            // Transação 2 (mais recente)
+            const expectedAmountTx2 = (tx2InDb.net_price / 100) * (1 - 0.014); // 1.4% de taxa
+            // Transação 1 (mais antiga)
+            const expectedAmountTx1 = (tx1InDb.net_price / 100) * (1 - 0.014); // 1.4% de taxa
             // A primeira entrada deve ser a de R$80
             expect(firstEntry.event_type).toBe('PAYMENT_RECEIVED');
             expect(firstEntry.amount).toBeCloseTo(expectedAmountTx2);
