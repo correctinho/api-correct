@@ -104,21 +104,21 @@ export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetails
       }),
       prismaClient.benefitGroups.upsert({
         where:{
-          uuid: benefitGroupEntity.uuid.uuid
+          uuid: benefitGroupEntity.uuid
         },
         create: {
-          uuid: benefitGroupEntity.uuid.uuid,
+          uuid: benefitGroupEntity.uuid,
           group_name: benefitGroupEntity.group_name,
-          employer_item_details_uuid: benefitGroupEntity.employer_item_details_uuid.uuid,
+          employer_item_details_uuid: benefitGroupEntity.employer_item_details_uuid,
           value: benefitGroupEntity.value,
-          business_info_uuid: benefitGroupEntity.business_info_uuid.uuid,
+          business_info_uuid: benefitGroupEntity.business_info_uuid,
           is_default: benefitGroupEntity.is_default,
           created_at: benefitGroupEntity.created_at
         },
         update:{
           group_name: benefitGroupEntity.group_name,
           value: benefitGroupEntity.value,
-          business_info_uuid: benefitGroupEntity.business_info_uuid.uuid,
+          business_info_uuid: benefitGroupEntity.business_info_uuid,
           is_default: benefitGroupEntity.is_default,
           updated_at: benefitGroupEntity.updated_at
         }

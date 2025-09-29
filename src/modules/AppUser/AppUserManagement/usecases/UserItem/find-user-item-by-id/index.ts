@@ -4,12 +4,11 @@ import { AppUserItemPrismaRepository } from "../../../repositories/implementatio
 import { FindUserItemByIdByController } from "./find-user-item-by-id.controller";
 
 const appUserItemRepository = new AppUserItemPrismaRepository()
-const appUserInfoRepository = new AppUserInfoPrismaRepository()
 const businessInfoRepository = new CompanyDataPrismaRepository()
 
 const findUserItemById = new FindUserItemByIdByController(
   appUserItemRepository,
-  appUserInfoRepository
+  businessInfoRepository
 )
 
 export { findUserItemById }
