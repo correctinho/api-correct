@@ -4,7 +4,6 @@ export type InputActivateUserItemByEmployer = {
   business_info_uuid: string,
   user_info_uuid: string
   item_uuid: string
-  balance: number
   group_uuid: string
 }
 

@@ -17,7 +17,6 @@ export class CreateBenefitGroupsUsecase {
   ) { }
 
   async execute(data: InputCreateBenefitGroupsDTO) {
-
     const groupEntity: BenefitGroupsCreateCommand = {
       group_name: data.group_name,
       employer_item_details_uuid: new Uuid(data.employer_item_details_uuid),
@@ -27,7 +26,12 @@ export class CreateBenefitGroupsUsecase {
     }
     const entity = BenefitGroupsEntity.create(groupEntity)
 
-    const createGroup = await this.benefitGroupsRepository.createReturn(entity)
+    //check if employer item belongs to business
+    const checkEmployerItem = await this.employerItemsRepository.find(entity.employer_item_details_uuid)
+    if (!checkEmployerItem) throw new CustomError("Employer Item not found", 404)
+    if (checkEmployerItem.business_info_uuid.uuid !== entity.business_info_uuid.uuid) throw new CustomError("Employer Item not found in this company", 403)
+    
+      const createGroup = await this.benefitGroupsRepository.createReturn(entity)
 
     return {
       uuid: createGroup.uuid.uuid,

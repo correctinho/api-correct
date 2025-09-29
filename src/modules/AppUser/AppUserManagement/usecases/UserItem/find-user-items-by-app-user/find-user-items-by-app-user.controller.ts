@@ -7,7 +7,6 @@ import { ICompanyDataRepository } from "../../../../../Company/CompanyData/repos
 export class  FindAllUserItemsByAppUserController {
   constructor(
     private appUserItemRepository: IAppUserItemRepository,
-    private appUserInfoRepository: IAppUserInfoRepository,
 
 
   ) { }
@@ -16,7 +15,7 @@ export class  FindAllUserItemsByAppUserController {
     try {
       const userInfoUuid = req.appUser.user_info_uuid
 
-      const usecase = new FindAllUserItemsByAppUserUsecase(this.appUserItemRepository, this.appUserInfoRepository)
+      const usecase = new FindAllUserItemsByAppUserUsecase(this.appUserItemRepository)
 
       const result = await usecase.execute(userInfoUuid)
 
