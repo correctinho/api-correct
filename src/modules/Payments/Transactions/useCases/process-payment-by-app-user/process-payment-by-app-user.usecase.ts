@@ -41,7 +41,6 @@ export class ProcessPaymentByAppUserUsecase {
     // 3. Buscamos o UserItem
     const userItem = await this.userItemRepository.find(new Uuid(data.benefit_uuid));
     if (!userItem) throw new CustomError("User item not found", 404);
-
     // 4. Validações de Negócio
     if (userItem.user_info_uuid.uuid !== data.appUserInfoID) throw new CustomError("User item is not from this user", 403);
     if (userItem.status === "inactive" || userItem.status === "blocked") throw new CustomError("User item is not active", 403);

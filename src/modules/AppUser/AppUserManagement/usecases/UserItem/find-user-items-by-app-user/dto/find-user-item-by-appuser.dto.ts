@@ -16,9 +16,5 @@ export type OutputFindAppUserItemDTO = {
   grace_period_end_date?: string | null
   created_at?: string | null
   updated_at?: string | null,
-  Provider: {
-    business_info_uuid: string | null,
-    fantasy_name: string | null
-
-  }
+ 
 }

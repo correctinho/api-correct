@@ -1,4 +1,4 @@
-import { UserItemStatus } from "@prisma/client";
+import { ItemCategory, UserItemStatus } from "@prisma/client";
 import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../../errors/custom.error";
 import { IBusinessItemDetailsRepository } from "../../../../../Company/BusinessItemsDetails/repositories/business-item-details.repository";
@@ -8,9 +8,7 @@ import { AppUserInfoEntity, AppUserInfoProps } from "../../../entities/app-user-
 import { IAppUserAuthRepository } from "../../../repositories/app-use-auth-repository";
 import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repository";
 import { InputCreateUserInfoDTO, OutputCreateUserInfoDTO } from "../create-user-info/dto/create-user-info.dto";
-import { AppUserItemEntity } from "../../../entities/app-user-item.entity";
-import { BenefitGroupsEntity } from "../../../../../Company/BenefitGroups/entities/benefit-groups.entity";
-import { IAppUserItemRepository } from "../../../repositories/app-user-item-repository";
+import { AppUserItemCreateCommand, AppUserItemEntity } from "../../../entities/app-user-item.entity";
 import { IBenefitsRepository } from "../../../../../benefits/repositories/benefit.repository";
 
 let employerActiveItems: OutputFindEmployerItemDetailsDTO[] = []
@@ -52,8 +50,7 @@ export class CreateAppUserInfoByEmployerUsecase {
 
     for (const employerItem of employerActiveItems) {
       const group = (employerItem.BenefitGroups.find(group => group.is_default === true))
-      const employeeItemEntityData = {
-        uuid: new Uuid(),
+      const employeeItemEntityData: AppUserItemCreateCommand  = {
         user_info_uuid: userInfoEntity.uuid,
         business_info_uuid: userInfoEntity.business_info_uuid,
         item_uuid: new Uuid(employerItem.item_uuid),
@@ -61,6 +58,11 @@ export class CreateAppUserInfoByEmployerUsecase {
         img_url: employerItem.img_url,
         balance: group.value,
         group_uuid: new Uuid(group.uuid),
+        group_name: group.group_name,
+        group_value: group.value,
+        group_is_default: group.is_default,
+        item_category: employerItem.Item.item_category as ItemCategory,
+        employee_salary: userInfoEntity.salary,
         status: 'inactive' as UserItemStatus
       }
 
@@ -76,7 +78,7 @@ export class CreateAppUserInfoByEmployerUsecase {
     }
     if (existingUserInfo && !isEmployee) {
       userInfoEntity.changeUuid(new Uuid(existingUserInfo.uuid))
-
+      
       //create only employee data
       await this.appUserInfoRepository.createEmployeeAndItems(userInfoEntity, employeeItemsArray)
     }

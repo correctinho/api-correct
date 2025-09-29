@@ -24,22 +24,22 @@ export class UpdateBenefitGroupsUsecase {
     //check if group belongs to admin
     if(group.business_info_uuid.uuid !== data.business_info_uuid) throw new CustomError("Unauthorized access", 403)
 
-    const entity = new BenefitGroupsEntity(group)
-    entity.changeGroupName(data.group_name)
-    entity.changeValue(data.value)
+    
+    group.changeGroupName(data.group_name)
+    group.changeValue(data.value)
 
 
     //update group
-    const updateGroup = await this.benefitGroupsRepository.createOrUpdate(entity)
+    await this.benefitGroupsRepository.update(group)
 
     return {
-      uuid: updateGroup.uuid.uuid,
-      group_name: updateGroup.group_name,
-      employerItemDetails_uuid: updateGroup.employer_item_details_uuid.uuid,
-      value: updateGroup.value,
-      business_info_uuid: updateGroup.business_info_uuid.uuid,
-      created_at: updateGroup.created_at,
-      updated_at: updateGroup.updated_at
+      uuid: group.uuid.uuid,
+      group_name: group.group_name,
+      employerItemDetails_uuid: group.employer_item_details_uuid.uuid,
+      value: group.value,
+      business_info_uuid: group.business_info_uuid.uuid,
+      created_at: group.created_at,
+      updated_at: group.updated_at
     }
   }
 

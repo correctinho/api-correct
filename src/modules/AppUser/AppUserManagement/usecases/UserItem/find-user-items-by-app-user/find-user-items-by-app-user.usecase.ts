@@ -1,5 +1,6 @@
 import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../../errors/custom.error";
+import { ICompanyDataRepository } from "../../../../../Company/CompanyData/repositories/company-data.repository";
 import { AppUserItemEntity } from "../../../entities/app-user-item.entity";
 import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repository";
 import { IAppUserItemRepository } from "../../../repositories/app-user-item-repository";
@@ -8,7 +9,6 @@ import { OutputFindAppUserItemDTO } from "./dto/find-user-item-by-appuser.dto";
 export class FindAllUserItemsByAppUserUsecase {
   constructor(
     private appUserItemRepository: IAppUserItemRepository,
-    private appuserInfoRepository: IAppUserInfoRepository,
 
   ) { }
 
@@ -33,10 +33,7 @@ export class FindAllUserItemsByAppUserUsecase {
         grace_period_end_date: userItem.grace_period_end_date,
         created_at: userItem.created_at,
         updated_at: userItem.updated_at,
-        Provider: {
-          business_info_uuid: userItem.business_info_uuid ? userItem.business_info_uuid.uuid : null,
-          fantasy_name: userItem.fantasy_name ? userItem.fantasy_name : null,
-        }
+        
       };
     });
 
