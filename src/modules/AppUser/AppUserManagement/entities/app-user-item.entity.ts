@@ -1,202 +1,144 @@
 import { ItemCategory, ItemType, UserItemStatus } from "@prisma/client";
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
-import { addDaysToDate, newDateF } from "../../../../utils/date";
 import { CustomError } from "../../../../errors/custom.error";
+import { addDaysToDate, newDateF } from "../../../../utils/date";
 
+/**
+ * Propriedades para reconstruir a entidade a partir do banco de dados.
+ */
 export type AppUserItemProps = {
-  uuid?: Uuid
-  business_info_uuid?: Uuid
-  fantasy_name?: string
-  user_info_uuid: Uuid
-  item_uuid: Uuid
-  item_type?: ItemType
-  item_category?: ItemCategory
-  img_url: string
-  item_name?: string
-  balance: number
-  status: UserItemStatus
-  employee_salary?: number
-  blocked_at?: string
-  cancelled_at?: string
-  cancelling_request_at?: string
-  block_reason?: string
-  cancel_reason?: string
-  grace_period_end_date?: string
-  group_uuid: Uuid
-  group_name?: string
-  group_value?: number
-  group_is_default?: boolean
-  created_at?: string
-  updated_at?: string
-}
+    uuid?: Uuid;
+    user_info_uuid: Uuid;
+    business_info_uuid: Uuid;
+    item_uuid: Uuid;
+    item_name: string;
+    item_category?: ItemCategory;
+    item_type?: ItemType;
+    fantasy_name?: string | null;
+    img_url?: string | null;
+    balance: number; // Em centavos
+    status: UserItemStatus;
+    group_uuid: Uuid;
+    group_name?: string;
+    group_value?: number; // Em centavos
+    group_is_default?: boolean;
+    employee_salary?: number; // Em centavos
+    blocked_at?: string | null;
+    cancelled_at?: string | null;
+    cancelling_request_at?: string | null;
+    block_reason?: string | null;
+    cancel_reason?: string | null;
+    grace_period_end_date?: string | null;
+    created_at?: string;
+    updated_at?: string;
+};
 
+/**
+ * Comando para criar uma NOVA entidade a partir da API/Usecase.
+ * Valores monetários (`balance`) vêm no formato amigável (Reais).
+ */
 export type AppUserItemCreateCommand = {
-  business_info_uuid?: Uuid
-  fantasy_name?: string
-  user_info_uuid: Uuid
-  item_uuid: Uuid
-  item_type?: ItemType
-  item_category?: ItemCategory
-  img_url: string
-  item_name?: string
-  balance: number
-  status: UserItemStatus
-  employee_salary?: number
-  group_uuid: Uuid
-  blocked_at?: string
-  cancelled_at?: string
-  block_reason?: string
-  cancel_reason?: string
-  grace_period_end_date?: string
-  created_at?: string
-  updated_at?: string
-}
+    user_info_uuid: Uuid;
+    business_info_uuid: Uuid;
+    item_uuid: Uuid;
+    item_name: string;
+    item_category: ItemCategory;
+    item_type?: ItemType;
+    fantasy_name?: string | null;
+    balance: number; // Em Reais (ex: 500.00)
+    status: UserItemStatus;
+    group_uuid: Uuid;
+    group_value: number; // Em Reais
+    group_name: string;
+    group_is_default: boolean;
+    employee_salary?: number; // Em Reais
+    img_url?: string | null;
+};
 
 export class AppUserItemEntity {
-  private _uuid?: Uuid
-  private _business_info_uuid: Uuid
-  private _fantasy_name?: string
-  private _user_info_uuid: Uuid
-  private _item_uuid: Uuid
-  private _item_type?: ItemType
-  private _item_category?: ItemCategory
-  private _img_url: string
-  private _item_name?: string
-  private _balance: number
-  private _status: UserItemStatus
-  private _employee_salary?: number
-  private _blocked_at?: string
-  private _cancelled_at?: string
-  private _cancelling_request_at?: string
-  private _block_reason?: string
-  private _cancel_reason?: string
-  private _grace_period_end_date?: string
-  private _group_uuid: Uuid
-  private _group_name?: string
-  private _group_value?: number
-  private _group_is_default: boolean
-  private _created_at?: string
-  private _updated_at?: string
+    private _uuid: Uuid;
+    private _user_info_uuid: Uuid;
+    private _business_info_uuid: Uuid;
+    private _item_uuid: Uuid;
+    private _item_name: string;
+    private _item_category: ItemCategory;
+    private _item_type: ItemType;
+    private _img_url: string | null;
+    private _balance: number; // Armazenado internamente como centavos
+    private _status: UserItemStatus;
+    private _fantasy_name: string | null;
+    private _group_uuid: Uuid;
+    private _group_name: string;
+    private _group_value: number; // Armazenado internamente como centavos
+    private _group_is_default: boolean;
+    private _employee_salary?: number;
+    private _blocked_at: string | null;
+    private _cancelled_at: string | null;
+    private _cancelling_request_at: string | null;
+    private _block_reason: string | null;
+    private _cancel_reason: string | null;
+    private _grace_period_end_date: string | null;
+    private _created_at: string;
+    private _updated_at: string;
 
-  constructor(props: AppUserItemProps) {
-    this._uuid = props.uuid ?? new Uuid()
-    this._business_info_uuid = props.business_info_uuid
-    this._fantasy_name = props.fantasy_name
-    this._user_info_uuid = props.user_info_uuid
-    this._item_uuid = props.item_uuid
-    this._img_url = props.img_url
-    this._item_name = props.item_name
-    this._balance = props.balance * 100
-    this._status = props.status ?? 'active'
-    this._group_uuid = props.group_uuid
-    this._blocked_at = props.blocked_at
-    this._cancelled_at = props.cancel_reason
-    this._cancelling_request_at = props.cancelling_request_at
-    this._block_reason = props.block_reason
-    this._cancel_reason = props.cancel_reason
-    this._grace_period_end_date = props.grace_period_end_date
-    this._group_name = props.group_name
-    this._group_value = props.group_value * 100
-    this._group_is_default = props.group_is_default
-    this._created_at = newDateF(new Date())
-    this._updated_at = newDateF(new Date())
-    this.validate()
-  }
+    private constructor(props: AppUserItemProps) {
+        this._uuid = props.uuid ?? new Uuid();
+        this._user_info_uuid = props.user_info_uuid;
+        this._business_info_uuid = props.business_info_uuid;
+        this._item_uuid = props.item_uuid;
+        this._item_name = props.item_name;
+        this._item_category = props.item_category;
+        this._item_type = props.item_type;
+        this._img_url = props.img_url ?? null;
+        this._balance = props.balance;
+        this._status = props.status;
+        this._fantasy_name = props.fantasy_name ?? null
+        this._group_uuid = props.group_uuid;
+        this._group_name = props.group_name;
+        this._group_value = props.group_value;
+        this._group_is_default = props.group_is_default;
+        this._employee_salary = props.employee_salary;
+        this._blocked_at = props.blocked_at ?? null;
+        this._cancelled_at = props.cancelled_at ?? null;
+        this._cancelling_request_at = props.cancelling_request_at ?? null;
+        this._block_reason = props.block_reason ?? null;
+        this._cancel_reason = props.cancel_reason ?? null;
+        this._grace_period_end_date = props.grace_period_end_date ?? null;
+        this._created_at = props.created_at ?? newDateF(new Date());
+        this._updated_at = props.updated_at ?? newDateF(new Date());
+        this.validate();
+    }
 
-  get uuid(): Uuid {
-    return this._uuid
-  }
+    // --- GETTERS (Retornam valores em formato amigável) ---
+    get uuid(): Uuid { return this._uuid; }
+    get user_info_uuid(): Uuid { return this._user_info_uuid; }
+    get business_info_uuid(): Uuid { return this._business_info_uuid; }
+    get item_uuid(): Uuid { return this._item_uuid; }
+    get item_name(): string { return this._item_name; }
+    get item_category(): ItemCategory { return this._item_category; }
+    get item_type(): ItemType { return this._item_type; }
+    get img_url(): string | null { return this._img_url; }
+    get balance(): number { return this._balance / 100; }
+    get status(): UserItemStatus { return this._status; }
+    get fantasy_name(): string | null { return this._fantasy_name; }
+    get group_uuid(): Uuid { return this._group_uuid; }
+    get group_name(): string { return this._group_name; }
+    get group_value(): number { return this._group_value / 100; }
+    get group_is_default(): boolean { return this._group_is_default; }
+    get employee_salary(): number | undefined { return this._employee_salary ? this._employee_salary / 100 : undefined; }
+    get blocked_at(): string | null { return this._blocked_at; }
+    get cancelled_at(): string | null { return this._cancelled_at; }
+    get cancelling_request_at(): string | null { return this._cancelling_request_at; }
+    get block_reason(): string | null { return this._block_reason; }
+    get cancel_reason(): string | null { return this._cancel_reason; }
+    get grace_period_end_date(): string | null { return this._grace_period_end_date; }
+    get created_at(): string { return this._created_at; }
+    get updated_at(): string { return this._updated_at; }
 
-  get business_info_uuid(): Uuid {
-    return this._business_info_uuid
-  }
-
-  get fantasy_name(): string {
-    return this._fantasy_name
-  }
-
-  get user_info_uuid(): Uuid {
-    return this._user_info_uuid
-  }
-
-  get item_uuid(): Uuid {
-    return this._item_uuid
-  }
-
-  get item_type(): ItemType {
-    return this._item_type
-  }
-
-  get item_category(): ItemCategory {
-    return this._item_category
-  }
-
-  get img_url(): string {
-    return this._img_url
-  }
-
-  get item_name(): string {
-    return this._item_name
-  }
-
-  get balance(): number {
-    return this._balance / 100
-  }
-
-  get status(): UserItemStatus {
-    return this._status
-  }
-
-  get employee_salary(): number {
-    return this._employee_salary
-  }
-
-  get blocked_at(): string | undefined {
-    return this._blocked_at
-  }
-
-  get cancelling_request_at(): string | undefined {
-    return this._cancelling_request_at
-  }
-
-  get cancelled_at(): string | undefined {
-    return this._cancelled_at
-  }
-
-  get block_reason(): string | undefined {
-    return this._block_reason
-  }
-
-  get cancel_reason(): string | undefined {
-    return this._cancel_reason
-  }
-
-  get grace_period_end_date(): string | undefined {
-    return this._grace_period_end_date
-  }
-
-  get group_uuid(): Uuid {
-    return this._group_uuid
-  }
-  get group_name(): string {
-    return this._group_name
-  }
-  get group_value(): number {
-    return this._group_value / 100
-  }
-
-  get group_is_default(): boolean {
-    return this._group_is_default
-  }
-  get created_at(): string | undefined {
-    return this._created_at
-  }
-
-  get updated_at(): string | undefined {
-    return this._updated_at
-  }
-
-  changeImgUrl(img_url: string) {
+    // --- MÉTODOS DE ALTERAÇÃO DE ESTADO ---
+    private touch(): void { this._updated_at = newDateF(new Date()); }
+    
+      changeImgUrl(img_url: string) {
     this._img_url = img_url
     this.validate()
   }
@@ -292,28 +234,32 @@ export class AppUserItemEntity {
     this.validate()
   }
 
-  validate() {
-    if (!this._user_info_uuid) throw new CustomError("User Info id is required", 400)
-    if (!this._item_uuid) throw new CustomError("Item id is required", 400)
-    if (this._balance < 0) throw new CustomError("Balance cannot be negative", 400);
-    if(this._balance > this._group_value) throw new CustomError("Balance cannot be higher than group value setup", 400)
-    if (typeof this._balance !== 'number' || isNaN(this._balance)) throw new CustomError("Balance must be a valid number", 400);
-
-    // Validação do status
-    if (!Object.values(UserItemStatus).includes(this._status)) {
-      throw new CustomError("Invalid status", 400);
+    
+    // --- SERIALIZAÇÃO E VALIDAÇÃO ---
+    private validate(): void {
+        if (!this._user_info_uuid) throw new CustomError("User Info id is required", 400);
+        if (!this._item_uuid) throw new CustomError("Item id is required", 400);
+        if (this._balance < 0) throw new CustomError("Balance cannot be negative", 400);
+        if(this._balance > this._group_value) throw new CustomError("Balance cannot be higher than group value setup", 400);
+        if (typeof this._balance !== 'number' || isNaN(this._balance)) throw new CustomError("Balance must be a valid number", 400);
+        if (!Object.values(UserItemStatus).includes(this._status)) throw new CustomError("Invalid status", 400);
+        if (this._item_category === 'pos_pago' && this._employee_salary !== undefined && this._balance > (this._employee_salary * 0.4)) {
+            throw new CustomError("Balance for 'pos_pago' category cannot exceed 40% of the employee's salary", 400);
+        }
+    }
+    
+    // --- MÉTODOS DE FÁBRICA ---
+    public static create(command: AppUserItemCreateCommand): AppUserItemEntity {
+        const props: AppUserItemProps = {
+            ...command,
+            balance: Math.round(command.balance * 100),
+            group_value: Math.round(command.group_value * 100),
+            employee_salary: command.employee_salary ? Math.round(command.employee_salary * 100) : undefined
+        };
+        return new AppUserItemEntity(props);
     }
 
-    //Validate balance updates
-    //Check if balance is higher than 40% of employees salary
-    if (this._item_category === 'pos_pago' && this._employee_salary !== undefined && this._balance > 0.4 * this._employee_salary) {
-      throw new CustomError("Balance for 'pos_pago' category cannot exceed 40% of the employee's salary", 400);
+    public static hydrate(props: AppUserItemProps): AppUserItemEntity {
+        return new AppUserItemEntity(props);
     }
-
-  }
-
-  static create(data: AppUserItemCreateCommand) {
-    const userItem = new AppUserItemEntity(data)
-    return userItem
-  }
 }
