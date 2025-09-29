@@ -6,7 +6,7 @@ import { ICompanyDataRepository } from "../../../../../Company/CompanyData/repos
 export class FindUserItemByIdByController {
   constructor(
     private appUserItemRepository: IAppUserItemRepository,
-    private appUserInfoRepository: IAppUserInfoRepository,
+    private businessInfoRepository: ICompanyDataRepository,
   ) { }
 
   async handle(req: Request, res: Response) {
@@ -22,12 +22,13 @@ export class FindUserItemByIdByController {
       if(req.appUser) {
         user_info_uuid = req.appUser.user_info_uuid
       }
-      const usecase = new FindUserItemByIdUsecase(this.appUserItemRepository, this.appUserInfoRepository)
+      const usecase = new FindUserItemByIdUsecase(this.appUserItemRepository, this.businessInfoRepository)
 
       const result = await usecase.execute(userItemId, business_user_business_info_uuid, user_info_uuid)
 
       return res.json(result)
     } catch (err: any) {
+      console.log({err})
       return res.status(err.statusCode).json({
         error: err.message
       })
