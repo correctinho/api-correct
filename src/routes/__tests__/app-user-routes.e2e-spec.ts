@@ -2694,7 +2694,7 @@ describe('E2E App User tests', () => {
                     // ACT: Chame a API com o input correto
                     const input = {
                         user_info_uuid: funcionarioParaCriarUuid,
-                        item_uuid: valeAlimentacaoEmployerItemUuid, // <-- Use o UUID correto aqui também
+                        item_uuid: valeAlimentacaoEmployerItemUuid, 
                     };
                     const result = await request(app)
                         .patch('/user-item/activate')
@@ -4697,7 +4697,7 @@ describe('E2E App User tests', () => {
 
                     // Validação do setup: Confirmamos que o saldo inicial do convênio é R$ 350,00
                     expect(employee2_convenio_initial_limit_in_cents).toBe(
-                        350
+                        35000
                     );
                 });
 

@@ -242,24 +242,26 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         });
     }
     async update(entity: AppUserItemEntity): Promise<void> {
+        const dataToSave = entity.toJSON()
         await prismaClient.userItem.update({
             where: {
-                uuid: entity.uuid.uuid,
+                uuid: dataToSave.uuid,
             },
             data: {
-                uuid: entity.uuid.uuid,
-                user_info_uuid: entity.user_info_uuid.uuid,
-                item_uuid: entity.item_uuid.uuid,
-                item_name: entity.item_name,
-                balance: entity.balance,
-                status: entity.status,
-                blocked_at: entity.blocked_at,
-                cancelled_at: entity.cancelled_at,
-                block_reason: entity.block_reason,
-                cancel_reason: entity.cancel_reason,
-                cancelling_request_at: entity.cancelling_request_at,
-                grace_period_end_date: entity.grace_period_end_date,
-                updated_at: entity.updated_at,
+                uuid: dataToSave.uuid,
+                user_info_uuid: dataToSave.user_info_uuid,
+                group_uuid: dataToSave.group_uuid,
+                item_uuid: dataToSave.item_uuid,
+                item_name: dataToSave.item_name,
+                balance: dataToSave.balance,
+                status: dataToSave.status,
+                blocked_at: dataToSave.blocked_at,
+                cancelled_at: dataToSave.cancelled_at,
+                block_reason: dataToSave.block_reason,
+                cancel_reason: dataToSave.cancel_reason,
+                cancelling_request_at: dataToSave.cancelling_request_at,
+                grace_period_end_date: dataToSave.grace_period_end_date,
+                updated_at: dataToSave.updated_at,
             },
         });
     }
@@ -329,7 +331,6 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
                 BenefitGroups: true,
             },
         });
-
         if (userItemsData.length === 0) {
             return [];
         }
