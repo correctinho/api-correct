@@ -234,13 +234,41 @@ export class AppUserItemEntity {
     this.validate()
   }
 
+  public toJSON(){
+    return {
+      uuid: this._uuid.uuid,
+      user_info_uuid: this._user_info_uuid.uuid,
+      business_info_uuid: this._business_info_uuid.uuid,
+      item_uuid: this._item_uuid.uuid,
+      item_name: this._item_name,
+      item_category: this._item_category,
+      item_type: this._item_type,
+      img_url: this._img_url,
+      balance: this._balance,
+      status: this._status,
+      fantasy_name: this._fantasy_name,
+      group_uuid: this._group_uuid.uuid,
+      group_name: this._group_name,
+      group_value: this._group_value,
+      group_is_default: this._group_is_default,
+      employee_salary: this._employee_salary,
+      blocked_at: this._blocked_at,
+      cancelled_at: this._cancelled_at,
+      cancelling_request_at: this._cancelling_request_at,
+      block_reason: this._block_reason,
+      cancel_reason: this._cancel_reason,
+      grace_period_end_date: this._grace_period_end_date,
+      created_at: this._created_at,
+      updated_at: this._updated_at
+    }
+  }
     
     // --- SERIALIZAÇÃO E VALIDAÇÃO ---
     private validate(): void {
         if (!this._user_info_uuid) throw new CustomError("User Info id is required", 400);
         if (!this._item_uuid) throw new CustomError("Item id is required", 400);
         if (this._balance < 0) throw new CustomError("Balance cannot be negative", 400);
-        if(this._balance > this._group_value) throw new CustomError("Balance cannot be higher than group value setup", 400);
+        if(this.item_name !== "Correct" && this._balance > this._group_value) throw new CustomError("Balance cannot be higher than group value setup", 400);
         if (typeof this._balance !== 'number' || isNaN(this._balance)) throw new CustomError("Balance must be a valid number", 400);
         if (!Object.values(UserItemStatus).includes(this._status)) throw new CustomError("Invalid status", 400);
         if (this._item_category === 'pos_pago' && this._employee_salary !== undefined && this._balance > (this._employee_salary * 0.4)) {

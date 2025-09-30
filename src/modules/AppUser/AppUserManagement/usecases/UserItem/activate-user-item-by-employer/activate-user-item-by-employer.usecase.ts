@@ -125,8 +125,7 @@ export class ActivateUserItemByEmployerUsecase {
         }
 
         // 2. Lógica de "Upsert" do UserItem
-        let employeeItemEntity =
-            await this.appUserItemRepository.findItemByEmployeeAndBusiness(
+        let employeeItemEntity = await this.appUserItemRepository.findItemByEmployeeAndBusiness(
                 input.user_info_uuid,
                 input.business_info_uuid,
                 input.item_uuid
@@ -150,7 +149,6 @@ export class ActivateUserItemByEmployerUsecase {
             employeeItemEntity.changeGroupUuid(targetGroup.uuid);
             employeeItemEntity.changeGroupValue(targetGroup.value);
             employeeItemEntity.changeBalance(targetGroup.value); // O getter já retorna em Reais
-
             await this.appUserItemRepository.update(employeeItemEntity);
         } else {
             // Se o item NÃO EXISTE (primeira vez), criamos a entidade do zero.
