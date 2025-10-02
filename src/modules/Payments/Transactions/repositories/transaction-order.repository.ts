@@ -54,6 +54,7 @@ export interface ITransactionOrderRepository
     ): Promise<ProcessPaymentByBusinessResult>;
     createPendingCashIn(
         userId: Uuid,
+        userItem: Uuid,
         amountInCents: number
     ): Promise<TransactionEntity>;
     updateTxId(transactionId: Uuid, txid: string): Promise<void>;

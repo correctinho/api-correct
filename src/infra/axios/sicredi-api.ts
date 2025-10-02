@@ -5,11 +5,12 @@ import path from 'path'; // <<< Importe o módulo 'path'
 
 export const createSicrediAxiosClient = () => {
 
+    const projectRoot = path.resolve(__dirname, '../../..')
     // Usamos path.resolve para garantir que o caminho seja construído
     // a partir da raiz do projeto, independentemente de onde o script é executado.
-    const keyPath = path.resolve('./src/infra/axios/certs/api-pix-jseren.key');
-    const certPath = path.resolve('./src/infra/axios/certs/32275282000126.cer');
-    const caPath = path.resolve('./src/infra/axios/certs/CadeiaCompletaSicredi.cer');
+    const keyPath = path.join(projectRoot, './src/infra/axios/certs', 'api-pix-jseren.key');
+    const certPath = path.join(projectRoot, './src/infra/axios/certs', '32275282000126.cer');
+    const caPath = path.join(projectRoot, './src/infra/axios/certs', 'CadeiaCompletaSicredi.cer');
 
     // const keyPath = path.resolve(process.env.SICREDI_PRIVATE_KEY_PATH!);
     // const certPath = path.resolve(process.env.SICREDI_CERT_PATH!);
