@@ -3,12 +3,14 @@ import { IPixProvider } from '../../../../../infra/providers/PixProvider/IPixPro
 import { IAppUserInfoRepository } from '../../../../AppUser/AppUserManagement/repositories/app-user-info.repository';
 import { ITransactionOrderRepository } from '../../../Transactions/repositories/transaction-order.repository';
 import { CreatePixChargeByAppUserUsecase } from './create-pix-charge-by-app-user.usecase';
+import { IAppUserItemRepository } from '../../../../AppUser/AppUserManagement/repositories/app-user-item-repository';
 
 export class CreatePixChargeController {
     constructor(
         private readonly pixProvider: IPixProvider,
         private readonly transactionRepository: ITransactionOrderRepository,
-        private readonly userInfoRepository: IAppUserInfoRepository
+        private readonly userInfoRepository: IAppUserInfoRepository,
+        private readonly userItemRepository: IAppUserItemRepository
     ) {}
 
     async handle(req: Request, res: Response) {
@@ -19,7 +21,8 @@ export class CreatePixChargeController {
             const usecase = new CreatePixChargeByAppUserUsecase(
                 this.pixProvider,
                 this.transactionRepository,
-                this.userInfoRepository
+                this.userInfoRepository,
+                this.userItemRepository
             )
 
             const result = await usecase.execute(data)
