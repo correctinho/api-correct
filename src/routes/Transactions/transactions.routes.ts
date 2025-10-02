@@ -8,7 +8,7 @@ import { geTransactionReceiptController } from "../../modules/Payments/Transacti
 import { generateReceiptPDFController } from "../../modules/Payments/Transactions/useCases/get-transaction-receipt/generate-receipt-pdf";
 import { processPaymentByPartnerController } from "../../modules/Payments/Transactions/useCases/process-payment-by-partner";
 import { sseSubscribe } from "../../infra/sse/sse.config";
-import { createPixChargeController } from "../../modules/Payments/Pix/usecases/create-pix-charge";
+import { createPixChargeController } from "../../modules/Payments/Pix/usecases/create-pix-charge-by-app-user";
 import { processPixWebhook } from "../../modules/Payments/Pix/usecases/process-pix-webhook";
 
 const transactionsRouter = Router()
