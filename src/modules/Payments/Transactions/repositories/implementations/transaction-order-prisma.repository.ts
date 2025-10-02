@@ -30,6 +30,7 @@ export class TransactionOrderPrismaRepository
 {
     async createPendingCashIn(
         userId: Uuid,
+        userItem: Uuid,
         amountInCents: number
     ): Promise<TransactionEntity> {
         const transactionData = await prismaClient.transactions.create({
@@ -37,6 +38,7 @@ export class TransactionOrderPrismaRepository
                 // Geramos um novo UUID para a nossa transação
                 uuid: new Uuid().uuid,
                 favored_user_uuid: userId.uuid,
+                user_item_uuid: userItem.uuid,
                 original_price: amountInCents,
                 net_price: amountInCents,
                 partner_credit_amount: 0, // Não se aplica a cash-in
