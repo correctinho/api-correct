@@ -271,9 +271,9 @@ export class AppUserItemEntity {
         if(this.item_name !== "Correct" && this._balance > this._group_value) throw new CustomError("Balance cannot be higher than group value setup", 400);
         if (typeof this._balance !== 'number' || isNaN(this._balance)) throw new CustomError("Balance must be a valid number", 400);
         if (!Object.values(UserItemStatus).includes(this._status)) throw new CustomError("Invalid status", 400);
-        if (this._item_category === 'pos_pago' && this._employee_salary !== undefined && this._balance > (this._employee_salary * 0.4)) {
-            throw new CustomError("Balance for 'pos_pago' category cannot exceed 40% of the employee's salary", 400);
-        }
+        // if (this._item_category === 'pos_pago' && this._employee_salary !== undefined && this._balance > (this._employee_salary * 0.4)) {
+        //     throw new CustomError("Balance for 'pos_pago' category cannot exceed 40% of the employee's salary", 400);
+        // }
     }
     
     // --- MÉTODOS DE FÁBRICA ---
