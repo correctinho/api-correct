@@ -6,7 +6,7 @@ import { ITransactionOrderRepository } from "../../../Transactions/repositories/
 import { InputCreatePixChargeDTO, OutputCreatePixChargeDTO } from "./dto/create-pix-charge.dto";
 import qrcode from 'qrcode';
 
-export class CreatePixChargeUsecase {
+export class CreatePixChargeByAppUserUsecase {
     constructor(
         private readonly pixProvider: IPixProvider,
         private readonly transactionRepository: ITransactionOrderRepository,
