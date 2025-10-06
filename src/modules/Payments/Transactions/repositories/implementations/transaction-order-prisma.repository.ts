@@ -53,6 +53,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
                     409
                 );
             }
+            
             if (dbTransaction.net_price !== amountReceivedInCents) {
                  throw new CustomError(
                     `Mismatched amount for transaction ${transactionUuidString}. Expected: ${dbTransaction.net_price}, Received: ${amountReceivedInCents}.`,

@@ -17,7 +17,6 @@ export class CreatePixChargeController {
         try {
             const data = req.body;
             data.userId = req.appUser.user_info_uuid
-
             const usecase = new CreatePixChargeByAppUserUsecase(
                 this.pixProvider,
                 this.transactionRepository,
