@@ -1,9 +1,12 @@
 import { AxiosInstance } from 'axios';
 import qs from 'qs';
 import {
+    ChargeDetailsResult,
     IPixProvider,
     PixChargeCreationData,
     PixChargeCreationResult,
+    PixDetailsResult,
+    WebhookConfigurationResult,
 } from '../../IPixProvider';
 import { createSicrediAxiosClient } from '../../../../axios/sicredi-api';
 import redisClient from '../../../../redis/redis.client';
@@ -20,7 +23,7 @@ export class SicrediPixProvider implements IPixProvider {
         this.apiClient = createSicrediAxiosClient();
     }
 
-    private async getAccessToken(): Promise<string> {
+    public async getAccessToken(): Promise<string> {
         const cachedToken = await redisClient.get(this.REDIS_TOKEN_KEY);
         if (cachedToken) {
             return cachedToken;
@@ -142,6 +145,64 @@ export class SicrediPixProvider implements IPixProvider {
                 error.response?.data || error.message
             );
             throw new Error('Falha ao criar cobrança PIX no Sicredi.');
+        }
+    }
+
+    public async getChargeByTxid(txid: string): Promise<ChargeDetailsResult> {
+        const token = await this.getAccessToken();
+
+        // O endpoint para consultar uma cobrança é /cob/{txid}
+        const endpoint = `/api/v2/cob/${txid}`;
+
+        console.log(`SicrediPixProvider: Consultando cobrança com txid: ${txid}`);
+
+        try {
+            const response = await this.apiClient.get(endpoint, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            // A resposta já corresponde à nossa interface ChargeDetailsResult
+            return response.data;
+
+        } catch (error: any) {
+            console.error(
+                '❌ ERRO ao consultar cobrança no Sicredi:',
+                error.response?.data || error.message
+            );
+
+            if (error.response?.status === 404) {
+                throw new Error('Cobrança não encontrada no Sicredi.');
+            }
+            
+            throw new Error('Falha ao consultar cobrança no Sicredi.');
+        }
+    }
+
+    public async getWebhookConfiguration(pixKey: string): Promise<WebhookConfigurationResult> {
+        const token = await this.getAccessToken();
+
+        const endpoint = `/api/v2/webhook/${pixKey}`;
+
+        console.log(`SicrediPixProvider: Consultando webhook para a chave: ${pixKey}`);
+
+        try {
+            const response = await this.apiClient.get(endpoint, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            return response.data;
+
+        } catch (error: any) {
+            console.error(
+                '❌ ERRO ao consultar configuração de webhook no Sicredi:',
+                error.response?.data || error.message
+            );
+
+            if (error.response?.status === 404) {
+                throw new Error('Nenhum webhook configurado para esta chave Pix.');
+            }
+            
+            throw new Error('Falha ao consultar configuração de webhook no Sicredi.');
         }
     }
 }

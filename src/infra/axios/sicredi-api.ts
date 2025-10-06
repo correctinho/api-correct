@@ -1,29 +1,33 @@
 import axios from 'axios';
 import https from 'https';
-import fs from 'fs'; // <<< Importe o módulo 'fs'
-import path from 'path'; // <<< Importe o módulo 'path'
+import fs from 'fs'; 
+import path from 'path';
 
 export const createSicrediAxiosClient = () => {
+    // 1. Leia os CAMINHOS das variáveis de ambiente
+    const keyPath = process.env.SICREDI_PRIVATE_KEY;
+    const certPath = process.env.SICREDI_CERT;
+    const caPath = process.env.SICREDI_CA_CERT;
 
-    const projectRoot = path.resolve(__dirname, '../../..')
-    // Usamos path.resolve para garantir que o caminho seja construído
-    // a partir da raiz do projeto, independentemente de onde o script é executado.
-    const keyPath = path.join(projectRoot, './src/infra/axios/certs', 'api-pix-jseren.key');
-    const certPath = path.join(projectRoot, './src/infra/axios/certs', '32275282000126.cer');
-    const caPath = path.join(projectRoot, './src/infra/axios/certs', 'CadeiaCompletaSicredi.cer');
+    // 2. Adicione verificações (boa prática)
+    if (!keyPath) { throw new Error("SICREDI_PRIVATE_KEY não definido ou vazio."); } // Ajustei a mensagem aqui para refletir o nome da variável
+    if (!certPath) { throw new Error("SICREDI_CERT não definido ou vazio."); }
+    if (!caPath) { throw new Error("SICREDI_CA_CERT não definido ou vazio."); }
 
-    // const keyPath = path.resolve(process.env.SICREDI_PRIVATE_KEY_PATH!);
-    // const certPath = path.resolve(process.env.SICREDI_CERT_PATH!);
-    // const caPath = path.resolve(process.env.SICREDI_CA_CERT_PATH!);
-    // 1. Configura o Agente HTTPS, lendo o CONTEÚDO de cada arquivo
+    // // --- ADICIONE ESTES CONSOLE.LOGS PARA VER O CAMINHO RESOLVIDO ---
+    // const resolvedKeyPath = path.resolve(keyPath);
+    // const resolvedCertPath = path.resolve(certPath);
+    // const resolvedCaPath = path.resolve(caPath);
+
+    // 3. Crie o Agente HTTPS, LENDO O CONTEÚDO de cada arquivo
     const httpsAgent = new https.Agent({
-        key: fs.readFileSync(keyPath),
-        cert: fs.readFileSync(certPath),
-        ca: fs.readFileSync(caPath),
+        key: keyPath,  
+        cert: certPath,
+        ca: caPath,
         rejectUnauthorized: false
     });
 
-    // 2. Cria e retorna a instância do Axios
+    // 4. Cria e retorna a instância do Axios
     return axios.create({
         baseURL: 'https://api-pix.sicredi.com.br',
         httpsAgent: httpsAgent,

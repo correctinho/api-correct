@@ -18,8 +18,12 @@ export type ProcessPaymentByBusinessResult = {
     amountPaidFromLiquidBalance: number;
     payerFinalLiquidBalance: number;
 };
-export interface ITransactionOrderRepository
-    extends RepositoryInterface<TransactionEntity> {
+
+export type ProcessAppUserPixCreditPaymentResult = {
+    success: boolean;
+    finalCreditedUserItemBalance: number;
+};
+export interface ITransactionOrderRepository extends RepositoryInterface<TransactionEntity> {
     savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity>;
     processSplitPrePaidPayment(
         transactionEntity: TransactionEntity,
@@ -58,4 +62,8 @@ export interface ITransactionOrderRepository
         amountInCents: number
     ): Promise<TransactionEntity>;
     updateTxId(transactionId: Uuid, txid: string): Promise<void>;
-}
+    findByProviderTxId(providerTxId: string): Promise<TransactionEntity | null>;
+    processAppUserPixCreditPayment(
+        transactionEntity: TransactionEntity,
+        amountReceivedInCents: number,
+    ): Promise<ProcessAppUserPixCreditPaymentResult>;}
