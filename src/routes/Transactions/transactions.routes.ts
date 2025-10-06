@@ -10,6 +10,7 @@ import { processPaymentByPartnerController } from "../../modules/Payments/Transa
 import { sseSubscribe } from "../../infra/sse/sse.config";
 import { createPixChargeController } from "../../modules/Payments/Pix/usecases/create-pix-charge-by-app-user";
 import { processPixWebhook } from "../../modules/Payments/Pix/usecases/process-pix-webhook";
+import { createMockPixChargeController } from "../../modules/Payments/Pix/usecases/create-pix-charge-by-app-user/index.mock";
 
 const transactionsRouter = Router()
 
@@ -47,14 +48,18 @@ transactionsRouter.get("/transaction/:transactionId/download", async (request, r
 // Endpoint para o PDV se inscrever e ouvir atualizações de uma transação via SSE
 transactionsRouter.get("/transactions/:transactionId/subscribe", sseSubscribe);
 
-// Create Pix Charge
-transactionsRouter.post('/transaction/pix/charge', appUserIsAuth, async (request, response) => {
+// Create Pix Charge By AppUser
+transactionsRouter.post('/transaction/pix/charge/app-user', appUserIsAuth, async (request, response) => {
   await createPixChargeController.handle(request, response)
 })
 
+// Create Pix Charge By AppUser - Mocked - For E2E Testes
+transactionsRouter.post('/transaction/pix/charge/app-user/mocked', appUserIsAuth, async (request, response) => {
+  await createMockPixChargeController.handle(request, response)
+})
 transactionsRouter.post(
     "/webhooks/sicredi-pix",
-    (req, res) => processPixWebhook.handle(req, res)
+    async (req, res) => await processPixWebhook.handle(req, res)
 );
 
 export { transactionsRouter }
