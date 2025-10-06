@@ -14,6 +14,38 @@ export interface PixChargeCreationResult {
     // ... qualquer outro campo comum que seja retornado por provedores PIX
 }
 
+export interface ChargeDetailsResult {
+    status: string; // Ex: "ATIVA" ou "CONCLUIDA"
+    txid: string;
+    valor: {
+        original: string;
+    };
+    chave: string;
+    // O campo 'pix' é opcional. Ele só existirá se a cobrança já foi paga.
+    pix?: PixDetailsResult[]; 
+}
+
+export interface PixDetailsResult {
+    endToEndId: string;
+    txid: string;
+    valor: string;
+    horario: string; // Timestamp da transação
+    chave: string;
+    infoPagador?: string;
+    devolucoes?: Array<{
+        id: string;
+        rtrId: string;
+        valor: string;
+        status: string;
+    }>;
+}
+
+export interface WebhookConfigurationResult {
+    webhookUrl: string;
+    chave: string;
+    criacao: string; // Timestamp de criação
+}
+
 // A Interface (O Contrato)
 export interface IPixProvider {
     /**
@@ -23,6 +55,19 @@ export interface IPixProvider {
      */
     createImmediateCharge(chargeData: PixChargeCreationData): Promise<PixChargeCreationResult>;
 
+    /**
+     * Consulta os detalhes de um Pix recebido a partir do seu EndToEndId.
+     * @param e2eId O EndToEndId da transação Pix.
+     * @returns Uma promessa que resolve com os detalhes do Pix.
+     */
+    getChargeByTxid(txid: string): Promise<ChargeDetailsResult>;
+
+     /**
+     * Consulta a configuração de Webhook para uma chave Pix específica.
+     * @param pixKey A chave Pix cuja configuração de webhook será consultada.
+     * @returns Uma promessa que resolve com os detalhes da configuração do webhook.
+     */
+    getWebhookConfiguration(pixKey: string): Promise<WebhookConfigurationResult>;
     // No futuro, poderíamos adicionar outros métodos aqui, como:
     // getChargeStatus(txid: string): Promise<PixChargeStatus>;
 }

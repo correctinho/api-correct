@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
-import { AppUserItemEntity } from '../../../../AppUser/AppUserManagement/entities/app-user-item.entity';
 import {
     TransactionEntity,
     TransactionProps,
 } from '../../entities/transaction-order.entity';
 import {
     ITransactionOrderRepository,
+    ProcessAppUserPixCreditPaymentResult,
     ProcessPaymentByBusinessParams,
     ProcessPaymentByBusinessResult,
 } from '../transaction-order.repository';
@@ -25,9 +25,150 @@ import {
 } from '../../../../../utils/date';
 import { prismaClient } from '../../../../../infra/databases/prisma.config';
 
-export class TransactionOrderPrismaRepository
-    implements ITransactionOrderRepository
-{
+export class TransactionOrderPrismaRepository implements ITransactionOrderRepository {
+     async processAppUserPixCreditPayment(
+        transactionEntity: TransactionEntity, // <--- Recebe a TransactionEntity
+        amountReceivedInCents: number,
+    ): Promise<ProcessAppUserPixCreditPaymentResult> {
+        const transactionUuidString = transactionEntity.uuid.uuid;
+            // Re-buscar a transação para garantir que estamos trabalhando com os dados mais recentes
+            // ou se quiser otimizar, pode assumir que a transactionEntity está atualizada
+            // e apenas usar seu `uuid` para o `update` no final.
+            // Para maior segurança, vamos buscar novamente.
+        const result = await prismaClient.$transaction(async (tx) => {
+            const dbTransaction = await tx.transactions.findUnique({
+                where: { uuid: transactionUuidString },
+                select: { uuid: true, user_item_uuid: true, net_price: true, status: true },
+            });
+
+            if (!dbTransaction) { // Caso a transação tenha sido deletada entre a busca no usecase e aqui
+                 throw new CustomError(
+                    `Transaction with UUID ${transactionUuidString} not found during PIX credit processing.`,
+                    404
+                );
+            }
+            if (dbTransaction.status !== TransactionStatus.pending) {
+                 throw new CustomError(
+                    `Transaction ${transactionUuidString} is not in 'pending' status (${dbTransaction.status}). Cannot process AppUser PIX credit.`,
+                    409
+                );
+            }
+            if (dbTransaction.net_price !== amountReceivedInCents) {
+                 throw new CustomError(
+                    `Mismatched amount for transaction ${transactionUuidString}. Expected: ${dbTransaction.net_price}, Received: ${amountReceivedInCents}.`,
+                    409
+                );
+            }
+
+            const creditedUserItemUuid = dbTransaction.user_item_uuid; // Use o da transação do DB
+            if (!creditedUserItemUuid) {
+                throw new CustomError(
+                    `Transaction ${transactionUuidString} does not have a user_item_uuid for credit.`,
+                    500
+                );
+            }
+
+            const creditedUserItem = await tx.userItem.findUnique({
+                where: { uuid: creditedUserItemUuid },
+                select: { uuid: true, balance: true }
+            });
+
+            if (!creditedUserItem) {
+                throw new CustomError(
+                    `Credited AppUser UserItem with UUID ${creditedUserItemUuid} not found for transaction ${transactionUuidString}.`,
+                    404
+                );
+            }
+
+            const creditedItemBalanceBefore = creditedUserItem.balance;
+            const creditedItemBalanceAfter = creditedItemBalanceBefore + amountReceivedInCents;
+
+            // --- Executar Atualizações Atômicas ---
+            // 1. Creditar o saldo no UserItem do AppUser
+            await tx.userItem.update({
+                where: { uuid: creditedUserItemUuid },
+                data: {
+                    balance: { increment: amountReceivedInCents },
+                    updated_at: newDateF(new Date()),
+                },
+            });
+             // 2. Registrar no Histórico do UserItem do AppUser
+            await tx.userItemHistory.create({
+                data: {
+                    user_item_uuid: creditedUserItemUuid,
+                    event_type: UserItemEventType.PIX_RECEIVED,
+                    amount: amountReceivedInCents,
+                    balance_before: creditedItemBalanceBefore,
+                    balance_after: creditedItemBalanceAfter,
+                    related_transaction_uuid: transactionUuidString
+                },
+            });
+
+            // 3. Atualizar a Transação com os dados da entidade
+            await tx.transactions.update({
+                where: { uuid: transactionUuidString },
+                data: {
+                    status: transactionEntity.status, // Usa o status já definido na entidade (success)
+                    paid_at: transactionEntity.paid_at, // Usa a data definida na entidade (string)
+                    pix_e2e_id: transactionEntity.pix_e2e_id, // Usa o endToEndId definido na entidade
+                    updated_at: transactionEntity.updated_at, // Usa o updated_at definido na entidade
+                    // Não alteramos provider_tx_id aqui, ele deve ter sido definido na criação da cobrança
+                },
+            });
+            return {
+                success: true,
+                finalCreditedUserItemBalance: creditedItemBalanceAfter,
+            };
+        })
+        return result
+    }
+        
+    async findByProviderTxId(providerTxId: string): Promise<TransactionEntity | null> {
+        const transactionPix = await prismaClient.transactions.findFirst({
+            where:{
+                provider_tx_id: providerTxId
+            },
+        })
+
+        if(!transactionPix){ return null}
+
+        const transactionProps: TransactionProps = {
+            uuid: new Uuid(transactionPix.uuid),
+            user_item_uuid: transactionPix.user_item_uuid
+                ? new Uuid(transactionPix.user_item_uuid)
+                : null,
+            favored_user_uuid: transactionPix.favored_user_uuid
+                ? new Uuid(transactionPix.favored_user_uuid)
+                : null,
+            favored_business_info_uuid:
+                transactionPix.favored_business_info_uuid
+                    ? new Uuid(transactionPix.favored_business_info_uuid)
+                    : null,
+            original_price: transactionPix.original_price,
+            discount_percentage: transactionPix.discount_percentage,
+            net_price: transactionPix.net_price,
+            fee_percentage: transactionPix.fee_percentage,
+            fee_amount: transactionPix.fee_amount,
+            partner_credit_amount: transactionPix.partner_credit_amount,
+            cashback: transactionPix.cashback,
+            description: transactionPix.description,
+            status: transactionPix.status,
+            transaction_type: transactionPix.transaction_type,
+            favored_partner_user_uuid: transactionPix.favored_partner_user_uuid
+                ? new Uuid(transactionPix.favored_partner_user_uuid)
+                : null,
+            paid_at: transactionPix.paid_at,
+            provider_tx_id: transactionPix.provider_tx_id,
+            pix_e2e_id: transactionPix.pix_e2e_id,
+            created_at: transactionPix.created_at,
+            updated_at: transactionPix.updated_at,
+        };
+
+        // 3. Usa o método estático 'hydrate' para reconstruir a entidade completa.
+        //    Isso garante que o objeto retornado seja uma instância de classe real.
+        return TransactionEntity.hydrate(transactionProps);
+
+    }
     async createPendingCashIn(
         userId: Uuid,
         userItem: Uuid,
@@ -43,7 +184,7 @@ export class TransactionOrderPrismaRepository
                 net_price: amountInCents,
                 partner_credit_amount: 0, // Não se aplica a cash-in
                 status: TransactionStatus.pending,
-                transaction_type: TransactionType.CASH_IN_PIX,
+                transaction_type: TransactionType.CASH_IN_PIX_USER,
                 created_at: newDateF(new Date()), 
             },
         });

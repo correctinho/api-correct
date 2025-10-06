@@ -10,9 +10,16 @@ async function testIntegration() {
     try {
         const sicrediClient = new SicrediPixProvider();
         const tokenKey = 'sicredi:pix:access_token';
-
+        
         // Verificamos se o token já existe no cache para saber se um novo será buscado
         const tokenExistsBefore = await redisClient.exists(tokenKey);
+
+        const tokenValue = await sicrediClient.getAccessToken();
+
+        console.log("\n✅ Teste de conexão/obtenção de token finalizado.");
+
+        // 2. VISUALIZA o valor do token obtido.
+        console.log(` -> Valor do token: ${tokenValue}`);
 
         console.log("\n✅ Token de Acesso obtido com sucesso!");
 

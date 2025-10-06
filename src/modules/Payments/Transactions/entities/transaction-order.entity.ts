@@ -29,6 +29,8 @@ export type TransactionProps = {
   paid_at?: string | null; // Optional: Date when the transaction was paid
   item_uuid?: string
   favored_partner_user_uuid?: Uuid | null; // Optional: FK to PartnerUser
+  provider_tx_id?: string | null; //
+  pix_e2e_id?: string | null;
   created_at?: string; // Optional: Handled by constructor/DB
   updated_at?: string; // Optional: Handled by constructor/DB
 };
@@ -75,6 +77,8 @@ export class TransactionEntity {
   private _favored_partner_user_uuid?: Uuid | null;
   private _correct_account_uuid?: Uuid | null;
   private _correct_account_balance?: number; // Optional: current balance in cents for correct account
+  private _provider_tx_id?: string | null; // <-- Adicionado
+  private _pix_e2e_id?: string | null; 
   private _created_at: string;
   private _updated_at: string;
 
@@ -103,6 +107,9 @@ export class TransactionEntity {
     this._paid_at = newDateF(new Date());
     this._item_uuid = props.item_uuid;
     this._favored_partner_user_uuid = props.favored_partner_user_uuid ?? null;
+
+    this._provider_tx_id = props.provider_tx_id ?? null;
+    this._pix_e2e_id = props.pix_e2e_id ?? null; 
     this._created_at = props.created_at ?? newDateF(new Date());
     this._updated_at = newDateF(new Date());
   }
@@ -132,10 +139,31 @@ export class TransactionEntity {
   get favored_partner_user_uuid(): Uuid | null { return this._favored_partner_user_uuid; }
   get correct_account_uuid(): Uuid | null { return this._correct_account_uuid; }
   get correct_account_balance(): number | null { return this._correct_account_balance; }
+   get provider_tx_id(): string | null { return this._provider_tx_id; }
+  get pix_e2e_id(): string | null { return this._pix_e2e_id; }
   get created_at(): string { return this._created_at; }
   get updated_at(): string { return this._updated_at; }
 
-  // --- Methods to change state ---
+  setPixPaymentDetails(endToEndId: string, paidAt: string): void {
+        if (this._status !== TransactionStatus.pending) {
+            throw new CustomError(`Cannot set PIX payment details on a transaction that is not 'pending'. Current status: ${this._status}`, 400);
+        }
+        this._pix_e2e_id = endToEndId;
+        this._paid_at = paidAt;
+        this._status = TransactionStatus.success; // Automaticamente marca como sucesso
+        this._updated_at = newDateF(new Date());
+        this.validate();
+    }
+
+    
+    setProviderTxId(txid: string): void {
+        if (this._provider_tx_id && this._provider_tx_id !== txid) {
+            console.warn(`Provider TX ID already set for transaction ${this.uuid.uuid}. Overwriting from ${this._provider_tx_id} to ${txid}.`);
+        }
+        this._provider_tx_id = txid;
+        this._updated_at = newDateF(new Date());
+        this.validate();
+    }
 
   changeStatus(newStatus: TransactionStatus): void {
 
@@ -343,6 +371,8 @@ export class TransactionEntity {
       status: this._status,
       transaction_type: this._transaction_type,
       favored_partner_user_uuid: this._favored_partner_user_uuid ? this._favored_partner_user_uuid.uuid : null,
+      provider_tx_id: this._provider_tx_id, 
+      pix_e2e_id: this._pix_e2e_id,
       created_at: this._created_at,
     };
   }
