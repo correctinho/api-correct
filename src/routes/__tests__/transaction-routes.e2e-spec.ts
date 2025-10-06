@@ -3,6 +3,7 @@ import { app } from '../../app';
 import { InputCreateAppUserDTO } from '../../modules/AppUser/app-user-dto/app-user.dto';
 import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto';
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo';
+import { prismaClient } from '../../infra/databases/prisma.config';
 
 let userToken1: string;
 let userToken2: string;
@@ -442,7 +443,7 @@ describe('E2E Transactions', () => {
 
         expect(appUser1.statusCode).toBe(201);
         expect(appUser1.body.is_active).toEqual(inputNewAppUser1.is_active);
-
+        
         const appUser2 = await request(app)
             .post('/app-user')
             .send(inputNewAppUser2);
@@ -478,8 +479,80 @@ describe('E2E Transactions', () => {
 
         userToken3 = loginAppUser3.body.token;
         expect(loginAppUser3.statusCode).toBe(200);
+
+        //*****Craete User Info***** */
+        //***create user info 1***** */
+        const inputUserInfo1: 
+        any = {
+            document: authenticateAppUser1.document,
+            document2: '24875492',
+            document3: '56121561258',
+            full_name: 'User Full Name',
+            display_name: null,
+            gender: 'Masculino',
+            date_of_birth: '15/08/1998',
+            phone: '679654874520',
+            email: null,
+            status: null,
+            marital_status: 'casado',
+            dependents_quantity: 1,
+        };
+
+        const resultUserInfo1 = await request(app)
+            .post('/app-user/info')
+            .set('Authorization', `Bearer ${userToken1}`)
+            .send(inputUserInfo1);
+        expect(resultUserInfo1.statusCode).toBe(201);
+
+        //***create user info 12***** */
+        const inputUserInfo2: 
+        any = {
+            document: authenticateAppUser2.document,
+            document2: '248754vd92',
+            document3: '561215dfwwv61258',
+            full_name: 'User Full Name',
+            display_name: null,
+            gender: 'Masculino',
+            date_of_birth: '15/08/1998',
+            phone: '6796548444520',
+            email: null,
+            status: null,
+            marital_status: 'casado',
+            dependents_quantity: 1,
+        };
+        
+        const resultUserInfo2 = await request(app)
+            .post('/app-user/info')
+            .set('Authorization', `Bearer ${userToken2}`)
+            .send(inputUserInfo2);
+        console.log(resultUserInfo2.body)
+        expect(resultUserInfo2.statusCode).toBe(201);
+
+        //***create user info 3***** */
+        const inputUserInfo3: 
+        any = {
+            document: authenticateAppUser3.document,
+            document2: '248asdsdv75492',
+            document3: '5612156fev1258',
+            full_name: 'User Full Name',
+            display_name: null,
+            gender: 'Masculino',
+            date_of_birth: '15/08/1998',
+            phone: '679654874820',
+            email: null,
+            status: null,
+            marital_status: 'casado',
+            dependents_quantity: 1,
+        };
+
+        const resultUserInfo3 = await request(app)
+            .post('/app-user/info')
+            .set('Authorization', `Bearer ${userToken3}`)
+            .send(inputUserInfo3);
+        expect(resultUserInfo3.statusCode).toBe(201);
     });
     describe('E2E Pix Transactions', () => {
+        let pixChargeTransactionId: string;
         describe('Create PIX charges AppUser', () => {
             it('Should throw an error if charge amount is missing', async () => {
                 const input = {};
@@ -490,7 +563,7 @@ describe('E2E Transactions', () => {
                         Authorization: `Bearer ${userToken1}`,
                     });
                 expect(result.statusCode).toBe(400);
-                expect(result.body.message).toBe(
+                expect(result.body.error).toBe(
                     'User ID e um valor positivo são necessários.'
                 );
             });
@@ -505,13 +578,13 @@ describe('E2E Transactions', () => {
                         Authorization: `Bearer ${userToken1}`,
                     });
                 expect(result.statusCode).toBe(400);
-                expect(result.body.message).toBe(
+                expect(result.body.error).toBe(
                     'User ID e um valor positivo são necessários.'
                 );
             });
             it('Should craete a pix charge', async () => {
                 const input = {
-                    amountInReais: 10,
+                    amountInReais: 10.0,
                 };
                 const result = await request(app)
                     .post('/transaction/pix/charge/app-user/mocked')
@@ -519,8 +592,135 @@ describe('E2E Transactions', () => {
                     .set({
                         Authorization: `Bearer ${userToken1}`,
                     });
-                console.log(result.body);
+                pixChargeTransactionId = result.body.transactionId;
+                expect(result.statusCode).toBe(201);
+                expect(result.body).toHaveProperty('pixCopyPaste');
+
+                //Get pix charge created
+                const pixCreated = await prismaClient.transactions.findFirst({
+                    where:{
+                        uuid: result.body.transactionId
+                    }
+                })
+
+                const userInfo = await prismaClient.userInfo.findUnique({
+                    where:{
+                        document: inputNewAppUser1.document.replace(".","").replace(".","").replace("-","")
+                    }
+                })
+
+
+                const userItem = await prismaClient.userItem.findFirst({
+                    where:{
+                        uuid: pixCreated.user_item_uuid
+                    }
+                })
+                expect(userItem.item_name).toBe("Correct")
+                expect(pixCreated?.uuid).toBe(result.body.transactionId);
+                expect(pixCreated.favored_user_uuid).toBe(userInfo?.uuid);
+                expect(pixCreated.favored_business_info_uuid).toBeNull();
+                expect(pixCreated.payer_business_info_uuid).toBeNull();
+                expect(pixCreated.original_price).toBe(1000);
+                expect(pixCreated.discount_percentage).toBe(0);
+                expect(pixCreated.net_price).toBe(1000);
+                expect(pixCreated.fee_percentage).toBe(0);
+                expect(pixCreated.fee_amount).toBe(0);
+                expect(pixCreated.partner_credit_amount).toBe(0);
+                expect(pixCreated.cashback).toBe(0);
+                expect(pixCreated.description).toBeNull()
+                expect(pixCreated.provider_tx_id).toBeTruthy()
+                expect(pixCreated.pix_e2e_id).toBeNull()
+                expect(pixCreated?.status).toBe('pending');
+                expect(pixCreated?.transaction_type).toBe('CASH_IN_PIX_USER');
+                expect(pixCreated.favored_partner_user_uuid).toBeNull()
+                expect(pixCreated.paid_at).toBeNull()
+                expect(pixCreated.created_at).toBeTruthy()
+                expect(pixCreated.updated_at).toBeTruthy()
             });
+           
+        });
+        describe('Webhook Processing', () => {
+            let pixCreatedBeforeWebhook: any
+            beforeAll(async () => {
+                // ARRANGE: Buscamos a transação 'pending' que foi criada no teste anterior.
+                // Usamos a variável `pixChargeTransactionId` que você já salvou.
+                pixCreatedBeforeWebhook = await prismaClient.transactions.findUnique({
+                    where: {
+                        uuid: pixChargeTransactionId
+                    }
+                });
+                
+                // Uma verificação para garantir que nosso setup está correto
+                expect(pixCreatedBeforeWebhook).toBeDefined();
+                expect(pixCreatedBeforeWebhook?.status).toBe('pending');
+
+            });
+            
+            it("Should process a valid webhook notification, credit the user's balance, and update the transaction status", async () => {
+                // ARRANGE (Continuação)
+                
+                // 1. Buscar o saldo do UserItem ANTES do webhook
+                const userItemBefore = await prismaClient.userItem.findUnique({
+                    where: { uuid: pixCreatedBeforeWebhook.user_item_uuid }
+                });
+                const balanceBefore = userItemBefore.balance;
+
+                // 2. Montar o payload do webhook simulando a resposta do Sicredi
+                //    É crucial usar o `provider_tx_id` da transação que estamos testando!
+                const webhookPayload = {
+                    pix: [
+                        {
+                            endToEndId: `E${Date.now()}${Math.random().toString().slice(2, 12)}`, // Simula um E2E ID único
+                            txid: pixCreatedBeforeWebhook.provider_tx_id, // <<< O PONTO DE LIGAÇÃO
+                            valor: (pixCreatedBeforeWebhook.net_price / 100).toFixed(2), // Ex: "10.00"
+                            horario: new Date().toISOString()
+                        }
+                    ]
+                };
+
+                // ACT: Chamar o endpoint do webhook
+                const result = await request(app)
+                    .post('/webhooks/sicredi-pix') // Use a rota real do webhook
+                    .send(webhookPayload);
+
+                // ASSERT
+
+                // 1. A resposta da API deve ser sucesso
+                expect(result.statusCode).toBe(200);
+
+                // 2. Verificar o estado da TRANSAÇÃO no banco de dados DEPOIS do webhook
+                const transactionAfter = await prismaClient.transactions.findUnique({
+                    where: { uuid: pixChargeTransactionId }
+                });
+                expect(transactionAfter).toBeDefined();
+                expect(transactionAfter?.status).toBe('success'); // O status deve ter mudado!
+                expect(transactionAfter?.pix_e2e_id).toBe(webhookPayload.pix[0].endToEndId); // O endToEndId foi salvo
+                expect(transactionAfter?.paid_at).toBeTruthy(); // O paid_at foi preenchido
+
+                // 3. Verificar o estado do USER ITEM no banco de dados DEPOIS do webhook
+                const userItemAfter = await prismaClient.userItem.findUnique({
+                    where: { uuid: pixCreatedBeforeWebhook.user_item_uuid }
+                });
+                const expectedBalanceAfter = balanceBefore + pixCreatedBeforeWebhook.net_price;
+                expect(userItemAfter?.balance).toBe(expectedBalanceAfter); // O saldo foi creditado!
+
+                // 4. Verificar a criação do registro no HISTÓRICO
+                const historyEntry = await prismaClient.userItemHistory.findFirst({
+                    where: {
+                        related_transaction_uuid: pixChargeTransactionId
+                    }
+                });
+                expect(historyEntry).toBeDefined();
+                expect(historyEntry?.event_type).toBe('PIX_RECEIVED');
+                expect(historyEntry?.amount).toBe(pixCreatedBeforeWebhook.net_price);
+                expect(historyEntry?.balance_before).toBe(balanceBefore);
+                expect(historyEntry?.balance_after).toBe(expectedBalanceAfter);
+            });
+            
+            // Adicione outros testes para o webhook aqui, se necessário:
+            // - Teste para um webhook com txid que não existe
+            // - Teste para um webhook de uma transação que já está 'success' (teste de idempotência)
+            // - Teste para um webhook com valor incorreto
         });
     });
 });

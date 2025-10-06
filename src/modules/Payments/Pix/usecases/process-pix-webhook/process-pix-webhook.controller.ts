@@ -9,7 +9,6 @@ export class ProcessPixWebhookController {
         ) { }
     async handle(req: Request, res: Response) {
         try {
-            console.log("Chamou o webhook do sicredi")
             const usecase = new ProcessPixWebhookUsecase(
                 this.transactionRepository,
             );
