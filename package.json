@@ -14,8 +14,8 @@
     "test:benefits": "jest --config jest-e2e.config.ts routes/__tests__/benefit.routes.e2e-spec.ts --runInBand --watch",
     "test": "jest --config jest.unit.config.ts --watch",
     "test:e2e": "jest --config jest-e2e.config.ts --runInBand --watch",
-    "tsc": "tsc",
-    "generate": "prisma generate",
+    "tsc": "npx tsc",
+    "generate": "npx prisma generate",
     "build": "npm run generate && npm run tsc",
     "vercel-build": "npm run build",
     "postinstall": "npm run generate"
