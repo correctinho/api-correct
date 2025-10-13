@@ -12,6 +12,7 @@ import { prismaClient } from '../../infra/databases/prisma.config';
 import { PasswordBCrypt } from '../../infra/shared/crypto/password.bcrypt';
 import fs from 'fs';
 import { Status } from '@prisma/client';
+import { FakeStorage } from '../../infra/providers/storage/implementations/fake/fake.storage';
 
 let userToken1: string;
 let userToken2: string;
@@ -1486,6 +1487,12 @@ describe('E2E App User tests', () => {
             if (fs.existsSync(dummyPngPath)) {
                 fs.rmSync(dummyPngPath, { force: true });
             }
+
+            const tempFakeStorageInstance = new FakeStorage('test-uploads-fake'); 
+        
+        // Chama o método cleanAll para remover o diretório de uploads de teste.
+            await tempFakeStorageInstance.cleanAll();
+            console.log("[TEST_CLEANUP] FakeStorage temporary uploads directory and internal state cleaned.");
         });
 
         describe('Create document validation', () => {
@@ -1636,6 +1643,12 @@ describe('E2E App User tests', () => {
             if (fs.existsSync(dummyPngPath)) {
                 fs.rmSync(dummyPngPath, { force: true });
             }
+            const tempFakeStorageInstance = new FakeStorage('test-uploads-fake'); 
+        
+        // Chama o método cleanAll para remover o diretório de uploads de teste.
+            await tempFakeStorageInstance.cleanAll();
+            console.log("[TEST_CLEANUP] FakeStorage temporary uploads directory and internal state cleaned.");
+
         });
 
         it('Should return user with only user auth registered', async () => {
