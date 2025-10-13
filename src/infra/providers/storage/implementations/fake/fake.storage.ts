@@ -76,7 +76,7 @@ export class FakeStorage implements IStorage {
         }
     }
 
-    cleanAll() {
+    async cleanAll() {
         if (fs.existsSync(this.baseTempDir)) {
             fs.rmSync(this.baseTempDir, { recursive: true, force: true });
             console.log(`[FakeStorage] Diretório temporário ${this.baseTempDir} e seus conteúdos removidos.`);
