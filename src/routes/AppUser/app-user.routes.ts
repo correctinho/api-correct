@@ -19,6 +19,8 @@ import { getUserAddressController } from "../../modules/AppUser/AppUserManagemen
 import { updateUserAddressController } from "../../modules/AppUser/AppUserManagement/usecases/UserAddress/update-app-user-address";
 import { createUserInfoByEmployerController } from "../../modules/AppUser/AppUserManagement/usecases/UserInfo/create-user-info-by-employer";
 import { setTransactionPinController } from "../../modules/AppUser/AppUserManagement/usecases/TransactionPIN/set-transaction-pin";
+import { uploadImage } from "../../infra/shared/multer/multer-memory.config";
+import { createDocumentsE2ETestsController } from "../../modules/AppUser/AppUserManagement/usecases/DocumentsValidation/create-documents-validation/index-for-tests";
 
 const appUserRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -104,11 +106,34 @@ appUserRouter.put("/app-user/address", appUserIsAuth, async (request, response) 
 //**********Document Validation*********** */
 
 //create documents for validation
-appUserRouter.post("/app-user/document-validation", appUserIsAuth, async (request, response) => {
-    await createDocumentsController.handle(request, response)
-})
+appUserRouter.post(
+  '/app-user/document-validation',
+  appUserIsAuth,
+  uploadImage.fields([ // <--- USE ESTE 'uploadImage'
+    { name: 'selfie', maxCount: 1 },
+    { name: 'document_front', maxCount: 1 },
+    { name: 'document_back', maxCount: 1 },
+    { name: 'document_selfie', maxCount: 1 },
+  ]),
+  async (request, response) => {
+    await createDocumentsController.handle(request, response);
+  }
+);
 
 
-
+//this endpoint must be used only for e2e tests purposes
+appUserRouter.post(
+  '/app-user/document-validation/e2e-test',
+  appUserIsAuth,
+  uploadImage.fields([ // <--- USE ESTE 'uploadImage'
+    { name: 'selfie', maxCount: 1 },
+    { name: 'document_front', maxCount: 1 },
+    { name: 'document_back', maxCount: 1 },
+    { name: 'document_selfie', maxCount: 1 },
+  ]),
+  async (request, response) => {
+    await createDocumentsE2ETestsController.handle(request, response);
+  }
+);
 
 export { appUserRouter }

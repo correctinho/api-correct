@@ -9,7 +9,7 @@ export interface IAppUserInfoRepository extends RepositoryInterface<AppUserInfoE
   saveOrUpdateByCSV(userInfo: AppUserInfoEntity, employeeItem: AppUserItemEntity[]): Promise<void>
   findByDocumentUserInfo(document: string): Promise<OutputFindUserDTO | null>
   // save(data: AppUserInfoEntity): Promise<void>
-  // findByEmailUserInfo(email: string): Promise<UserInfoResponse | null>
+  findByEmailUserInfo(email: string): Promise<OutputFindUserDTO | null>
   findByDocument2UserInfo(document2: string | null): Promise<AppUserInfoEntity>
   // findByDocument3UserInfo(document3: string | null): Promise<AppUserInfoEntity>
   findManyByBusiness(business_info_uuid: string): Promise<OutputGetEmployeesByBusinessDTO[] | []>
