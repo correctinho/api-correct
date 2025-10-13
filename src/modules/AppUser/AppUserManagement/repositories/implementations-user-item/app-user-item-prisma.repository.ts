@@ -1,3 +1,4 @@
+import { UserItemEventType, UserItemStatus } from '@prisma/client';
 import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
 import { prismaClient } from '../../../../../infra/databases/prisma.config';
 import {
@@ -6,8 +7,83 @@ import {
 } from '../../entities/app-user-item.entity';
 import { OutputFindAllAppUserItemsDTO } from '../../usecases/UserItem/find-all-by-employer/dto/find-user-item.dto';
 import { IAppUserItemRepository } from '../app-user-item-repository';
+import { newDateF } from '../../../../../utils/date';
 
 export class AppUserItemPrismaRepository implements IAppUserItemRepository {
+    // Implementação do método transacional para atualização
+    async updateBalanceAndHistory(
+        userItemUuid: string,
+        newBalanceInCents: number,
+        previousBalanceInCents: number,
+        transactionUuid: string | null, // Pode ser o UUID da transação de depósito do empregador
+        eventType: UserItemEventType
+    ): Promise<void> {
+        await prismaClient.$transaction(async (tx) => {
+            // 1. Atualizar o saldo do UserItem
+            await tx.userItem.update({
+                where: { uuid: userItemUuid },
+                data: {
+                    balance: newBalanceInCents,
+                    updated_at: newDateF(new Date()),
+                },
+            });
+
+            // 2. Criar o registro de histórico
+            await tx.userItemHistory.create({
+                data: {
+                    user_item_uuid: userItemUuid,
+                    event_type: eventType,
+                    amount: newBalanceInCents - previousBalanceInCents, // O valor que foi 'adicionado' ou 'alterado'
+                    balance_before: previousBalanceInCents,
+                    balance_after: newBalanceInCents,
+                    related_transaction_uuid: transactionUuid, // Pode ser null ou o UUID do depósito
+                },
+            });
+        });
+    }
+    async findUserItemsWithBenefitGroupsByEmployerAndUserInfoIds(
+        employerUuid: string,
+        userInfoUuids: string[]
+    ): Promise<AppUserItemEntity[]> {
+        const userItemsData = await prismaClient.userItem.findMany({
+            where: {
+                // Filtra por empregador E pela lista de user_info_uuids
+                business_info_uuid: employerUuid,
+                user_info_uuid: { in: userInfoUuids },
+                status: UserItemStatus.active, // Exemplo
+            },
+            include: {
+               BenefitGroups: true,
+               Item: true
+            },
+        });
+
+        if (userItemsData.length === 0) {
+            return [];
+        }
+
+        // Mapeie os resultados do Prisma para suas AppUserItemEntity
+        return userItemsData.map((userItem) => {
+            const itemProps: AppUserItemProps = {
+                uuid: new Uuid(userItem.uuid),
+                user_info_uuid: new Uuid(userItem.user_info_uuid), // Ajuste aqui se user_info_uuid não for o app_user_uuid diretamente
+                business_info_uuid: new Uuid(userItem.business_info_uuid), // Adicione este se UserItem tiver employer_uuid
+                balance: userItem.balance,
+                item_name: userItem.item_name,
+                item_type: userItem.Item.item_type,
+                item_category: userItem.Item.item_category,
+                item_uuid: new Uuid(userItem.item_uuid),
+                status: userItem.status,
+                group_uuid: userItem.BenefitGroups ? new Uuid(userItem.BenefitGroups.uuid) : null,
+                group_name: userItem.BenefitGroups ? userItem.BenefitGroups.group_name : null, 
+                group_value: userItem.BenefitGroups ? userItem.BenefitGroups.value : null,
+                group_is_default: userItem.BenefitGroups ? userItem.BenefitGroups.is_default : null, // Assumindo 'is_default' no BenefitGroups
+                created_at: userItem.created_at,
+                updated_at: userItem.updated_at,
+            };
+            return AppUserItemEntity.hydrate(itemProps);
+        });
+    }
     async findAllUserItemsByEmployer(
         userInfoId: string,
         businessInfoId: string
@@ -199,9 +275,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
             item_category: userItemData.Item.item_category,
             balance: userItemData.balance, // O valor já vem em centavos do banco
             status: userItemData.status,
-            group_uuid: userItemData.group_uuid
-                ? new Uuid(userItemData.group_uuid)
-                : null,
+            group_uuid: userItemData.group_uuid ? new Uuid(userItemData.group_uuid) : null,
             // Incluímos os dados do grupo, que são parte do estado da entidade
             group_name: userItemData.BenefitGroups?.group_name,
             group_value: userItemData.BenefitGroups?.value,

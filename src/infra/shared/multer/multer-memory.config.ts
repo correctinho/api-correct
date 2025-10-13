@@ -2,7 +2,7 @@ import multer, { FileFilterCallback, Options } from "multer";
 import { Request } from "express";
 import { CustomError } from "../../../errors/custom.error";
 
-interface MulterFile {
+export interface MulterFile {
   fieldname: string;
   originalname: string;
   encoding: string;

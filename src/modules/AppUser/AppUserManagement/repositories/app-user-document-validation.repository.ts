@@ -4,5 +4,5 @@ import { DocumentValidationEntity } from "../entities/app-user-document-validati
 
 export interface IAppUserDocumentValidationRepository extends RepositoryInterface<DocumentValidationEntity>{
     saveOrUpdate(data: DocumentValidationEntity, user_info_uuid: Uuid): Promise<void>
-
+    findStatuses(id: Uuid): Promise<DocumentValidationEntity>
 }
