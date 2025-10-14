@@ -10,6 +10,9 @@ import { randomUUID } from 'crypto';
 import { calculateCycleSettlementDateAsDate } from '../../utils/date';
 import { prismaClient } from '../../infra/databases/prisma.config';
 import { PasswordBCrypt } from '../../infra/shared/crypto/password.bcrypt';
+import fs from 'fs';
+import { Status } from '@prisma/client';
+import { FakeStorage } from '../../infra/providers/storage/implementations/fake/fake.storage';
 
 let userToken1: string;
 let userToken2: string;
@@ -92,6 +95,8 @@ const documentUser1 = '875.488.760-76';
 const documentUser2 = '475.953.480-64';
 const documentUser3 = '694.438.610-03';
 
+const projectRoot = process.cwd();
+
 const inputNewAppUser1: InputCreateAppUserDTO = {
     user_info_uuid: null,
     document: documentUser1,
@@ -108,12 +113,12 @@ const inputNewAppUser2: InputCreateAppUserDTO = {
     is_active: true,
 };
 
-const inputNewAppUser3: InputCreateAppUserDTO = {
+const inputNewAppUser3: any = {
     user_info_uuid: null,
     document: '915.583.910-02',
     email: 'email3@email.com',
     password: 'senha123',
-    is_active: true,
+    //is_active: true,
 };
 
 const authenticateAppUser1 = {
@@ -727,55 +732,6 @@ describe('E2E App User tests', () => {
                     'User Info already registered - 1'
                 );
                 expect(createUser.statusCode).toBe(409);
-            });
-
-            it('Should throw an error if user info is already registered and tables are not synchronized', async () => {
-                //IMPORTANT: This test will happen when correct admin registers user info before user downloads the app.
-                //When the user registers itself in userAuth table, the api will check if correct admin already created user info and will synchronize tables.
-                //this test still need to be created
-                // const inputNewAppUser1: InputCreateAppUserDTO = {
-                //     user_info_uuid: null,
-                //     document: '329.552.380-07',
-                //     email: 'new-user@new-user.com',
-                //     password: 'senha123',
-                //     is_active: true
-                // }
-                // //create new user auth
-                //  await request(app).post("/app-user").send(inputNewAppUser1)
-                // //login user
-                // const userLogin = {
-                //     document: inputNewAppUser1.document,
-                //     password: inputNewAppUser1.password
-                // }
-                // const loginUser = await request(app).post("/login-app-user").send(userLogin)
-                // const userToken1New = loginUser.body.token
-                // const input: InputCreateUserInfoDTO = {
-                //     business_info_uuid: null,
-                //     address_uuid: null,
-                //     document: documentUser1,
-                //     document2: null,
-                //     document3: null,
-                //     full_name: "User Full Name",
-                //     display_name: null,
-                //     internal_company_code: null,
-                //     gender: 'Male',
-                //     date_of_birth: '15/08/1998',
-                //     salary: null,
-                //     phone: null,
-                //     email: "email@email.com",
-                //     company_owner: false,
-                //     status: null,
-                //     function: null,
-                //     recommendation_code: null,
-                //     is_authenticated: false,
-                //     marital_status: null,
-                //     dependents_quantity: 1,
-                //     user_document_validation_uuid: null,
-                //     user_id: null
-                // }
-                // const createUser = await request(app).post("/app-user/info").set('Authorization', `Bearer ${userToken1}`).send(input)
-                // expect(createUser.body.error).toBe("User Info already registered - 1")
-                // expect(createUser.statusCode).toBe(409)
             });
         });
 
@@ -1503,190 +1459,225 @@ describe('E2E App User tests', () => {
             });
         });
     });
+        const testFilesDir = path.join(projectRoot, 'test-files');
+        const dummyPngPath = path.join(testFilesDir, 'dummy.png');
 
     describe('E2E tests Document Validation', () => {
+        // Conteúdo de um PNG 1x1 pixel transparente para criar arquivos dummy
+        const dummyPngBuffer = Buffer.from(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+            'base64'
+        );
+        beforeAll(async () => {
+            // //create user2
+            // const createUser2 = await request(app).post('/app-user').send(inputNewAppUser2);
+            // expect(createUser2.statusCode).toBe(201)
+            //login user 2
+            const token = await request(app)
+                .post('/login-app-user')
+                .send(authenticateAppUser2);
+            userToken2 = token.body.token;
+
+            fs.writeFileSync(dummyPngPath, new Uint8Array(dummyPngBuffer));
+        });
+
+        // --- Teardown para remover o arquivo dummy ---
+        afterAll(async () => {
+            // Remove apenas o arquivo dummy PNG criado
+            if (fs.existsSync(dummyPngPath)) {
+                fs.rmSync(dummyPngPath, { force: true });
+            }
+
+            const tempFakeStorageInstance = new FakeStorage('test-uploads-fake'); 
+        
+        // Chama o método cleanAll para remover o diretório de uploads de teste.
+            await tempFakeStorageInstance.cleanAll();
+            console.log("[TEST_CLEANUP] FakeStorage temporary uploads directory and internal state cleaned.");
+        });
+
         describe('Create document validation', () => {
-            it('Should throw and error if user info is not found', async () => {
-                //create user2
-                await request(app).post('/app-user').send(inputNewAppUser2);
-                //login user 2
-                const token = await request(app)
-                    .post('/login-app-user')
-                    .send(authenticateAppUser2);
-                userToken3 = token.body.token;
-
-                const input = {
-                    selfie_base64:
-                        'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
-                    document_front_base64:
-                        'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
-                    document_back_base64:
-                        'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
-                    document_selfie_base64:
-                        'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
-                };
-
+            it('Should throw an error if no document is sent', async () => {
                 const result = await request(app)
-                    .post('/app-user/document-validation')
-                    .set('Authorization', `Bearer ${userToken3}`)
-                    .send(input);
+                    .post('/app-user/document-validation/e2e-test')
+                    .set('Authorization', `Bearer ${userToken2}`);
+
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe(
+                    'No documents to be registered. At least one file is required.'
+                );
+            });
+            it('Should throw an error if user info does not exist', async () => {
+                const result = await request(app)
+                    .post('/app-user/document-validation/e2e-test')
+                    .set('Authorization', `Bearer ${userToken2}`)
+                    .attach('selfie', dummyPngPath, 'selfie.png') // Substitui selfie_base64
+                    .attach(
+                        'document_front',
+                        dummyPngPath,
+                        'document_front.png'
+                    ) // Substitui document_front_base64
+                    .attach('document_back', dummyPngPath, 'document_back.png') // Substitui document_back_base64
+                    .attach(
+                        'document_selfie',
+                        dummyPngPath,
+                        'document_selfie.png'
+                    ); // Substitui document_selfie_base64
 
                 expect(result.statusCode).toBe(404);
                 expect(result.body.error).toBe('User info not found');
             });
 
-            it('Should throw an error if any document was not sent', async () => {
-                //create user2
-                await request(app).post('/app-user').send(inputNewAppUser2);
-
-                //login user 2
-                const token = await request(app)
-                    .post('/login-app-user')
-                    .send(authenticateAppUser2);
-                userToken3 = token.body.token;
-
-                //create user info
-                const inputCreateUserInfo: InputCreateUserInfoDTO = {
-                    business_info_uuid: null,
-                    address_uuid: null,
-                    document: inputNewAppUser2.document,
-                    document2: null,
-                    document3: null,
+            it('Should register one document', async () => {
+                //create user info 2
+                const inputUserInfo2: any = {
+                    document: authenticateAppUser2.document,
                     full_name: 'User Full Name',
-                    display_name: null,
-                    internal_company_code: null,
                     gender: 'Male',
                     date_of_birth: '15/08/1998',
-                    salary: null,
-                    phone: null,
-                    email: inputNewAppUser2.email,
-                    company_owner: false,
-                    status: null,
-                    function: null,
-                    recommendation_code: null,
-                    is_authenticated: false,
-                    marital_status: null,
+                    email: 'email@email.com',
                     dependents_quantity: 1,
-                    user_document_validation_uuid: null,
-                    user_id: null,
                 };
 
-                //create user info
-                await request(app)
+                const createUserInfo2 = await request(app)
                     .post('/app-user/info')
-                    .set('Authorization', `Bearer ${userToken3}`)
-                    .send(inputCreateUserInfo);
-
-                const input = {
-                    selfie_base64: '',
-                    document_front_base64: '',
-                    document_back_base64: '',
-                    document_selfie_base64: '',
-                };
-
+                    .set('Authorization', `Bearer ${userToken2}`)
+                    .send(inputUserInfo2);
+                expect(createUserInfo2.statusCode).toBe(201);
                 const result = await request(app)
-                    .post('/app-user/document-validation')
-                    .set('Authorization', `Bearer ${userToken3}`)
-                    .send(input);
-
-                expect(result.statusCode).toBe(400);
-                expect(result.body.error).toBe('No documents to be registered');
-            });
-
-            it('Should register one document', async () => {
-                //create user2
-                await request(app).post('/app-user').send(inputNewAppUser2);
-                //login user 2
-                const token = await request(app)
-                    .post('/login-app-user')
-                    .send(authenticateAppUser2);
-                userToken3 = token.body.token;
-
-                const input = {
-                    selfie_base64:
-                        'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
-                    document_front_base64: '',
-                    document_back_base64: '',
-                    document_selfie_base64: '',
-                };
-
-                const result = await request(app)
-                    .post('/app-user/document-validation')
-                    .set('Authorization', `Bearer ${userToken3}`)
-                    .send(input);
+                    .post('/app-user/document-validation/e2e-test')
+                    .set('Authorization', `Bearer ${userToken2}`)
+                    .attach('selfie', dummyPngPath, 'selfie.png')
+                    .attach(
+                        'document_front',
+                        dummyPngPath,
+                        'document_front.png'
+                    );
 
                 expect(result.statusCode).toBe(201);
-                expect(result.body.result.selfie_status).toBe('under_analysis');
-            });
+                expect(result.body.uuid).toBeDefined();
+                
+                // 1. URLs: Devem corresponder ao formato do FakeStorage.
+                const fakeUrlRegex =
+                    /^http:\/\/localhost:9000\/fake-bucket\/user-documents\/[a-f0-9-]+\/[a-f0-9-]+\.(png|bin)$/;
 
-            it('Should update documents', async () => {
-                //create user2
-                await request(app).post('/app-user').send(inputNewAppUser2);
-                //login user 2
-                const token = await request(app)
-                    .post('/login-app-user')
-                    .send(authenticateAppUser2);
-                userToken3 = token.body.token;
+                expect(result.body.document_front_url).toMatch(fakeUrlRegex);
+                expect(result.body.selfie_url).toMatch(fakeUrlRegex);
 
-                const input = {
-                    selfie_base64:
-                        'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
-                    document_front_base64:
-                        'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
-                    document_back_base64:
-                        'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
-                    document_selfie_base64:
-                        'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
+                // 2. Status: Devem ser 'under_analysis' conforme definido no usecase.
+                expect(result.body.document_front_status).toBe(
+                    'under_analysis'
+                );
+                expect(result.body.document_back_status).toBe(
+                    'pending_to_send'
+                );
+                expect(result.body.selfie_status).toBe('under_analysis');
+                expect(result.body.document_selfie_status).toBe(
+                    'pending_to_send'
+                );
+
+                const documentUser2 = {
+                    document: authenticateAppUser2.document
+                        .replace('.', '')
+                        .replace('.', '')
+                        .replace('-', ''),
                 };
-
-                const result = await request(app)
-                    .post('/app-user/document-validation')
-                    .set('Authorization', `Bearer ${userToken3}`)
-                    .send(input);
-
-                expect(result.statusCode).toBe(201);
-                expect(result.body.result.selfie_status).toBe('under_analysis');
-                expect(result.body.result.document_front_status).toBe(
-                    'under_analysis'
+                // 3. Verificações no banco de dados
+                const updatedUserInfo = await prismaClient.userInfo.findUnique({
+                    where: { document: documentUser2.document }, // Use o UUID correto para o userInfo do userToken3
+                });
+                expect(updatedUserInfo?.user_document_validation_uuid).toBe(
+                    result.body.uuid.uuid
                 );
-                expect(result.body.result.document_back_status).toBe(
-                    'under_analysis'
-                );
-                expect(result.body.result.document_selfie_status).toBe(
-                    'under_analysis'
-                );
+                expect(updatedUserInfo.status).not.toBe('active');
             });
+
+            it('Should register all the others documents', async () => {
+                                               
+                const result = await request(app)
+                    .post('/app-user/document-validation/e2e-test')
+                    .set('Authorization', `Bearer ${userToken2}`)
+                    .attach('document_back', dummyPngPath, 'document_back.png')
+                    .attach('document_selfie', dummyPngPath, 'document_selfie.png')
+                expect(result.statusCode).toBe(201)
+
+                const documentUser2 = {
+                    document: authenticateAppUser2.document
+                        .replace('.', '')
+                        .replace('.', '')
+                        .replace('-', ''),
+                };
+                // 3. Verificações no banco de dados
+                const updatedUserInfo = await prismaClient.userInfo.findUnique({
+                    where: { document: documentUser2.document }, // Use o UUID correto para o userInfo do userToken3
+                });
+                const userDocuments = await prismaClient.userDocumentValidation.findUnique({
+                    where:{
+                        uuid: updatedUserInfo.user_document_validation_uuid
+                    }
+                })
+                expect(userDocuments).toBeDefined()
+                expect(userDocuments.document_back_status).toBe("under_analysis")
+                expect(userDocuments.document_front_status).toBe("under_analysis")
+                expect(userDocuments.document_selfie_status).toBe("under_analysis")
+                expect(userDocuments.selfie_status).toBe("under_analysis")
+               
+                expect(updatedUserInfo.status).toBe("active")
+            });
+
         });
     });
 
     describe('E2E tests User Status by document - Not authenticated', () => {
+                // Conteúdo de um PNG 1x1 pixel transparente para criar arquivos dummy
+        const dummyPngBuffer = Buffer.from(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+            'base64'
+        );
+        beforeAll(async () => {
+            fs.writeFileSync(dummyPngPath, new Uint8Array(dummyPngBuffer));
+        });
+
+        // --- Teardown para remover o arquivo dummy ---
+        afterAll(async () => {
+            // Remove apenas o arquivo dummy PNG criado
+            if (fs.existsSync(dummyPngPath)) {
+                fs.rmSync(dummyPngPath, { force: true });
+            }
+            const tempFakeStorageInstance = new FakeStorage('test-uploads-fake'); 
+        
+        // Chama o método cleanAll para remover o diretório de uploads de teste.
+            await tempFakeStorageInstance.cleanAll();
+            console.log("[TEST_CLEANUP] FakeStorage temporary uploads directory and internal state cleaned.");
+
+        });
+
         it('Should return user with only user auth registered', async () => {
             //create app user
-            await request(app).post('/app-user').send(inputNewAppUser3);
-
+            const createAppUser3 = await request(app).post('/app-user').send(inputNewAppUser3);
+            expect(createAppUser3.statusCode).toBe(201)
             const result = await request(app).get(
                 `/app-user/document/${inputNewAppUser3.document}`
             );
-
             expect(result.body.status).toBeFalsy();
             expect(result.body.UserAuth).toBeTruthy();
             expect(result.body.UserInfo).toBeFalsy();
             expect(result.body.Address).toBeFalsy();
             expect(result.body.UserValidation.document_front_status).toBe(
-                'pending to send'
+                'pending_to_send'
             );
             expect(result.body.UserValidation.document_back_status).toBe(
-                'pending to send'
+                'pending_to_send'
             );
             expect(result.body.UserValidation.document_selfie_status).toBe(
-                'pending to send'
+                'pending_to_send'
             );
             expect(result.body.UserValidation.selfie_status).toBe(
-                'pending to send'
+                'pending_to_send'
             );
         });
 
-        it('Should return user with user auth and user info registered', async () => {
+        it('Should return more user details', async () => {
+
             const result = await request(app).get(
                 `/app-user/document/${inputNewAppUser2.document}`
             );
@@ -1696,16 +1687,16 @@ describe('E2E App User tests', () => {
             expect(result.body.UserInfo).toBeTruthy();
             expect(result.body.Address).toBeFalsy();
             expect(result.body.UserValidation.document_front_status).toBe(
-                'pending to send'
+                'pending_to_send'
             );
             expect(result.body.UserValidation.document_back_status).toBe(
-                'pending to send'
+                'pending_to_send'
             );
             expect(result.body.UserValidation.document_selfie_status).toBe(
-                'pending to send'
+                'pending_to_send'
             );
             expect(result.body.UserValidation.selfie_status).toBe(
-                'pending to send'
+                'pending_to_send'
             );
         });
 
@@ -1719,44 +1710,35 @@ describe('E2E App User tests', () => {
             expect(result.body.UserInfo).toBeTruthy();
             expect(result.body.Address).toBeTruthy();
             expect(result.body.UserValidation.document_front_status).toBe(
-                'pending to send'
+                'pending_to_send'
             );
             expect(result.body.UserValidation.document_back_status).toBe(
-                'pending to send'
+                'pending_to_send'
             );
             expect(result.body.UserValidation.document_selfie_status).toBe(
-                'pending to send'
+                'pending_to_send'
             );
             expect(result.body.UserValidation.selfie_status).toBe(
-                'pending to send'
+                'pending_to_send'
             );
         });
 
         it('Should return a user with full status', async () => {
-            const token = await request(app)
-                .post('/login-app-user')
-                .send(authenticateAppUser1);
-            const userToken = token.body.token;
-            const input = {
-                selfie_base64:
-                    'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
-                document_front_base64:
-                    'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
-                document_back_base64:
-                    'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
-                document_selfie_base64:
-                    'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC',
-            };
-
-            await request(app)
-                .post('/app-user/document-validation')
-                .set('Authorization', `Bearer ${userToken}`)
-                .send(input);
+            
+            const registerAllDocuments = await request(app)
+                    .post('/app-user/document-validation/e2e-test')
+                    .set('Authorization', `Bearer ${userToken1}`)
+                    .attach('document_back', dummyPngPath, 'document_back.png')
+                    .attach('document_selfie', dummyPngPath, 'document_selfie.png')
+                    .attach('selfie', dummyPngPath, 'selfie.png')
+                    .attach('document_front', dummyPngPath, 'document_front.png');
+            
+            expect(registerAllDocuments.statusCode).toBe(201)
+            
 
             const result = await request(app).get(
                 `/app-user/document/${inputNewAppUser1.document}`
             );
-
             expect(result.body.status).toBeTruthy();
             expect(result.body.UserAuth).toBeTruthy();
             expect(result.body.UserInfo).toBeTruthy();
@@ -2694,7 +2676,7 @@ describe('E2E App User tests', () => {
                     // ACT: Chame a API com o input correto
                     const input = {
                         user_info_uuid: funcionarioParaCriarUuid,
-                        item_uuid: valeAlimentacaoEmployerItemUuid, 
+                        item_uuid: valeAlimentacaoEmployerItemUuid,
                     };
                     const result = await request(app)
                         .patch('/user-item/activate')
@@ -3937,7 +3919,6 @@ describe('E2E App User tests', () => {
                 expected_cashback_in_cents =
                     createTransaction.body.cashback * 100;
 
-
                 const employeeItemsPrisma =
                     await prismaClient.userItem.findMany({
                         where: { user_info_uuid: employee_user_info },
@@ -4162,7 +4143,8 @@ describe('E2E App User tests', () => {
                         .query({ userItemId: correct_benefit_user2_uuid });
                     employee2_cashback_initial_balance_in_cents = Math.round(
                         cashbackBenefit.body.balance * 100
-                    );                });
+                    );
+                });
 
                 it('Should throw an error if transaction id is missing', async () => {
                     const input = {
@@ -4401,7 +4383,7 @@ describe('E2E App User tests', () => {
                     const alimentaco = await prismaClient.userItem.findUnique({
                         where: {
                             uuid: alimentacao_benefit_user2_uuid,
-                        }
+                        },
                     });
                     // 3. ACT: Executar o pagamento
                     const paymentInput = {

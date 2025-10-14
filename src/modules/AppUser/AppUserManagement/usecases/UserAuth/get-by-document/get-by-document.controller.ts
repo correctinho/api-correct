@@ -17,12 +17,13 @@ export class GetByDocumentController {
         try {
             const document = req.params.document as string
             const getByDocument = new GetByDocumentUsecase(this.appUserRepository, this.appUserInfoRepository, this.appUserValidationRepository)
-
+            
             const user = await getByDocument.execute(document)
-
+           
             return res.json(user)
 
         } catch (err: any) {
+            console.log({err})
             return res.status(err.statusCode).json({
                 error: err.message
             })

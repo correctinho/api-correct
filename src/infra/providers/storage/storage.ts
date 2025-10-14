@@ -1,5 +1,6 @@
 // ../../../../../infra/providers/storage/storage.ts
-import { FileDTO } from "../../../modules/Ecommerce/Products/entities/product.entity";
+
+import { MulterFile } from "../../shared/multer/multer-memory.config";
 
 export interface StorageUploadData {
   url: string;  // A URL pública completa para acessar o arquivo
@@ -12,6 +13,6 @@ export interface UploadResponse {
 }
 
 export abstract class IStorage {
-  abstract upload(file: FileDTO, folder: string): Promise<UploadResponse>;
+  abstract upload(file: MulterFile, folder: string): Promise<UploadResponse>;
   abstract delete(filePath: string): Promise<void>; // Continua usando o path relativo
 }

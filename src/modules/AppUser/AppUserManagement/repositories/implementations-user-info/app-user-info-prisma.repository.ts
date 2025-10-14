@@ -9,8 +9,54 @@ import { randomUUID } from 'crypto';
 import { urlencoded } from 'express';
 import { OutputFindUserDTO } from '../../usecases/UserInfo/get-user-info-by-user/dto/get-user-by-user.dto';
 import { AppUserItemEntity } from '../../entities/app-user-item.entity';
+import { EmployeeStatus } from '@prisma/client';
 
 export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
+    async findByEmailUserInfo(email: string): Promise<OutputFindUserDTO | null> {
+       const user = await prismaClient.userInfo.findUnique({
+            where: {
+                email: email,
+            },
+            include: {
+                Employee: true,
+            },
+        });
+
+        if (!user) return null;
+
+        return {
+            uuid: user.uuid,
+            address_uuid: user.address_uuid,
+            document: user.document,
+            document2: user.document2,
+            document3: user.document3,
+            full_name: user.full_name,
+            display_name: user.display_name,
+            gender: user.gender,
+            email: user.email,
+            date_of_birth: user.date_of_birth,
+            phone: user.phone,
+            status: user.status,
+            recommendation_code: user.recommendation_code,
+            marital_status: user.marital_status,
+            is_employee: user.is_employee,
+            user_document_validation_uuid: user.user_document_validation_uuid,
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+            Employee: user.Employee.map((emp) => ({
+                uuid: emp.uuid,
+                business_info_uuid: emp.business_info_uuid,
+                internal_company_code: emp.company_internal_code ?? null,
+                salary: emp.salary,
+                company_owner: emp.company_owner ?? false,
+                function: emp.job_title ?? null,
+                dependents_quantity: emp.dependents_quantity ?? 0,
+                created_at: emp.created_at,
+                updated_at: emp.updated_at,
+            })),
+        };
+
+    }
     findByDocument2UserInfo(
         document2: string | null
     ): Promise<AppUserInfoEntity> {
@@ -118,6 +164,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
         const user = await prismaClient.employee.findMany({
             where: {
                 business_info_uuid,
+                status: EmployeeStatus.active
             },
             include: {
                 UserInfo: {
