@@ -451,7 +451,6 @@ describe('E2E Transactions', () => {
 
         expect(appUser1.statusCode).toBe(201);
         expect(appUser1.body.is_active).toEqual(inputNewAppUser1.is_active);
-
         const appUser2 = await request(app)
             .post('/app-user')
             .send(inputNewAppUser2);
