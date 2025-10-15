@@ -4,13 +4,21 @@ import { InputCreateAppUserDTO } from '../../modules/AppUser/app-user-dto/app-us
 import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto';
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo';
 import { prismaClient } from '../../infra/databases/prisma.config';
+import path from 'path';
+import { OfflineTokenStatus } from '@prisma/client';
+import { newDateF } from '../../utils/date';
 
-let userToken1: string;
-let userToken2: string;
-let userToken3: string;
+let userAuthToken1: string;
+let userAuthToken2: string;
+let userAuthToken3: string;
 
-let employee_auth_token: string;
-let employee_user_info: string;
+let employer_info_uuid: string;
+let employer_admin_uuid: string;
+let employer_admin_token: string;
+
+let document_employee1: string;
+let auth_token_employee1: string;
+let user_info_uuid_employee1: string;
 
 let correctAdminToken: string;
 
@@ -443,7 +451,6 @@ describe('E2E Transactions', () => {
 
         expect(appUser1.statusCode).toBe(201);
         expect(appUser1.body.is_active).toEqual(inputNewAppUser1.is_active);
-        
         const appUser2 = await request(app)
             .post('/app-user')
             .send(inputNewAppUser2);
@@ -463,27 +470,26 @@ describe('E2E Transactions', () => {
             .post('/login-app-user')
             .send(authenticateAppUser1);
 
-        userToken1 = loginAppUser1.body.token;
+        userAuthToken1 = loginAppUser1.body.token;
         expect(loginAppUser1.statusCode).toBe(200);
 
         const loginAppUser2 = await request(app)
             .post('/login-app-user')
             .send(authenticateAppUser2);
 
-        userToken2 = loginAppUser2.body.token;
+        userAuthToken2 = loginAppUser2.body.token;
         expect(loginAppUser2.statusCode).toBe(200);
 
         const loginAppUser3 = await request(app)
             .post('/login-app-user')
             .send(authenticateAppUser3);
 
-        userToken3 = loginAppUser3.body.token;
+        userAuthToken3 = loginAppUser3.body.token;
         expect(loginAppUser3.statusCode).toBe(200);
 
         //*****Craete User Info***** */
         //***create user info 1***** */
-        const inputUserInfo1: 
-        any = {
+        const inputUserInfo1: any = {
             document: authenticateAppUser1.document,
             document2: '24875492',
             document3: '56121561258',
@@ -500,13 +506,12 @@ describe('E2E Transactions', () => {
 
         const resultUserInfo1 = await request(app)
             .post('/app-user/info')
-            .set('Authorization', `Bearer ${userToken1}`)
+            .set('Authorization', `Bearer ${userAuthToken1}`)
             .send(inputUserInfo1);
         expect(resultUserInfo1.statusCode).toBe(201);
 
         //***create user info 12***** */
-        const inputUserInfo2: 
-        any = {
+        const inputUserInfo2: any = {
             document: authenticateAppUser2.document,
             document2: '248754vd92',
             document3: '561215dfwwv61258',
@@ -520,17 +525,15 @@ describe('E2E Transactions', () => {
             marital_status: 'casado',
             dependents_quantity: 1,
         };
-        
+
         const resultUserInfo2 = await request(app)
             .post('/app-user/info')
-            .set('Authorization', `Bearer ${userToken2}`)
+            .set('Authorization', `Bearer ${userAuthToken2}`)
             .send(inputUserInfo2);
-        console.log(resultUserInfo2.body)
         expect(resultUserInfo2.statusCode).toBe(201);
 
         //***create user info 3***** */
-        const inputUserInfo3: 
-        any = {
+        const inputUserInfo3: any = {
             document: authenticateAppUser3.document,
             document2: '248asdsdv75492',
             document3: '5612156fev1258',
@@ -547,9 +550,399 @@ describe('E2E Transactions', () => {
 
         const resultUserInfo3 = await request(app)
             .post('/app-user/info')
-            .set('Authorization', `Bearer ${userToken3}`)
+            .set('Authorization', `Bearer ${userAuthToken3}`)
             .send(inputUserInfo3);
         expect(resultUserInfo3.statusCode).toBe(201);
+
+        //CREATE BUSINESS EMPLOYER
+        const inputCreateEmployer = {
+            line1: 'Rua',
+            line2: '72B',
+            line3: '',
+            neighborhood: 'Bairro Teste',
+            postal_code: '5484248423',
+            city: 'Cidade teste',
+            state: 'Estado teste',
+            country: 'País teste',
+            fantasy_name: 'Empresa teste',
+            document: 'empregador',
+            classification: 'Classificação',
+            colaborators_number: 5,
+            email: 'empregador@empregador.com',
+            phone_1: '215745158',
+            phone_2: '124588965',
+            business_type: 'empregador',
+            employer_branch: 'Frigoríficio',
+            items_uuid: [benefit1_uuid, benefit3_uuid, benefit2_uuid],
+        };
+
+        const employerCreatedRes = await request(app)
+            .post('/business/register')
+            .send(inputCreateEmployer);
+        expect(employerCreatedRes.statusCode).toBe(201);
+
+        employer_info_uuid = employerCreatedRes.body.BusinessInfo.uuid;
+
+        //ACTIVATE EMPLOYER
+        const inputToActivateEmployer = {
+            status: 'active',
+        };
+        const queryToActivateEmployer = {
+            business_info_uuid: employer_info_uuid,
+        };
+        const employerActivate = await request(app)
+            .put('/business/info/correct')
+            .set('Authorization', `Bearer ${correctAdminToken}`)
+            .query(queryToActivateEmployer)
+            .send(inputToActivateEmployer);
+        expect(employerActivate.statusCode).toBe(200);
+
+        //CREATE EMPLOYER ADMIN
+        const inputCreateEmployerAdmin = {
+            password: '123456',
+            business_info_uuid: employer_info_uuid,
+            email: 'empregador@empregador.com',
+            name: 'Nome do admin employer',
+        };
+        const adminEmployerCreated = await request(app)
+            .post('/business/admin/correct')
+            .set('Authorization', `Bearer ${correctAdminToken}`)
+            .send(inputCreateEmployerAdmin);
+        expect(adminEmployerCreated.statusCode).toBe(201);
+        employer_admin_uuid = adminEmployerCreated.body.uuid;
+
+        //Login Employer admin
+        const inputLoginEmployerAdmin = {
+            business_document: inputCreateEmployer.document,
+            password: '123456',
+            email: inputCreateEmployer.email,
+        };
+        const loginEmployerAdmin = await request(app)
+            .post('/business/admin/login')
+            .send(inputLoginEmployerAdmin);
+        expect(loginEmployerAdmin.statusCode).toBe(200);
+
+        employer_admin_token = loginEmployerAdmin.body.token;
+        //CREATE EMPLOYER ITEMS DETAILS
+        const inputToCreateEmployerItemDetails = {
+            item_uuid: benefit4_uuid,
+            business_info_uuid: employer_info_uuid,
+            cycle_end_day: 1,
+            value: 200,
+        };
+        const employerItemDetailsCreated = await request(app)
+            .post('/business/item/details/correct')
+            .set('Authorization', `Bearer ${correctAdminToken}`)
+            .send(inputToCreateEmployerItemDetails);
+
+        expect(employerItemDetailsCreated.statusCode).toBe(201);
+
+        //CREATE EMPLOYEES from CSV
+        const csvFilePath = path.join(
+            __dirname,
+            '../../../test-files/ideal-model.csv'
+        );
+        const queryToCreateEmployees = {
+            business_info_uuid: employer_info_uuid,
+        };
+
+        const resultEmployeesCreated = await request(app)
+            .post('/app-users-by-correct')
+            .query(queryToCreateEmployees)
+            .set('Authorization', `Bearer ${correctAdminToken}`)
+            .attach('file', csvFilePath); //
+        expect(resultEmployeesCreated.statusCode).toBe(201);
+        document_employee1 = resultEmployeesCreated.body.usersRegistered[0];
+        console.log({ document_employee1 });
+        //get employee 1 user info uuid
+        const userInfoEmployee1 = await prismaClient.userInfo.findUnique({
+            where: {
+                document: document_employee1,
+            },
+        });
+        console.log({ userInfoEmployee1 });
+        user_info_uuid_employee1 = userInfoEmployee1.uuid;
+
+        //Now we need to register this employ user auth
+        const inputUserauthEmployee1 = {
+            document: document_employee1,
+            email: 'email@emailuhgjkhi.com',
+            password: '123456',
+        };
+        const resultEmployee1Created = await request(app)
+            .post('/app-user')
+            .send(inputUserauthEmployee1);
+        expect(resultEmployee1Created.statusCode).toBe(201);
+
+        //Login Employee
+        const loginEmployee1 = await request(app)
+            .post('/login-app-user')
+            .send({
+                document: inputUserauthEmployee1.document,
+                password: inputUserauthEmployee1.password,
+            });
+        expect(loginEmployee1.statusCode).toBe(200);
+
+        auth_token_employee1 = loginEmployee1.body.token;
+        //Activate employee Item
+        const userItemsForEmployee1 = await prismaClient.userItem.findMany({
+            where: {
+                user_info_uuid: user_info_uuid_employee1,
+            },
+        });
+
+        const inpuActivateUserItem = {
+            user_info_uuid: user_info_uuid_employee1,
+            item_uuid: userItemsForEmployee1.find(
+                (item) => item.status === 'inactive'
+            ).item_uuid,
+        };
+        const resultActivateUserItem = await request(app)
+            .patch('/user-item/activate')
+            .set('Authorization', `Bearer ${employer_admin_token}`)
+            .send(inpuActivateUserItem);
+        expect(resultActivateUserItem.statusCode).toBe(200);
+    });
+
+    describe('E2E Offline Tokens', () => {
+        let userItem1EmployeeUuid: string;
+        let userItem2EmployeeUuid: string;
+        beforeAll(async () => {
+            //EMPLOYEE
+
+            const userItemsForUser1 = await prismaClient.userItem.findMany({
+                where: {
+                    user_info_uuid: user_info_uuid_employee1,
+                },
+            });
+
+            const userItemRecord = userItemsForUser1.find(
+                (item) => item.item_name === 'Correct'
+            );
+            const userItem2Record = userItemsForUser1.find(
+                (item) => item.item_name !== 'Correct'
+            );
+            expect(userItemRecord).toBeDefined();
+            expect(userItem2Record).toBeDefined();
+
+            userItem1EmployeeUuid = userItemRecord!.uuid;
+            userItem2EmployeeUuid = userItem2Record!.uuid;
+
+            await prismaClient.offlineToken.deleteMany({
+                where: { user_info_uuid: user_info_uuid_employee1 },
+            });
+            await prismaClient.offlineTokenHistory.deleteMany({
+                where: { user_info_uuid: user_info_uuid_employee1 },
+            });
+        });
+        describe('Activate Offline Tokens', () => {
+            it('should activate 5 new tokens for a user item successfully (Initial Activation)', async () => {
+                // Este é o primeiro teste que espera um estado 'limpo' de tokens para o UserItem.
+                // A. Requisição
+                const response = await request(app)
+                    .post('/app-user/activate-token')
+                    .set('Authorization', `Bearer ${auth_token_employee1}`) // Usando o token fornecido
+                    .send({ userItemUuid: userItem1EmployeeUuid });
+
+                // B. Asserts da Resposta
+                expect(response.status).toBe(201);
+                expect(response.body.offlineTokens).toBeInstanceOf(Array);
+                expect(response.body.offlineTokens).toHaveLength(5);
+
+                const firstToken = response.body.offlineTokens[0];
+                expect(firstToken.uuid).toBeDefined();
+                expect(firstToken.token_code).toMatch(/^[A-Z0-9]{6}$/);
+                expect(firstToken.user_info_uuid).toBe(
+                    user_info_uuid_employee1
+                );
+                expect(firstToken.user_item_uuid).toBe(userItem1EmployeeUuid);
+                expect(firstToken.status).toBe('ACTIVE');
+                expect(
+                    new Date(firstToken.expires_at).getTime()
+                ).toBeGreaterThan(Date.now());
+                expect(firstToken.sequence_number).toBe(1);
+
+                // C. Asserts do Banco de Dados
+                const dbTokens = await prismaClient.offlineToken.findMany({
+                    where: {
+                        user_item_uuid: userItem1EmployeeUuid,
+                        user_info_uuid: user_info_uuid_employee1,
+                    },
+                });
+                expect(dbTokens).toHaveLength(5);
+                dbTokens.forEach((token) => {
+                    expect(token.status).toBe('ACTIVE');
+                    expect(token.token_code).toBeDefined();
+                });
+
+                const dbHistory =
+                    await prismaClient.offlineTokenHistory.findMany({
+                        where: {
+                            user_item_uuid: userItem1EmployeeUuid,
+                            event_type: 'ACTIVATED',
+                        },
+                    });
+                expect(dbHistory).toHaveLength(5);
+                dbHistory.forEach((history) => {
+                    expect(history.original_token_uuid).toBeDefined();
+                    expect(history.event_description).toContain(
+                        'New offline token activated'
+                    );
+                });
+            });
+            it('should replace existing tokens for the same user item when re-activated, creating history for replacement and new activations', async () => {
+                // Este teste será executado APÓS o teste anterior, que já ativou 5 tokens.
+                // O Usecase deve lidar com a substituição desses 5 tokens.
+
+                // A. Requisição para re-ativar (com os mesmos dados do userItem1EmployeeUuid)
+                const response = await request(app)
+                    .post('/app-user/activate-token')
+                    .set('Authorization', `Bearer ${auth_token_employee1}`)
+                    .send({ userItemUuid: userItem1EmployeeUuid });
+
+                // B. Asserts da Resposta
+                expect(response.status).toBe(201);
+                expect(response.body.offlineTokens).toHaveLength(5);
+                // Os códigos dos tokens devem ser novos
+                const newTokensCodes = response.body.offlineTokens.map(
+                    (t: any) => t.token_code
+                );
+                const oldTokensFromHistory =
+                    await prismaClient.offlineTokenHistory.findMany({
+                        where: {
+                            user_item_uuid: userItem1EmployeeUuid,
+                            event_type: 'REPLACED_BY_NEW_ACTIVATION',
+                        },
+                    });
+                expect(
+                    oldTokensFromHistory.map((h) => h.token_code)
+                ).not.toEqual(expect.arrayContaining(newTokensCodes));
+
+                // C. Asserts do Banco de Dados
+                const finalTokens = await prismaClient.offlineToken.findMany({
+                    where: {
+                        user_item_uuid: userItem1EmployeeUuid,
+                        user_info_uuid: user_info_uuid_employee1,
+                    },
+                });
+                expect(finalTokens).toHaveLength(5); // Apenas 5 tokens ativos para este item
+                finalTokens.forEach((token) =>
+                    expect(token.status).toBe('ACTIVE')
+                );
+
+                const replacedHistory =
+                    await prismaClient.offlineTokenHistory.findMany({
+                        where: {
+                            user_item_uuid: userItem1EmployeeUuid,
+                            event_type: 'REPLACED_BY_NEW_ACTIVATION',
+                        },
+                    });
+                expect(replacedHistory).toHaveLength(5); // 5 tokens antigos devem ter sido marcados como REPLACED
+
+                const activatedHistory =
+                    await prismaClient.offlineTokenHistory.findMany({
+                        where: {
+                            user_item_uuid: userItem1EmployeeUuid,
+                            event_type: 'ACTIVATED',
+                        },
+                    });
+                expect(activatedHistory).toHaveLength(10); // 5 da primeira ativação + 5 desta re-ativação
+            });
+            it('should revoke active tokens from other user items for the same user when a new item is activated', async () => {
+                // Ativar tokens para este 'SecondaryBenefit' (que serão os "antigos" a serem revogados)
+                await request(app)
+                    .post('/app-user/activate-token')
+                    .set('Authorization', `Bearer ${auth_token_employee1}`)
+                    .send({ userItemUuid: userItem2EmployeeUuid });
+
+                // Verifique que os tokens foram criados para o SecondaryBenefit
+                const secondaryBenefitTokens =
+                    await prismaClient.offlineToken.findMany({
+                        where: {
+                            user_item_uuid: userItem2EmployeeUuid,
+                            status: OfflineTokenStatus.ACTIVE,
+                        },
+                    });
+                expect(secondaryBenefitTokens).toHaveLength(5);
+
+                // Agora, ativamos novamente o userItem1EmployeeUuid original.
+                // Isso DEVE revogar os tokens ativos de userItem2EmployeeUuid.
+                const response = await request(app)
+                    .post('/app-user/activate-token')
+                    .set('Authorization', `Bearer ${auth_token_employee1}`)
+                    .send({ userItemUuid: userItem1EmployeeUuid });
+
+                expect(response.status).toBe(201);
+                expect(response.body.offlineTokens).toHaveLength(5);
+
+                // C. Asserts do Banco de Dados
+                // Verificar tokens para userItem2EmployeeUuid (devem estar revogados)
+                const revokedBenefitTokens =
+                    await prismaClient.offlineToken.findMany({
+                        where: { user_item_uuid: userItem2EmployeeUuid },
+                    });
+                expect(revokedBenefitTokens).toHaveLength(5); // 5 tokens foram criados para SecondaryBenefit
+                revokedBenefitTokens.forEach((token) =>
+                    expect(token.status).toBe(OfflineTokenStatus.REVOKED)
+                );
+
+                // Verificar o histórico de revogação
+                const revokedHistory =
+                    await prismaClient.offlineTokenHistory.findMany({
+                        where: {
+                            user_item_uuid: userItem2EmployeeUuid,
+                            event_type: 'REVOKED',
+                        },
+                    });
+                expect(revokedHistory).toHaveLength(5); // 5 eventos de revogação
+
+                // IMPORTANTE: Limpar o userItem temporário e seus tokens/históricos para não impactar outros testes
+                await prismaClient.offlineToken.deleteMany({
+                    where: { user_item_uuid: userItem2EmployeeUuid },
+                });
+                await prismaClient.offlineTokenHistory.deleteMany({
+                    where: { user_item_uuid: userItem2EmployeeUuid },
+                });
+                await prismaClient.userItem.delete({
+                    where: { uuid: userItem2EmployeeUuid },
+                });
+            });
+            it('should return 404 if UserItem does not exist or does not belong to the user', async () => {
+                // Geração de um UUID que (esperamos) não exista ou não pertença ao usuário
+                const nonExistentOrOtherUserItemUuid = new Uuid().uuid;
+
+                const response = await request(app)
+                    .post('/app-user/activate-token')
+                    .set('Authorization', `Bearer ${userAuthToken1}`)
+                    .send({ userItemUuid: nonExistentOrOtherUserItemUuid });
+
+                expect(response.status).toBe(404);
+                expect(response.body.error).toBe(
+                    'UserItem not found or does not belong to the user.'
+                );
+            });
+
+            it('should return 401 if user is not authenticated', async () => {
+                const response = await request(app)
+                    .post('/app-user/activate-token')
+                    .send({ userItemUuid: userItem1EmployeeUuid }); 
+
+                expect(response.status).toBe(401);
+                
+            });
+
+            it('should return 400 if userItemUuid is missing from request body', async () => {
+                const response = await request(app)
+                    .post('/app-user/activate-token')
+                    .set('Authorization', `Bearer ${userAuthToken1}`)
+                    .send({}); // Corpo vazio
+
+                expect(response.status).toBe(400);
+                expect(response.body.error).toBe(
+                    'userItemUuid is required in request body.'
+                );
+            });
+        });
     });
     describe('E2E Pix Transactions', () => {
         let pixChargeTransactionId: string;
@@ -560,7 +953,7 @@ describe('E2E Transactions', () => {
                     .post('/transaction/pix/charge/app-user/mocked')
                     .send(input)
                     .set({
-                        Authorization: `Bearer ${userToken1}`,
+                        Authorization: `Bearer ${auth_token_employee1}`,
                     });
                 expect(result.statusCode).toBe(400);
                 expect(result.body.error).toBe(
@@ -575,7 +968,7 @@ describe('E2E Transactions', () => {
                     .post('/transaction/pix/charge/app-user/mocked')
                     .send(input)
                     .set({
-                        Authorization: `Bearer ${userToken1}`,
+                        Authorization: `Bearer ${userAuthToken1}`,
                     });
                 expect(result.statusCode).toBe(400);
                 expect(result.body.error).toBe(
@@ -590,7 +983,7 @@ describe('E2E Transactions', () => {
                     .post('/transaction/pix/charge/app-user/mocked')
                     .send(input)
                     .set({
-                        Authorization: `Bearer ${userToken1}`,
+                        Authorization: `Bearer ${userAuthToken1}`,
                     });
                 pixChargeTransactionId = result.body.transactionId;
                 expect(result.statusCode).toBe(201);
@@ -598,24 +991,26 @@ describe('E2E Transactions', () => {
 
                 //Get pix charge created
                 const pixCreated = await prismaClient.transactions.findFirst({
-                    where:{
-                        uuid: result.body.transactionId
-                    }
-                })
+                    where: {
+                        uuid: result.body.transactionId,
+                    },
+                });
 
                 const userInfo = await prismaClient.userInfo.findUnique({
-                    where:{
-                        document: inputNewAppUser1.document.replace(".","").replace(".","").replace("-","")
-                    }
-                })
-
+                    where: {
+                        document: inputNewAppUser1.document
+                            .replace('.', '')
+                            .replace('.', '')
+                            .replace('-', ''),
+                    },
+                });
 
                 const userItem = await prismaClient.userItem.findFirst({
-                    where:{
-                        uuid: pixCreated.user_item_uuid
-                    }
-                })
-                expect(userItem.item_name).toBe("Correct")
+                    where: {
+                        uuid: pixCreated.user_item_uuid,
+                    },
+                });
+                expect(userItem.item_name).toBe('Correct');
                 expect(pixCreated?.uuid).toBe(result.body.transactionId);
                 expect(pixCreated.favored_user_uuid).toBe(userInfo?.uuid);
                 expect(pixCreated.favored_business_info_uuid).toBeNull();
@@ -627,41 +1022,40 @@ describe('E2E Transactions', () => {
                 expect(pixCreated.fee_amount).toBe(0);
                 expect(pixCreated.partner_credit_amount).toBe(0);
                 expect(pixCreated.cashback).toBe(0);
-                expect(pixCreated.description).toBeNull()
-                expect(pixCreated.provider_tx_id).toBeTruthy()
-                expect(pixCreated.pix_e2e_id).toBeNull()
+                expect(pixCreated.description).toBeNull();
+                expect(pixCreated.provider_tx_id).toBeTruthy();
+                expect(pixCreated.pix_e2e_id).toBeNull();
                 expect(pixCreated?.status).toBe('pending');
                 expect(pixCreated?.transaction_type).toBe('CASH_IN_PIX_USER');
-                expect(pixCreated.favored_partner_user_uuid).toBeNull()
-                expect(pixCreated.paid_at).toBeNull()
-                expect(pixCreated.created_at).toBeTruthy()
-                expect(pixCreated.updated_at).toBeTruthy()
+                expect(pixCreated.favored_partner_user_uuid).toBeNull();
+                expect(pixCreated.paid_at).toBeNull();
+                expect(pixCreated.created_at).toBeTruthy();
+                expect(pixCreated.updated_at).toBeTruthy();
             });
-           
         });
         describe('Webhook Processing', () => {
-            let pixCreatedBeforeWebhook: any
+            let pixCreatedBeforeWebhook: any;
             beforeAll(async () => {
                 // ARRANGE: Buscamos a transação 'pending' que foi criada no teste anterior.
                 // Usamos a variável `pixChargeTransactionId` que você já salvou.
-                pixCreatedBeforeWebhook = await prismaClient.transactions.findUnique({
-                    where: {
-                        uuid: pixChargeTransactionId
-                    }
-                });
-                
+                pixCreatedBeforeWebhook =
+                    await prismaClient.transactions.findUnique({
+                        where: {
+                            uuid: pixChargeTransactionId,
+                        },
+                    });
+
                 // Uma verificação para garantir que nosso setup está correto
                 expect(pixCreatedBeforeWebhook).toBeDefined();
                 expect(pixCreatedBeforeWebhook?.status).toBe('pending');
-
             });
-            
+
             it("Should process a valid webhook notification, credit the user's balance, and update the transaction status", async () => {
                 // ARRANGE (Continuação)
-                
+
                 // 1. Buscar o saldo do UserItem ANTES do webhook
                 const userItemBefore = await prismaClient.userItem.findUnique({
-                    where: { uuid: pixCreatedBeforeWebhook.user_item_uuid }
+                    where: { uuid: pixCreatedBeforeWebhook.user_item_uuid },
                 });
                 const balanceBefore = userItemBefore.balance;
 
@@ -672,10 +1066,12 @@ describe('E2E Transactions', () => {
                         {
                             endToEndId: `E${Date.now()}${Math.random().toString().slice(2, 12)}`, // Simula um E2E ID único
                             txid: pixCreatedBeforeWebhook.provider_tx_id, // <<< O PONTO DE LIGAÇÃO
-                            valor: (pixCreatedBeforeWebhook.net_price / 100).toFixed(2), // Ex: "10.00"
-                            horario: new Date().toISOString()
-                        }
-                    ]
+                            valor: (
+                                pixCreatedBeforeWebhook.net_price / 100
+                            ).toFixed(2), // Ex: "10.00"
+                            horario: new Date().toISOString(),
+                        },
+                    ],
                 };
 
                 // ACT: Chamar o endpoint do webhook
@@ -689,34 +1085,41 @@ describe('E2E Transactions', () => {
                 expect(result.statusCode).toBe(200);
 
                 // 2. Verificar o estado da TRANSAÇÃO no banco de dados DEPOIS do webhook
-                const transactionAfter = await prismaClient.transactions.findUnique({
-                    where: { uuid: pixChargeTransactionId }
-                });
+                const transactionAfter =
+                    await prismaClient.transactions.findUnique({
+                        where: { uuid: pixChargeTransactionId },
+                    });
                 expect(transactionAfter).toBeDefined();
                 expect(transactionAfter?.status).toBe('success'); // O status deve ter mudado!
-                expect(transactionAfter?.pix_e2e_id).toBe(webhookPayload.pix[0].endToEndId); // O endToEndId foi salvo
+                expect(transactionAfter?.pix_e2e_id).toBe(
+                    webhookPayload.pix[0].endToEndId
+                ); // O endToEndId foi salvo
                 expect(transactionAfter?.paid_at).toBeTruthy(); // O paid_at foi preenchido
 
                 // 3. Verificar o estado do USER ITEM no banco de dados DEPOIS do webhook
                 const userItemAfter = await prismaClient.userItem.findUnique({
-                    where: { uuid: pixCreatedBeforeWebhook.user_item_uuid }
+                    where: { uuid: pixCreatedBeforeWebhook.user_item_uuid },
                 });
-                const expectedBalanceAfter = balanceBefore + pixCreatedBeforeWebhook.net_price;
+                const expectedBalanceAfter =
+                    balanceBefore + pixCreatedBeforeWebhook.net_price;
                 expect(userItemAfter?.balance).toBe(expectedBalanceAfter); // O saldo foi creditado!
 
                 // 4. Verificar a criação do registro no HISTÓRICO
-                const historyEntry = await prismaClient.userItemHistory.findFirst({
-                    where: {
-                        related_transaction_uuid: pixChargeTransactionId
-                    }
-                });
+                const historyEntry =
+                    await prismaClient.userItemHistory.findFirst({
+                        where: {
+                            related_transaction_uuid: pixChargeTransactionId,
+                        },
+                    });
                 expect(historyEntry).toBeDefined();
                 expect(historyEntry?.event_type).toBe('PIX_RECEIVED');
-                expect(historyEntry?.amount).toBe(pixCreatedBeforeWebhook.net_price);
+                expect(historyEntry?.amount).toBe(
+                    pixCreatedBeforeWebhook.net_price
+                );
                 expect(historyEntry?.balance_before).toBe(balanceBefore);
                 expect(historyEntry?.balance_after).toBe(expectedBalanceAfter);
             });
-            
+
             // Adicione outros testes para o webhook aqui, se necessário:
             // - Teste para um webhook com txid que não existe
             // - Teste para um webhook de uma transação que já está 'success' (teste de idempotência)
