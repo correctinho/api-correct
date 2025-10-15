@@ -11,6 +11,7 @@ import { sseSubscribe } from "../../infra/sse/sse.config";
 import { createPixChargeController } from "../../modules/Payments/Pix/usecases/create-pix-charge-by-app-user";
 import { processPixWebhook } from "../../modules/Payments/Pix/usecases/process-pix-webhook";
 import { createMockPixChargeController } from "../../infra/providers/PixProvider/implementations/sicredi/tests/index.mock";
+import { activateTokenController } from "../../modules/Payments/OfflineTokens/usecases/activate-tokens-offline";
 
 const transactionsRouter = Router()
 
@@ -61,5 +62,10 @@ transactionsRouter.post(
     "/webhooks/sicredi-pix",
     async (req, res) => await processPixWebhook.handle(req, res)
 );
+
+//Activate Offline Token
+transactionsRouter.post("/app-user/activate-token", appUserIsAuth, async (request, response) => {
+  await activateTokenController.handle(request, response)
+})
 
 export { transactionsRouter }
