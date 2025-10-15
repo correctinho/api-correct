@@ -1,6 +1,6 @@
 import RepositoryInterface from "../../../../@shared/domain/repository/repository-interface";
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
-import { OfflineTokenHistoryEntity } from "../entities/offline-token.entity";
+import { OfflineTokenHistoryEntity } from "../entities/offline-tokens-history.entity";
 
 export interface IOfflineTokenHistoryRepository extends RepositoryInterface<OfflineTokenHistoryEntity> {
   findByTokenCode(tokenCode: string): Promise<OfflineTokenHistoryEntity[]>;

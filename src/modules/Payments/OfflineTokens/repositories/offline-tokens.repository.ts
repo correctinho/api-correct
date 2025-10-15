@@ -1,7 +1,7 @@
 import { OfflineTokenStatus } from '@prisma/client'; // Ainda usamos a enum do Prisma
 import RepositoryInterface from "../../../../@shared/domain/repository/repository-interface"; // Sua base de repositório
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
-import { OfflineTokenEntity } from '../entities/offline-tokens-history.entity';
+import { OfflineTokenEntity } from '../entities/offline-token.entity';
 
 export interface IOfflineTokenRepository extends RepositoryInterface<OfflineTokenEntity> {
   createMany(entities: OfflineTokenEntity[]): Promise<OfflineTokenEntity[]>;
