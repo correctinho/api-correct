@@ -2,6 +2,7 @@
 
 import path from 'path';
 import fs from 'fs';
+import os from 'os'; // Importe o módulo 'os'
 import { v4 as uuidv4 } from 'uuid';
 import { IStorage, StorageUploadData, UploadResponse } from '../../storage';
 import { MulterFile } from '../../../../shared/multer/multer-memory.config'; 
@@ -16,29 +17,47 @@ export class FakeStorage implements IStorage {
         originalFileDTO: MulterFile; 
     }[] = [];
 
+    // Adicione uma flag para saber se estamos em um ambiente de produção (Vercel)
+    private isProduction: boolean;
+
     constructor(tempDirName: string = 'test-uploads-fake') {
-        this.baseTempDir = path.join(process.cwd(), tempDirName);
-        if (!fs.existsSync(this.baseTempDir)) {
-            fs.mkdirSync(this.baseTempDir, { recursive: true });
+        this.isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+
+        if (this.isProduction) {
+            this.baseTempDir = '/fake-production-uploads'; 
+            console.warn("[FakeStorage] Rodando em modo de simulação sem escrita em disco (Produção/Vercel).");
+        } else {
+            this.baseTempDir = path.join(os.tmpdir(), tempDirName); // USANDO os.tmpdir()
+            if (!fs.existsSync(this.baseTempDir)) {
+                fs.mkdirSync(this.baseTempDir, { recursive: true });
+            }
+            console.log(`[FakeStorage] Diretório de uploads fake local: ${this.baseTempDir}`);
         }
     }
 
     async upload(file: MulterFile, folder: string): Promise<UploadResponse> {
         try {
             const fileExtension = file.originalname.split('.').pop() || 'bin';
-
             const uniqueFilename = `${uuidv4()}.${fileExtension}`; 
             
-            const targetFolder = path.join(this.baseTempDir, folder);
-            if (!fs.existsSync(targetFolder)) {
-                fs.mkdirSync(targetFolder, { recursive: true });
-            }
-
-            const filepath = path.join(targetFolder, uniqueFilename);
-            fs.writeFileSync(filepath, file.buffer as Uint8Array); // Opção 1: Type assertion para Uint8Array
-
             const simulatedUrl = `http://localhost:9000/fake-bucket/${folder}/${uniqueFilename}`;
             const simulatedPath = `${folder}/${uniqueFilename}`;
+
+            let filepath = ''; // Inicializa filepath
+
+            if (!this.isProduction) {
+                // APENAS cria diretórios e escreve arquivos se NÃO estiver em produção
+                const targetFolder = path.join(this.baseTempDir, folder);
+                if (!fs.existsSync(targetFolder)) {
+                    fs.mkdirSync(targetFolder, { recursive: true });
+                }
+                filepath = path.join(targetFolder, uniqueFilename);
+                fs.writeFileSync(filepath, file.buffer as Uint8Array); // Escreve o arquivo
+                console.log(`[FakeStorage] Arquivo salvo em disco: ${filepath}`);
+            } else {
+                console.log(`[FakeStorage] Simulação de upload (sem escrita em disco): ${simulatedPath}`);
+                filepath = simulatedPath; 
+            }
 
             const data: StorageUploadData = {
                 url: simulatedUrl,
@@ -47,7 +66,7 @@ export class FakeStorage implements IStorage {
 
             this.uploadedFileRecords.push({
                 filename: uniqueFilename,
-                filepath,
+                filepath, // filepath real se não for produção, simulado se for
                 simulatedUrl,
                 simulatedPath,
                 originalFileDTO: file
@@ -57,6 +76,9 @@ export class FakeStorage implements IStorage {
 
         } catch (error: any) {
             console.error("[FakeStorage] Falha no upload:", error);
+            if (this.isProduction) {
+                return { data: null, error: new Error(`FakeStorage simulation failed (production mode): ${error.message}`) };
+            }
             return { data: null, error: new Error(`FakeStorage upload failed: ${error.message}`) };
         }
     }
@@ -66,9 +88,11 @@ export class FakeStorage implements IStorage {
         
         if (recordIndex !== -1) {
             const record = this.uploadedFileRecords[recordIndex];
-            if (fs.existsSync(record.filepath)) {
+            if (!this.isProduction && fs.existsSync(record.filepath)) { // APENAS tenta deletar fisicamente se NÃO for produção
                 fs.rmSync(record.filepath, { force: true });
-                console.log(`[FakeStorage] Arquivo ${record.filepath} deletado.`);
+                console.log(`[FakeStorage] Arquivo ${record.filepath} deletado fisicamente.`);
+            } else if (this.isProduction) {
+                 console.log(`[FakeStorage] Simulação de exclusão (sem interação com disco): ${filePath}`);
             }
             this.uploadedFileRecords.splice(recordIndex, 1);
         } else {
@@ -77,9 +101,11 @@ export class FakeStorage implements IStorage {
     }
 
     async cleanAll() {
-        if (fs.existsSync(this.baseTempDir)) {
+        if (!this.isProduction && fs.existsSync(this.baseTempDir)) { // APENAS limpa fisicamente se NÃO for produção
             fs.rmSync(this.baseTempDir, { recursive: true, force: true });
             console.log(`[FakeStorage] Diretório temporário ${this.baseTempDir} e seus conteúdos removidos.`);
+        } else if (this.isProduction) {
+            console.log(`[FakeStorage] Simulação de limpeza (sem interação com disco).`);
         }
         this.uploadedFileRecords = [];
     }
