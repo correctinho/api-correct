@@ -29,6 +29,7 @@ export type TransactionProps = {
   paid_at?: string | null; // Optional: Date when the transaction was paid
   item_uuid?: string
   favored_partner_user_uuid?: Uuid | null; // Optional: FK to PartnerUser
+  used_offline_token_code?: string
   provider_tx_id?: string | null; //
   pix_e2e_id?: string | null;
   created_at?: string; // Optional: Handled by constructor/DB
@@ -49,6 +50,8 @@ export type TransactionCreateCommand = {
   transaction_type?: TransactionType;
   description?: string | null;
   // ... e outros campos que vêm da requisição inicial
+
+  used_offline_token_code?: string
 };
 
 export class TransactionEntity {
@@ -79,6 +82,7 @@ export class TransactionEntity {
   private _correct_account_balance?: number; // Optional: current balance in cents for correct account
   private _provider_tx_id?: string | null; // <-- Adicionado
   private _pix_e2e_id?: string | null; 
+  private _used_offline_token_code?: string
   private _created_at: string;
   private _updated_at: string;
 
@@ -110,6 +114,8 @@ export class TransactionEntity {
 
     this._provider_tx_id = props.provider_tx_id ?? null;
     this._pix_e2e_id = props.pix_e2e_id ?? null; 
+
+    this._used_offline_token_code = props.used_offline_token_code
     this._created_at = props.created_at ?? newDateF(new Date());
     this._updated_at = newDateF(new Date());
   }
@@ -141,6 +147,7 @@ export class TransactionEntity {
   get correct_account_balance(): number | null { return this._correct_account_balance; }
    get provider_tx_id(): string | null { return this._provider_tx_id; }
   get pix_e2e_id(): string | null { return this._pix_e2e_id; }
+  get used_offline_token_code(): string | null { return this._used_offline_token_code }
   get created_at(): string { return this._created_at; }
   get updated_at(): string { return this._updated_at; }
 
@@ -258,6 +265,11 @@ export class TransactionEntity {
 
     this.validate();
   }
+
+  changeUsedOfflineToken(token: string) {
+    this._used_offline_token_code = token
+    this.validate()
+  }
   calculateFee(): void {
     // Verifica se os valores necessários existem antes de calcular
     if (this._net_price === undefined || this._fee_percentage === undefined) {
@@ -373,6 +385,7 @@ export class TransactionEntity {
       favored_partner_user_uuid: this._favored_partner_user_uuid ? this._favored_partner_user_uuid.uuid : null,
       provider_tx_id: this._provider_tx_id, 
       pix_e2e_id: this._pix_e2e_id,
+      used_offline_token_code: this._used_offline_token_code,
       created_at: this._created_at,
     };
   }

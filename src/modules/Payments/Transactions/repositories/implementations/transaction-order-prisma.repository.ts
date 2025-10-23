@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
 import {
     TransactionEntity,
@@ -13,6 +12,8 @@ import {
 import {
     BusinessAccountEventType,
     CorrectAccountEventType,
+    OfflineTokenHistoryEventType,
+    OfflineTokenStatus,
     TransactionStatus,
     TransactionType,
     UserItemEventType,
@@ -24,8 +25,233 @@ import {
     newDateF,
 } from '../../../../../utils/date';
 import { prismaClient } from '../../../../../infra/databases/prisma.config';
+import { OfflineTokenEntity } from '../../../OfflineTokens/entities/offline-token.entity';
+import { IOfflineTokenRepository } from '../../../OfflineTokens/repositories/offline-tokens.repository';
+import { IOfflineTokenHistoryRepository } from '../../../OfflineTokens/repositories/offline-tokens-history.repository';
 
 export class TransactionOrderPrismaRepository implements ITransactionOrderRepository {
+    async processOfflineTokenPayment(
+    transactionEntity: TransactionEntity,
+    offlineTokenEntity: OfflineTokenEntity,
+    userInfoUuid: Uuid,
+  ): Promise<{
+    success: boolean;
+    finalDebitedUserItemBalance: number;
+    user_cashback_amount: number;
+  }> {
+    const dataToSave = transactionEntity.toJSON();
+    const debitedUserItemId = dataToSave.user_item_uuid; // UUID do benefício que está sendo debitado
+    const transactionId = dataToSave.uuid;
+    const favoredBusinessInfoId = dataToSave.favored_business_info_uuid;
+    const totalAmountToDecrement = dataToSave.net_price; // Valor total gasto pelo usuário
+    const netAmountToCreditBusiness = dataToSave.partner_credit_amount;
+    const netAmountToCreditPlatform = dataToSave.fee_amount;
+    const cashbackAmountToCreditUser = dataToSave.cashback; // Valor do cashback a ser creditado
+
+    // Dados do OfflineToken que serão atualizados/usados
+    const offlineTokenUuid = offlineTokenEntity.uuid.uuid;
+    const offlineTokenCode = offlineTokenEntity.token_code;
+
+    const result = await prismaClient.$transaction(async (tx) => {
+        // 0. CRIAR A TRANSAÇÃO NO BANCO DE DADOS PRIMEIRO!
+    //    Isso garante que o 'transactionId' (UUID da transação) exista no DB antes de ser referenciado.
+     await tx.transactions.create({
+        data: {
+            uuid: dataToSave.uuid, // O UUID da sua entidade dataToSave
+            user_item_uuid: debitedUserItemId, // O item que foi debitado
+            favored_business_info_uuid: favoredBusinessInfoId, // O negócio que recebeu o pagamento
+            original_price: dataToSave.original_price,
+            discount_percentage: dataToSave.discount_percentage,
+            net_price: dataToSave.net_price,
+            fee_percentage: dataToSave.fee_percentage,
+            fee_amount: dataToSave.fee_amount,
+            partner_credit_amount: dataToSave.partner_credit_amount,
+            cashback: dataToSave.cashback,
+            description: dataToSave.description,
+            status: dataToSave.status, // Inicialmente 'pending', será atualizado para 'success' depois
+            transaction_type: dataToSave.transaction_type,
+            used_offline_token_code: dataToSave.used_offline_token_code, // Código do token offline usado
+            created_at: newDateF(new Date()),
+
+        },
+    });
+      // 1. Buscar UserItem DEBITADO e verificar saldo atomicamente
+      const debitedUserItem = await tx.userItem.findUnique({
+        where: { uuid: debitedUserItemId },
+        select: { balance: true, user_info_uuid: true },
+      });
+      if (!debitedUserItem) {
+        throw new CustomError(`Debited UserItem with UUID ${debitedUserItemId} not found.`, 404);
+      }
+      if (debitedUserItem.user_info_uuid !== userInfoUuid.uuid) {
+        throw new CustomError(`Debited UserItem ${debitedUserItemId} does not belong to user ${userInfoUuid.uuid}.`, 409);
+      }
+      if (debitedUserItem.balance < totalAmountToDecrement) {
+        throw new CustomError(`Insufficient balance in UserItem ${debitedUserItemId}. Required: ${totalAmountToDecrement}, Available: ${debitedUserItem.balance}`, 403);
+      }
+      const debitedUserItemBalanceBefore = debitedUserItem.balance;
+      const debitedUserItemBalanceAfter = debitedUserItemBalanceBefore - totalAmountToDecrement;
+
+      // 2. Buscar UserItem "Correct" para o cashback
+      const correctUserItem = await tx.userItem.findFirst({
+        where: { user_info_uuid: userInfoUuid.uuid, item_name: 'Correct' },
+        select: { uuid: true, balance: true },
+      });
+      if (!correctUserItem) {
+        throw new CustomError(`User ${userInfoUuid.uuid} does not have a 'Correct' UserItem to receive cashback.`, 404);
+      }
+      const correctUserItemId = correctUserItem.uuid;
+      const correctItemBalanceBeforeCashback = correctUserItem.balance;
+      const correctItemBalanceAfterCashback = correctItemBalanceBeforeCashback + cashbackAmountToCreditUser;
+
+      // 3. Buscar BusinessAccount do Parceiro
+      const currentBusinessAccount = await tx.businessAccount.findFirst({
+        where: { business_info_uuid: favoredBusinessInfoId },
+        select: { uuid: true, balance: true },
+      });
+      if (!currentBusinessAccount) {
+        throw new CustomError(`BusinessAccount associated with BusinessInfo ${favoredBusinessInfoId} not found.`, 404);
+      }
+      const businessAccountId = currentBusinessAccount.uuid;
+      const businessBalanceBefore = currentBusinessAccount.balance;
+      const businessBalanceAfter = businessBalanceBefore + netAmountToCreditBusiness;
+
+      // 4. Buscar CorrectAccount da Plataforma
+      const currentCorrectAccount = await tx.correctAccount.findFirst({
+        select: { uuid: true, balance: true },
+      });
+      if (!currentCorrectAccount) {
+        throw new CustomError(`CorrectAccount not found. System configuration error.`, 500);
+      }
+      const correctAccountId = currentCorrectAccount.uuid;
+      const correctBalanceBefore = currentCorrectAccount.balance;
+      const correctBalanceAfter = correctBalanceBefore + netAmountToCreditPlatform;
+
+      // --- Executar Atualizações ---
+
+      // 5. Debitar UserItem DEBITADO
+      await tx.userItem.update({
+        where: { uuid: debitedUserItemId },
+        data: { balance: { decrement: totalAmountToDecrement }, updated_at: newDateF(new Date()) },
+      });
+
+      // 6. Creditar BusinessAccount do Parceiro
+      await tx.businessAccount.update({
+        where: { uuid: businessAccountId },
+        data: { balance: { increment: netAmountToCreditBusiness }, updated_at: newDateF(new Date()) },
+      });
+
+      // 7. Creditar CorrectAccount da Plataforma
+      await tx.correctAccount.update({
+        where: { uuid: correctAccountId },
+        data: { balance: { increment: netAmountToCreditPlatform }, updated_at:newDateF(new Date()) },
+      });
+
+      // 8. Creditar CASHBACK no UserItem "Correct" do Usuário
+      await tx.userItem.update({
+        where: { uuid: correctUserItemId },
+        data: { balance: { increment: cashbackAmountToCreditUser }, updated_at:newDateF(new Date()) },
+      });
+
+      // NOVO: 9. Atualizar o OfflineToken para CONSUMED e last_used_at/last_accessed_at
+      await tx.offlineToken.update({
+        where: { uuid: offlineTokenUuid },
+        data: {
+          status: OfflineTokenStatus.CONSUMED,
+          last_used_at: new Date(),
+          last_accessed_at: new Date(),
+          updated_at: new Date(),
+        },
+      });
+
+      // NOVO: 10. Criar registro no OfflineTokenHistory
+      await tx.offlineTokenHistory.create({
+        data: {
+          original_token_uuid: offlineTokenUuid,
+          token_code: offlineTokenCode,
+          user_info_uuid: userInfoUuid.uuid,
+          user_item_uuid: debitedUserItemId, // O UserItem associado ao uso do token
+          event_type: OfflineTokenHistoryEventType.USED_IN_TRANSACTION, // Ou CONSUMED, dependendo da sua preferência
+          event_description: `Token used for transaction ${transactionId}.`,
+          related_transaction_uuid: transactionId,
+          event_at: new Date(),
+          snapshot_expires_at: offlineTokenEntity.expires_at, // Captura o estado no momento
+          snapshot_status: OfflineTokenStatus.CONSUMED, // O status APÓS o uso
+        },
+      });
+
+      // --- Criação dos Registros de Histórico das Contas ---
+
+      // 11. Histórico GASTO UserItem DEBITADO
+      await tx.userItemHistory.create({
+        data: {
+          user_item_uuid: debitedUserItemId,
+          event_type: "ITEM_SPENT", // Substitua pelo seu enum UserItemEventType.ITEM_SPENT
+          amount: -totalAmountToDecrement,
+          balance_before: debitedUserItemBalanceBefore,
+          balance_after: debitedUserItemBalanceAfter,
+          related_transaction_uuid: transactionId,
+        },
+      });
+
+      // 12. Histórico CASHBACK UserItem "Correct"
+      await tx.userItemHistory.create({
+        data: {
+          user_item_uuid: correctUserItemId,
+          event_type: "CASHBACK_RECEIVED", // Substitua pelo seu enum UserItemEventType.CASHBACK_RECEIVED
+          amount: cashbackAmountToCreditUser,
+          balance_before: correctItemBalanceBeforeCashback,
+          balance_after: correctItemBalanceAfterCashback,
+          related_transaction_uuid: transactionId,
+        },
+      });
+
+      // 13. Histórico BusinessAccount do Parceiro
+      await tx.businessAccountHistory.create({
+        data: {
+          business_account_uuid: businessAccountId,
+          event_type: "PAYMENT_RECEIVED", // Substitua pelo seu enum BusinessAccountEventType.PAYMENT_RECEIVED
+          amount: netAmountToCreditBusiness,
+          balance_before: businessBalanceBefore,
+          balance_after: businessBalanceAfter,
+          related_transaction_uuid: transactionId,
+        },
+      });
+
+      // 14. Histórico CorrectAccount da Plataforma
+      await tx.correctAccountHistory.create({
+        data: {
+          correct_account_uuid: correctAccountId,
+          event_type: "PLATFORM_FEE_COLLECTED", // Substitua pelo seu enum CorrectAccountEventType.PLATFORM_FEE_COLLECTED
+          amount: netAmountToCreditPlatform,
+          balance_before: correctBalanceBefore,
+          balance_after: correctBalanceAfter,
+          related_transaction_uuid: transactionId,
+        },
+      });
+
+      // 15. Atualizar Status da Transação Original para "success"
+      await tx.transactions.update({
+        where: { uuid: transactionId },
+        data: {
+          status: 'success', // Seu TransactionStatus.SUCCESS
+          user_item_uuid: debitedUserItemId,
+          paid_at: newDateF(new Date()),
+          updated_at: newDateF(new Date()),
+        },
+      });
+
+      // 16. Retorno
+      return {
+        success: true,
+        finalDebitedUserItemBalance: debitedUserItemBalanceAfter,
+        user_cashback_amount: cashbackAmountToCreditUser,
+      };
+    });
+
+    return result;
+  }
+
      async processAppUserPixCreditPayment(
         transactionEntity: TransactionEntity, // <--- Recebe a TransactionEntity
         amountReceivedInCents: number,

@@ -7,6 +7,7 @@ import { prismaClient } from '../../infra/databases/prisma.config';
 import path from 'path';
 import { OfflineTokenStatus } from '@prisma/client';
 import { newDateF } from '../../utils/date';
+import { InputProcessPOSTransactionWithOfflineTokenDTO } from '../../modules/Payments/Transactions/useCases/process-pos-payment-by-offline-token/dto/process-pos-payment-by-offline-token.dto';
 
 let userAuthToken1: string;
 let userAuthToken2: string;
@@ -105,6 +106,10 @@ let partner3_initial_liquid_balance_in_cents: number;
 let correct_admin_initial_balance_in_cents: number;
 let employee2_alimentacao_initial_balance_in_cents: number;
 let employee2_cashback_initial_balance_in_cents: number;
+
+//user offline tokens
+let activeOfflineToken: string;
+let revokedToken: string;
 
 describe('E2E Transactions', () => {
     beforeAll(async () => {
@@ -414,6 +419,17 @@ describe('E2E Transactions', () => {
         partner_admin_uuid = partnerAdmin1Result.body.uuid;
         expect(partnerAdmin1Result.statusCode).toBe(201);
 
+        //login partner 1 admin
+        const loginPartnerAdmin1 = await request(app)
+            .post('/business/admin/login')
+            .send({
+                business_document: inputPartner1.document,
+                password: inputPartnerAdmin1.password,
+                email: inputPartnerAdmin1.email,
+            });
+        expect(loginPartnerAdmin1.statusCode).toBe(200);
+        partner_admin_token = loginPartnerAdmin1.body.token;
+
         //Craete partner 2 admin
         const inputPartnerAdmin2 = {
             password: '123456',
@@ -653,14 +669,12 @@ describe('E2E Transactions', () => {
             .attach('file', csvFilePath); //
         expect(resultEmployeesCreated.statusCode).toBe(201);
         document_employee1 = resultEmployeesCreated.body.usersRegistered[0];
-        console.log({ document_employee1 });
         //get employee 1 user info uuid
         const userInfoEmployee1 = await prismaClient.userInfo.findUnique({
             where: {
                 document: document_employee1,
             },
         });
-        console.log({ userInfoEmployee1 });
         user_info_uuid_employee1 = userInfoEmployee1.uuid;
 
         //Now we need to register this employ user auth
@@ -675,12 +689,10 @@ describe('E2E Transactions', () => {
         expect(resultEmployee1Created.statusCode).toBe(201);
 
         //Login Employee
-        const loginEmployee1 = await request(app)
-            .post('/login-app-user')
-            .send({
-                document: inputUserauthEmployee1.document,
-                password: inputUserauthEmployee1.password,
-            });
+        const loginEmployee1 = await request(app).post('/login-app-user').send({
+            document: inputUserauthEmployee1.document,
+            password: inputUserauthEmployee1.password,
+        });
         expect(loginEmployee1.statusCode).toBe(200);
 
         auth_token_employee1 = loginEmployee1.body.token;
@@ -704,9 +716,9 @@ describe('E2E Transactions', () => {
         expect(resultActivateUserItem.statusCode).toBe(200);
     });
 
+    let userItem1EmployeeUuid: string;
+    let userItem2EmployeeUuid: string;
     describe('E2E Offline Tokens', () => {
-        let userItem1EmployeeUuid: string;
-        let userItem2EmployeeUuid: string;
         beforeAll(async () => {
             //EMPLOYEE
 
@@ -735,6 +747,7 @@ describe('E2E Transactions', () => {
                 where: { user_info_uuid: user_info_uuid_employee1 },
             });
         });
+
         describe('Activate Offline Tokens', () => {
             it('should activate 5 new tokens for a user item successfully (Initial Activation)', async () => {
                 // Este é o primeiro teste que espera um estado 'limpo' de tokens para o UserItem.
@@ -763,6 +776,12 @@ describe('E2E Transactions', () => {
                 expect(firstToken.sequence_number).toBe(1);
 
                 // C. Asserts do Banco de Dados
+                const findFirsttokenInDB =
+                    await prismaClient.offlineToken.findUnique({
+                        where: { token_code: firstToken.token_code },
+                    });
+                expect(findFirsttokenInDB.token_code).toHaveLength(6);
+
                 const dbTokens = await prismaClient.offlineToken.findMany({
                     where: {
                         user_item_uuid: userItem1EmployeeUuid,
@@ -850,11 +869,12 @@ describe('E2E Transactions', () => {
             });
             it('should revoke active tokens from other user items for the same user when a new item is activated', async () => {
                 // Ativar tokens para este 'SecondaryBenefit' (que serão os "antigos" a serem revogados)
-                await request(app)
+                const newTokens = await request(app)
                     .post('/app-user/activate-token')
                     .set('Authorization', `Bearer ${auth_token_employee1}`)
                     .send({ userItemUuid: userItem2EmployeeUuid });
 
+                expect(newTokens.status).toBe(201);
                 // Verifique que os tokens foram criados para o SecondaryBenefit
                 const secondaryBenefitTokens =
                     await prismaClient.offlineToken.findMany({
@@ -874,6 +894,9 @@ describe('E2E Transactions', () => {
 
                 expect(response.status).toBe(201);
                 expect(response.body.offlineTokens).toHaveLength(5);
+                activeOfflineToken = response.body.offlineTokens.find(
+                    (token: any) => token.status === 'ACTIVE'
+                ).token_code;
 
                 // C. Asserts do Banco de Dados
                 // Verificar tokens para userItem2EmployeeUuid (devem estar revogados)
@@ -881,6 +904,10 @@ describe('E2E Transactions', () => {
                     await prismaClient.offlineToken.findMany({
                         where: { user_item_uuid: userItem2EmployeeUuid },
                     });
+                revokedToken = revokedBenefitTokens.find(
+                    (token: any) => token.status === 'REVOKED'
+                ).token_code;
+                console.log({ revokedToken });
                 expect(revokedBenefitTokens).toHaveLength(5); // 5 tokens foram criados para SecondaryBenefit
                 revokedBenefitTokens.forEach((token) =>
                     expect(token.status).toBe(OfflineTokenStatus.REVOKED)
@@ -895,17 +922,6 @@ describe('E2E Transactions', () => {
                         },
                     });
                 expect(revokedHistory).toHaveLength(5); // 5 eventos de revogação
-
-                // IMPORTANTE: Limpar o userItem temporário e seus tokens/históricos para não impactar outros testes
-                await prismaClient.offlineToken.deleteMany({
-                    where: { user_item_uuid: userItem2EmployeeUuid },
-                });
-                await prismaClient.offlineTokenHistory.deleteMany({
-                    where: { user_item_uuid: userItem2EmployeeUuid },
-                });
-                await prismaClient.userItem.delete({
-                    where: { uuid: userItem2EmployeeUuid },
-                });
             });
             it('should return 404 if UserItem does not exist or does not belong to the user', async () => {
                 // Geração de um UUID que (esperamos) não exista ou não pertença ao usuário
@@ -925,10 +941,9 @@ describe('E2E Transactions', () => {
             it('should return 401 if user is not authenticated', async () => {
                 const response = await request(app)
                     .post('/app-user/activate-token')
-                    .send({ userItemUuid: userItem1EmployeeUuid }); 
+                    .send({ userItemUuid: userItem1EmployeeUuid });
 
                 expect(response.status).toBe(401);
-                
             });
 
             it('should return 400 if userItemUuid is missing from request body', async () => {
@@ -1124,6 +1139,173 @@ describe('E2E Transactions', () => {
             // - Teste para um webhook com txid que não existe
             // - Teste para um webhook de uma transação que já está 'success' (teste de idempotência)
             // - Teste para um webhook com valor incorreto
+        });
+    });
+    describe('E2E Process POS Payment by Offline Token', () => {
+        it('Should throw an error if original price is missing', async () => {
+            const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                business_info_uuid: '',
+                partner_user_uuid: '',
+                original_price: 0,
+                discount_percentage: 10,
+                net_price: 900,
+                tokenCode: 'ABC123',
+            };
+            const result = await request(app)
+                .post('/app-user/transation/offline-token')
+                .send(input)
+                .set({
+                    Authorization: `Bearer ${partner_admin_token}`,
+                });
+            expect(result.statusCode).toBe(400);
+            expect(result.body.error).toBe('Original price is required');
+        });
+        it('Should throw an error if net_price is missing (undefined)', async () => {
+            const input: any = {
+                business_info_uuid: '',
+                partner_user_uuid: '',
+                original_price: 1000,
+                discount_percentage: 10,
+                // net_price: undefined, // Esta propriedade está ausente
+                tokenCode: 'ABC123',
+            };
+            const result = await request(app)
+                .post('/app-user/transation/offline-token')
+                .send(input)
+                .set({
+                    Authorization: `Bearer ${partner_admin_token}`,
+                });
+            expect(result.statusCode).toBe(400);
+            expect(result.body.error).toBe('Net price is required');
+        });
+
+        it('Should throw an error if discount_percentage is missing (undefined)', async () => {
+            const input: any = {
+                business_info_uuid: '',
+                partner_user_uuid: '',
+                original_price: 1000,
+                // discount_percentage: undefined, // Esta propriedade está ausente
+                net_price: 900,
+                tokenCode: 'ABC123',
+            };
+            const result = await request(app)
+                .post('/app-user/transation/offline-token')
+                .send(input)
+                .set({
+                    Authorization: `Bearer ${partner_admin_token}`,
+                });
+            expect(result.statusCode).toBe(400);
+            expect(result.body.error).toBe('Discount percentage is required');
+        });
+
+        it('Should throw an error if tokenCode is missing (undefined)', async () => {
+            const input: any = {
+                business_info_uuid: '',
+                partner_user_uuid: '',
+                original_price: 1000,
+                discount_percentage: 10,
+                net_price: 900,
+                // tokenCode: undefined, // Esta propriedade está ausente
+            };
+            const result = await request(app)
+                .post('/app-user/transation/offline-token')
+                .send(input)
+                .set({
+                    Authorization: `Bearer ${partner_admin_token}`,
+                });
+            expect(result.statusCode).toBe(400);
+            expect(result.body.error).toBe('Offline token code is required');
+        });
+
+        it('Should throw an error if tokenCode has an invalid length (less than 6 characters)', async () => {
+            const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                business_info_uuid: '',
+                partner_user_uuid: '',
+                original_price: 1000,
+                discount_percentage: 10,
+                net_price: 900,
+                tokenCode: 'ABC12', // Menos de 6 caracteres
+            };
+            const result = await request(app)
+                .post('/app-user/transation/offline-token')
+                .send(input)
+                .set({
+                    Authorization: `Bearer ${partner_admin_token}`,
+                });
+            expect(result.statusCode).toBe(400);
+            expect(result.body.error).toBe(
+                'Offline token code must be 6 characters long'
+            );
+        });
+
+        it('Should throw an error if tokenCode has an invalid length (more than 6 characters)', async () => {
+            const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                business_info_uuid: '',
+                partner_user_uuid: '',
+                original_price: 1000,
+                discount_percentage: 10,
+                net_price: 900,
+                tokenCode: 'ABC1234', // Mais de 6 caracteres
+            };
+            const result = await request(app)
+                .post('/app-user/transation/offline-token')
+                .send(input)
+                .set({
+                    Authorization: `Bearer ${partner_admin_token}`,
+                });
+            expect(result.statusCode).toBe(400);
+            expect(result.body.error).toBe(
+                'Offline token code must be 6 characters long'
+            );
+        });
+        it('Should throw an error is token status is REVOKED', async () => {
+            const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                business_info_uuid: '',
+                partner_user_uuid: '',
+                original_price: 10,
+                discount_percentage: 10,
+                net_price: 9,
+                tokenCode: revokedToken, // Mais de 6 caracteres
+            };
+            const result = await request(app)
+                .post('/app-user/transation/offline-token')
+                .send(input)
+                .set({
+                    Authorization: `Bearer ${partner_admin_token}`,
+                });
+            expect(result.statusCode).toBe(403);
+            expect(result.body.error).toBe(
+                'Offline token is not active. Current status: REVOKED.'
+            );
+        });
+        it('Should successfully process offline token payment', async () => {
+            //HERE WE ARE COMING BACK TOKENS TO USER ITEM 2, BECAUSE IT HAS SOME BALANCE
+            // Ativar tokens para este 'SecondaryBenefit' (que serão os "antigos" a serem revogados)
+            const newTokensOnItem2 = await request(app)
+                .post('/app-user/activate-token')
+                .set('Authorization', `Bearer ${auth_token_employee1}`)
+                .send({ userItemUuid: userItem2EmployeeUuid });
+            activeOfflineToken = newTokensOnItem2.body.offlineTokens.find(
+                (token: any) => token.status === 'ACTIVE'
+            ).token_code;
+
+            const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                business_info_uuid: '',
+                partner_user_uuid: '',
+                original_price: 10,
+                discount_percentage: 10,
+                net_price: 9,
+                tokenCode: activeOfflineToken, // Mais de 6 caracteres
+            };
+            const result = await request(app)
+                .post('/app-user/transation/offline-token')
+                .send(input)
+                .set({
+                    Authorization: `Bearer ${partner_admin_token}`,
+                });
+            console.log(result.body)
+            expect(result.statusCode).toBe(200);
+           
         });
     });
 });
