@@ -47,7 +47,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
     const netAmountToCreditBusiness = dataToSave.partner_credit_amount;
     const netAmountToCreditPlatform = dataToSave.fee_amount;
     const cashbackAmountToCreditUser = dataToSave.cashback; // Valor do cashback a ser creditado
-
+    console.log({totalAmountToDecrement})
     // Dados do OfflineToken que serão atualizados/usados
     const offlineTokenUuid = offlineTokenEntity.uuid.uuid;
     const offlineTokenCode = offlineTokenEntity.token_code;
@@ -240,7 +240,8 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
           updated_at: newDateF(new Date()),
         },
       });
-
+      console.log({debitedUserItemBalanceBefore})
+      console.log({debitedUserItemBalanceAfter})
       // 16. Retorno
       return {
         success: true,

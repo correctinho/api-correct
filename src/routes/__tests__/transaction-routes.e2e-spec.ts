@@ -5,7 +5,7 @@ import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-be
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo';
 import { prismaClient } from '../../infra/databases/prisma.config';
 import path from 'path';
-import { OfflineTokenStatus } from '@prisma/client';
+import { OfflineTokenStatus, TransactionStatus } from '@prisma/client';
 import { newDateF } from '../../utils/date';
 import { InputProcessPOSTransactionWithOfflineTokenDTO } from '../../modules/Payments/Transactions/useCases/process-pos-payment-by-offline-token/dto/process-pos-payment-by-offline-token.dto';
 
@@ -907,7 +907,6 @@ describe('E2E Transactions', () => {
                 revokedToken = revokedBenefitTokens.find(
                     (token: any) => token.status === 'REVOKED'
                 ).token_code;
-                console.log({ revokedToken });
                 expect(revokedBenefitTokens).toHaveLength(5); // 5 tokens foram criados para SecondaryBenefit
                 revokedBenefitTokens.forEach((token) =>
                     expect(token.status).toBe(OfflineTokenStatus.REVOKED)
@@ -1142,170 +1141,413 @@ describe('E2E Transactions', () => {
         });
     });
     describe('E2E Process POS Payment by Offline Token', () => {
-        it('Should throw an error if original price is missing', async () => {
-            const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
-                business_info_uuid: '',
-                partner_user_uuid: '',
-                original_price: 0,
-                discount_percentage: 10,
-                net_price: 900,
-                tokenCode: 'ABC123',
-            };
-            const result = await request(app)
-                .post('/app-user/transation/offline-token')
-                .send(input)
-                .set({
-                    Authorization: `Bearer ${partner_admin_token}`,
-                });
-            expect(result.statusCode).toBe(400);
-            expect(result.body.error).toBe('Original price is required');
-        });
-        it('Should throw an error if net_price is missing (undefined)', async () => {
-            const input: any = {
-                business_info_uuid: '',
-                partner_user_uuid: '',
-                original_price: 1000,
-                discount_percentage: 10,
-                // net_price: undefined, // Esta propriedade está ausente
-                tokenCode: 'ABC123',
-            };
-            const result = await request(app)
-                .post('/app-user/transation/offline-token')
-                .send(input)
-                .set({
-                    Authorization: `Bearer ${partner_admin_token}`,
-                });
-            expect(result.statusCode).toBe(400);
-            expect(result.body.error).toBe('Net price is required');
-        });
+        // ======================================================================
+        // PRÉ-REQUISITOS E CONFIGURAÇÃO (Variáveis para o teste)
+        // ======================================================================
 
-        it('Should throw an error if discount_percentage is missing (undefined)', async () => {
-            const input: any = {
-                business_info_uuid: '',
-                partner_user_uuid: '',
-                original_price: 1000,
-                // discount_percentage: undefined, // Esta propriedade está ausente
-                net_price: 900,
-                tokenCode: 'ABC123',
-            };
-            const result = await request(app)
-                .post('/app-user/transation/offline-token')
-                .send(input)
-                .set({
-                    Authorization: `Bearer ${partner_admin_token}`,
-                });
-            expect(result.statusCode).toBe(400);
-            expect(result.body.error).toBe('Discount percentage is required');
-        });
+        //let auth_token_employee1: string; // Token JWT do employee1 para autenticação.
+        let user_info_uuid_employee1: string; // UUID do userInfo do employee1.
+        //let userItem2EmployeeUuid: string; // UUID do UserItem 'SecondaryBenefit' do employee1 (o que será debitado).
+        let correct_item_uuid_employee1: string; // UUID do UserItem 'Correct' do employee1 (para cashback) - UUID do DB
+        //let business_info_uuid_partner: string; // UUID do BusinessInfo do parceiro - UUID do DB
+        let business_account_uuid_partner: string; // UUID da BusinessAccount do parceiro - UUID do DB
+        let correct_account_uuid_platform: string; // UUID da CorrectAccount da plataforma - UUID do DB
+        //let partner_admin_token: string; // Token JWT do admin do parceiro para autenticação da requisição POST.
 
-        it('Should throw an error if tokenCode is missing (undefined)', async () => {
-            const input: any = {
-                business_info_uuid: '',
-                partner_user_uuid: '',
-                original_price: 1000,
-                discount_percentage: 10,
-                net_price: 900,
-                // tokenCode: undefined, // Esta propriedade está ausente
-            };
-            const result = await request(app)
-                .post('/app-user/transation/offline-token')
-                .send(input)
-                .set({
-                    Authorization: `Bearer ${partner_admin_token}`,
-                });
-            expect(result.statusCode).toBe(400);
-            expect(result.body.error).toBe('Offline token code is required');
-        });
+        // SALDOS INICIAIS LIDOS DO BANCO DE DADOS em Centavos
+        let initialUserItem2BalanceInCents: number;
+        let initialBusinessAccountBalanceInCents: number;
+        let initialCorrectAccountBalanceInCents: number;
 
-        it('Should throw an error if tokenCode has an invalid length (less than 6 characters)', async () => {
-            const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
-                business_info_uuid: '',
-                partner_user_uuid: '',
-                original_price: 1000,
-                discount_percentage: 10,
-                net_price: 900,
-                tokenCode: 'ABC12', // Menos de 6 caracteres
-            };
-            const result = await request(app)
-                .post('/app-user/transation/offline-token')
-                .send(input)
-                .set({
-                    Authorization: `Bearer ${partner_admin_token}`,
-                });
-            expect(result.statusCode).toBe(400);
-            expect(result.body.error).toBe(
-                'Offline token code must be 6 characters long'
+        let initialCorrectUserItemBalanceInCents: number;
+        let initialBusinessAccountBalance: number;
+        let initialCorrectAccountBalance: number;
+
+        // VALORES DA TRANSAÇÃO NO FORMATO QUE A API RECEBE (EM REAIS)
+        const originalPriceInReais = 100; // R$ 100.00
+        const discountPercentageForAPI = 10; // 10%
+        const netPriceInReais = 90; // R$ 90.00 (100 - 10% de 100 = 90)
+
+        // VALORES DA TRANSAÇÃO CONVERTIDOS PARA CENTAVOS PARA CÁLCULOS INTERNOS E DB
+        const originalPriceInCentsCalc = originalPriceInReais * 100; // 10000 centavos
+        const netPriceInCentsCalc = netPriceInReais * 100; // 9000 centavos
+
+        // Valores calculados com base nas regras da TransactionEntity (TODOS EM CENTAVOS)
+        let expectedPlatformFeePercentageScaled: number; // % total que a plataforma cobra (escalado)
+        let expectedPlatformFeeAmountInCents: number; // Valor total da taxa da plataforma (em centavos)
+        let expectedCashbackAmountInCents: number; // Valor total de cashback para o usuário (em centavos)
+        let expectedPartnerCreditAmountInCents: number; // Valor que o parceiro receberá (em centavos)
+
+        // Variáveis para as taxas escaladas (lidas do PartnerConfig)
+        let cashbackProvidedByPartnerScaled: number;
+        let adminTaxPercentageScaled: number;
+        let marketingTaxPercentageScaled: number;
+        let marketPlaceTaxScaled: number;
+
+        beforeAll(async () => {
+            //FIND PARTNER CONFIG TO IDENTIFY TAXES AND CASHBACK
+            // ======================================================================
+            // CÁLCULO DAS TAXAS E CASHBACK BASEADO NO PartnerConfig E TransactionEntity
+            // ======================================================================
+            // 1. Encontrar a configuração do parceiro para identificar taxas
+            const partnerConfig = await prismaClient.partnerConfig.findUnique({
+                where: {
+                    business_info_uuid: partner_info_uuid,
+                },
+            });
+            if (!partnerConfig) {
+                throw new Error(
+                    'PartnerConfig not found for the test partner. Please seed it.'
+                );
+            }
+            // 2. Armazenar as taxas escaladas diretamente do PartnerConfig
+            // (A sua `TransactionEntity` soma admin_tax e marketing_tax para o fee_percentage)
+            adminTaxPercentageScaled = partnerConfig.admin_tax;
+            marketingTaxPercentageScaled = partnerConfig.marketing_tax;
+            marketPlaceTaxScaled = partnerConfig.market_place_tax; // Se esta for uma taxa adicional fora de 'fee_percentage'
+            cashbackProvidedByPartnerScaled = partnerConfig.cashback_tax; // Cashback adicional do parceiro, se aplicável
+
+            // 3. Calcular a porcentagem TOTAL da taxa da plataforma (fee_percentage)
+            // Conforme TransactionEntity.calculateFeePercentage, é a soma de admin_tax e marketing_tax
+            expectedPlatformFeePercentageScaled =
+                adminTaxPercentageScaled + marketingTaxPercentageScaled;
+
+            // 4. Calcular o VALOR TOTAL da taxa da plataforma (fee_amount)x
+            // Conforme TransactionEntity.calculateFee() -> _fee_amount
+            const calculatedFeeAmount =
+                (BigInt(netPriceInCentsCalc) *
+                    BigInt(expectedPlatformFeePercentageScaled)) /
+                BigInt(1000000); // netPriceInCents * (fee_percentage / 10000 para % * 100 para centavos)
+            expectedPlatformFeeAmountInCents = Number(calculatedFeeAmount);
+
+            // 5. Calcular o VALOR TOTAL do cashback para o usuário
+            // Conforme TransactionEntity.calculateFee() -> _cashback é 20% do _fee_amount
+            expectedCashbackAmountInCents = Number(
+                (BigInt(expectedPlatformFeeAmountInCents) * 20n) / 100n
             );
-        });
+            // Adicionar cashback fornecido pelo parceiro
+            // cashback = (20% da taxa da plataforma) + (cashback do parceiro sobre net_price)
+            // ENTÃO:
+            const partnerAdditionalCashback =
+                (BigInt(netPriceInCentsCalc) *
+                    BigInt(cashbackProvidedByPartnerScaled)) /
+                BigInt(1000000);
+            expectedCashbackAmountInCents += Number(partnerAdditionalCashback);
 
-        it('Should throw an error if tokenCode has an invalid length (more than 6 characters)', async () => {
-            const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
-                business_info_uuid: '',
-                partner_user_uuid: '',
-                original_price: 1000,
-                discount_percentage: 10,
-                net_price: 900,
-                tokenCode: 'ABC1234', // Mais de 6 caracteres
-            };
-            const result = await request(app)
-                .post('/app-user/transation/offline-token')
-                .send(input)
-                .set({
-                    Authorization: `Bearer ${partner_admin_token}`,
-                });
-            expect(result.statusCode).toBe(400);
-            expect(result.body.error).toBe(
-                'Offline token code must be 6 characters long'
-            );
-        });
-        it('Should throw an error is token status is REVOKED', async () => {
-            const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
-                business_info_uuid: '',
-                partner_user_uuid: '',
-                original_price: 10,
-                discount_percentage: 10,
-                net_price: 9,
-                tokenCode: revokedToken, // Mais de 6 caracteres
-            };
-            const result = await request(app)
-                .post('/app-user/transation/offline-token')
-                .send(input)
-                .set({
-                    Authorization: `Bearer ${partner_admin_token}`,
-                });
-            expect(result.statusCode).toBe(403);
-            expect(result.body.error).toBe(
-                'Offline token is not active. Current status: REVOKED.'
-            );
-        });
-        it('Should successfully process offline token payment', async () => {
-            //HERE WE ARE COMING BACK TOKENS TO USER ITEM 2, BECAUSE IT HAS SOME BALANCE
-            // Ativar tokens para este 'SecondaryBenefit' (que serão os "antigos" a serem revogados)
-            const newTokensOnItem2 = await request(app)
-                .post('/app-user/activate-token')
-                .set('Authorization', `Bearer ${auth_token_employee1}`)
-                .send({ userItemUuid: userItem2EmployeeUuid });
-            activeOfflineToken = newTokensOnItem2.body.offlineTokens.find(
-                (token: any) => token.status === 'ACTIVE'
-            ).token_code;
+            // 6. Calcular o VALOR a ser creditado ao parceiro
+            // Conforme TransactionEntity.calculateFee() -> _partner_credit_amount
+            expectedPartnerCreditAmountInCents =
+                netPriceInCentsCalc - expectedPlatformFeeAmountInCents;
 
-            const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
-                business_info_uuid: '',
-                partner_user_uuid: '',
-                original_price: 10,
-                discount_percentage: 10,
-                net_price: 9,
-                tokenCode: activeOfflineToken, // Mais de 6 caracteres
-            };
-            const result = await request(app)
-                .post('/app-user/transation/offline-token')
-                .send(input)
-                .set({
-                    Authorization: `Bearer ${partner_admin_token}`,
+            // Se o marketplaceTax também afeta o que o parceiro recebe, precisaria ser subtraído daqui.
+            // Mas como a TransactionEntity calcula _fee_amount apenas com admin_tax e marketing_tax
+            // e _partner_credit_amount é _net_price - _fee_amount, o marketplaceTax não está impactando o parceiro *neste cálculo*.
+            // Ele deveria ser uma parte do _fee_amount ou uma dedução separada.
+            // Vamos considerar que 'marketPlaceTax' é uma taxa que a plataforma cobra a si mesma, ou parte do fee_percentage se somada.
+            // Por enquanto, a 'expectedPlatformFeeAmountInCents' já cobre o que a plataforma 'ganha' da transação.
+        });
+        beforeEach(async () => {
+            // --- CAPTURAR SALDOS INICIAIS ANTES DE CADA TESTE ---
+            const userItem2 = await prismaClient.userItem.findUnique({
+                where: { uuid: userItem2EmployeeUuid },
+            });
+            initialUserItem2BalanceInCents = userItem2.balance;
+
+            const correctUserItem = await prismaClient.userItem.findFirst({
+                where: {
+                    user_info_uuid: userItem2.user_info_uuid,
+                    item_name: 'Correct',
+                },
+            });
+
+            correct_item_uuid_employee1 = correctUserItem.uuid;
+            initialCorrectUserItemBalanceInCents = correctUserItem.balance;
+
+            const businessAccount =
+                await prismaClient.businessAccount.findFirst({
+                    where: { business_info_uuid: partner_info_uuid },
                 });
-            console.log(result.body)
-            expect(result.statusCode).toBe(200);
-           
+            business_account_uuid_partner = businessAccount.uuid;
+            initialBusinessAccountBalanceInCents = businessAccount.balance;
+
+            const correctAccount = await prismaClient.correctAccount.findFirst(
+                {}
+            );
+            initialCorrectAccountBalance = correctAccount.balance / 100;
+        });
+        describe('E2E Pre Paid Offline Token', () => {
+            it('Should throw an error if original price is missing', async () => {
+                const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 0,
+                    discount_percentage: 10,
+                    net_price: 900,
+                    tokenCode: 'ABC123',
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe('Original price is required');
+            });
+            it('Should throw an error if net_price is missing (undefined)', async () => {
+                const input: any = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 1000,
+                    discount_percentage: 10,
+                    // net_price: undefined, // Esta propriedade está ausente
+                    tokenCode: 'ABC123',
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe('Net price is required');
+            });
+
+            it('Should throw an error if discount_percentage is missing (undefined)', async () => {
+                const input: any = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 1000,
+                    // discount_percentage: undefined, // Esta propriedade está ausente
+                    net_price: 900,
+                    tokenCode: 'ABC123',
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe(
+                    'Discount percentage is required'
+                );
+            });
+
+            it('Should throw an error if tokenCode is missing (undefined)', async () => {
+                const input: any = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 1000,
+                    discount_percentage: 10,
+                    net_price: 900,
+                    // tokenCode: undefined, // Esta propriedade está ausente
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe(
+                    'Offline token code is required'
+                );
+            });
+
+            it('Should throw an error if tokenCode has an invalid length (less than 6 characters)', async () => {
+                const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 1000,
+                    discount_percentage: 10,
+                    net_price: 900,
+                    tokenCode: 'ABC12', // Menos de 6 caracteres
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe(
+                    'Offline token code must be 6 characters long'
+                );
+            });
+
+            it('Should throw an error if tokenCode has an invalid length (more than 6 characters)', async () => {
+                const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 1000,
+                    discount_percentage: 10,
+                    net_price: 900,
+                    tokenCode: 'ABC1234', // Mais de 6 caracteres
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe(
+                    'Offline token code must be 6 characters long'
+                );
+            });
+            it('Should throw an error is token status is REVOKED', async () => {
+                const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 10,
+                    discount_percentage: 10,
+                    net_price: 9,
+                    tokenCode: revokedToken, // Mais de 6 caracteres
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(403);
+                expect(result.body.error).toBe(
+                    'Offline token is not active. Current status: REVOKED.'
+                );
+            });
+            it('Should successfully process offline token payment - PRE PAID USER ITEM', async () => {
+                //HERE WE ARE COMING BACK TOKENS TO USER ITEM 2, BECAUSE IT HAS SOME BALANCE
+                // Ativar tokens para este 'SecondaryBenefit' (que serão os "antigos" a serem revogados)
+                const activateTokenResponse = await request(app)
+                    .post('/app-user/activate-token')
+                    .set('Authorization', `Bearer ${auth_token_employee1}`)
+                    .send({ userItemUuid: userItem2EmployeeUuid });
+
+                expect(activateTokenResponse.status).toBe(201);
+                expect(activateTokenResponse.body.offlineTokens).toBeInstanceOf(
+                    Array
+                );
+                expect(
+                    activateTokenResponse.body.offlineTokens.length
+                ).toBeGreaterThan(0);
+                activeOfflineToken =
+                    activateTokenResponse.body.offlineTokens.find(
+                        (token: any) => token.status === 'ACTIVE'
+                    ).token_code;
+                expect(activateTokenResponse.status).toBe(201);
+
+                const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: originalPriceInReais,
+                    discount_percentage: discountPercentageForAPI,
+                    net_price: netPriceInReais,
+                    tokenCode: activeOfflineToken, // Mais de 6 caracteres
+                };
+                const transactionResponse = await request(app) // <-- Renomeado de `result` para `transactionResponse` para clareza
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+
+                expect(transactionResponse.statusCode).toBe(200);
+
+                // ======================================================================
+                // C. ASSERÇÕES DA RESPOSTA DA API (Validação do corpo da resposta)
+                // ======================================================================
+                expect(transactionResponse.body.transaction_uuid).toBeDefined();
+                expect(typeof transactionResponse.body.transaction_uuid).toBe(
+                    'string'
+                );
+                expect(transactionResponse.body.transaction_status).toBe(
+                    TransactionStatus.success
+                );
+                expect(transactionResponse.body.paid_at).toBeDefined(); // Verifica se o timestamp de pagamento existe
+                expect(transactionResponse.body.offline_token_code).toBe(
+                    activeOfflineToken
+                );
+                expect(transactionResponse.body.offline_token_status).toBe(
+                    OfflineTokenStatus.CONSUMED
+                );
+                expect(transactionResponse.body.message).toBe(
+                    'Transaction created and paid successfully with offline token.'
+                );
+
+                // Validações de saldos/valores retornados pela API (geralmente em Reais)
+                // finalBalance: Saldo final do item debitado do usuário
+                expect(transactionResponse.body.finalBalance).toBeCloseTo(
+                    (initialUserItem2BalanceInCents - netPriceInCentsCalc) / 100
+                );
+                // cashback: Valor de cashback para o usuário
+                expect(transactionResponse.body.cashback).toBeCloseTo(
+                    expectedCashbackAmountInCents / 100
+                );
+
+                const transactionUuid =
+                    transactionResponse.body.transaction_uuid; // Captura o UUID da transação para uso posterior
+
+                // ======================================================================
+                // D. ASSERÇÕES DO ESTADO DO BANCO DE DADOS (APÓS A TRANSAÇÃO)
+                // ======================================================================
+
+                // 1. Verificar o UserItem2 (saldo debitado)
+                const updatedUserItem2 = await prismaClient.userItem.findUnique(
+                    {
+                        where: { uuid: userItem2EmployeeUuid },
+                    }
+                );
+                // Adicionar verificação de null, pois é uma boa prática
+                if (!updatedUserItem2)
+                    throw new Error(
+                        'Updated UserItem2 not found after transaction.'
+                    );
+
+                // Saldo final esperado em centavos: inicial - netPriceInCentsCalc
+                expect(updatedUserItem2.balance).toBe(
+                    initialUserItem2BalanceInCents - netPriceInCentsCalc
+                );
+                // 2. Verificar o CorrectUserItem (saldo de cashback creditado)
+                const updatedCorrectUserItem =
+                    await prismaClient.userItem.findUnique({
+                        where: { uuid: correct_item_uuid_employee1 },
+                    });
+                if (!updatedCorrectUserItem)
+                    throw new Error(
+                        'Updated CorrectUserItem not found after transaction.'
+                    );
+
+                console.log({
+                    initialCorrectUserItemBalanceInCents,
+                    expectedCashbackAmountInCents,
+                });
+                // Saldo final esperado em centavos: inicial + cashback
+                expect(updatedCorrectUserItem.balance).toBe(
+                    initialCorrectUserItemBalanceInCents +
+                        expectedCashbackAmountInCents
+                );
+
+                // 3. Verificar a BusinessAccount do parceiro (saldo creditado)
+                const updatedBusinessAccount =
+                    await prismaClient.businessAccount.findUnique({
+                        where: { uuid: business_account_uuid_partner },
+                    });
+                if (!updatedBusinessAccount)
+                    throw new Error(
+                        'Updated BusinessAccount not found after transaction.'
+                    );
+
+                console.log(
+                    'Updated BusinessAccount Balance (Cents):',
+                    updatedBusinessAccount.balance
+                );
+                // Saldo final esperado em centavos: inicial + valor a ser creditado ao parceiro
+                expect(updatedBusinessAccount.balance).toBe(
+                    initialBusinessAccountBalanceInCents +
+                        expectedPartnerCreditAmountInCents
+                );
+            });
         });
     });
 });

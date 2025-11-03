@@ -32,13 +32,11 @@ export class ProcessPOSTransactionWithOfflineTokenUsecase {
     if (data.net_price <= 0) throw new CustomError("Net price must be greater than zero", 400); // Net price também deve ser positivo
     if (!data.tokenCode) throw new CustomError("Offline token code is required", 400);
     if (data.tokenCode.length !== 6) throw new CustomError("Offline token code must be 6 characters long", 400); // Validação de tamanho
-    console.log("Aqui 1")
     // 2. Buscar e Validar o Offline Token (Usando o token_code de 6 caracteres, que é UNIQUE)
     const offlineToken = await this.offlineTokenRepository.findByTokenCode(data.tokenCode);
     if (!offlineToken) {
       throw new CustomError("Offline token not found for the provided code.", 404);
     }
-    console.log("Aqui 2")
 
     // Validação de Status do Token (apenas ACTIVE é permitido para uso)
     if (offlineToken.status !== OfflineTokenStatus.ACTIVE) {
@@ -55,7 +53,6 @@ export class ProcessPOSTransactionWithOfflineTokenUsecase {
     }
     const tokenUserItemUuid = offlineToken.user_item_uuid; // Prisma retorna string aqui se não for ValueObject
     const tokenUserInfoUuid = offlineToken.user_info_uuid; // Prisma retorna string aqui se não for ValueObject
-    console.log("Aqui 3")
 
     // 4. Validações de Negócio (Business, PartnerConfig)
     const businessInfo = await this.businessInfoRepository.findById(data.business_info_uuid);
@@ -65,7 +62,6 @@ export class ProcessPOSTransactionWithOfflineTokenUsecase {
 
     const partnerConfig = await this.partnerConfigRepository.findByPartnerId(businessInfo.uuid);
     if (!partnerConfig) throw new CustomError("Partner configuration not found for this business.", 400);
-    console.log("Aqui 4")
 
     // 5. Criar a TransactionEntity (com o `user_item_uuid` e `used_offline_token_code`)
     const transactionDataForEntity = {
@@ -78,7 +74,6 @@ export class ProcessPOSTransactionWithOfflineTokenUsecase {
     };
 
     const transactionEntity = TransactionEntity.create(transactionDataForEntity);
-    console.log("Aqui 5")
 
     // 6. Calcular taxas e setar IDs
     transactionEntity.calculateFeePercentage(partnerConfig.admin_tax, partnerConfig.marketing_tax);
@@ -93,15 +88,12 @@ export class ProcessPOSTransactionWithOfflineTokenUsecase {
     if (!userItem) throw new CustomError("User item associated with the token not found.", 404);
     if (userItem.user_info_uuid.uuid !== tokenUserInfoUuid.uuid) throw new CustomError("User item from token does not belong to the token's owner.", 403);
     if (userItem.status === "inactive" || userItem.status === "blocked") throw new CustomError("User item associated with token is not active.", 403);
-    console.log("Aqui 6")
-    console.log({userItem, transactionEntity})
     // 8. Verificação de Saldo/Limite do UserItem
     if (userItem.balance < transactionEntity.net_price) throw new CustomError("User item balance is not enough for this transaction.", 403);
 
     // Validação de elegibilidade do benefício para o parceiro
     const isBenefitValid = partnerConfig.items_uuid.some((item) => item === userItem.item_uuid.uuid);
     if (!isBenefitValid) throw new CustomError("User item associated with token is not valid for this transaction at this business.", 403);
-    console.log("Aqui 7")
 
     // 9. Processamento do Pagamento (Lógica pré-paga para tokens offline)
     if (userItem.item_category === "pre_pago") {
@@ -113,8 +105,7 @@ export class ProcessPOSTransactionWithOfflineTokenUsecase {
           tokenUserInfoUuid, // O UUID do app-user dono do token
         );
 
-            console.log("Aqui 8")
-
+        console.log(repoResult)
         return {
           transaction_uuid: transactionEntity.uuid.uuid,
           transaction_status: 'success', // Status final conforme sua entidade
