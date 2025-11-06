@@ -5,7 +5,7 @@ import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-be
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo';
 import { prismaClient } from '../../infra/databases/prisma.config';
 import path from 'path';
-import { OfflineTokenStatus, TransactionStatus } from '@prisma/client';
+import { OfflineTokenHistoryEventType, OfflineTokenStatus, TransactionStatus, TransactionType, UserItemEventType } from '@prisma/client';
 import { newDateF } from '../../utils/date';
 import { InputProcessPOSTransactionWithOfflineTokenDTO } from '../../modules/Payments/Transactions/useCases/process-pos-payment-by-offline-token/dto/process-pos-payment-by-offline-token.dto';
 
@@ -1273,7 +1273,8 @@ describe('E2E Transactions', () => {
             const correctAccount = await prismaClient.correctAccount.findFirst(
                 {}
             );
-            initialCorrectAccountBalance = correctAccount.balance / 100;
+            initialCorrectAccountBalanceInCents = correctAccount.balance;
+            correct_account_uuid_platform = correctAccount.uuid;
         });
         describe('E2E Pre Paid Offline Token', () => {
             it('Should throw an error if original price is missing', async () => {
@@ -1518,10 +1519,6 @@ describe('E2E Transactions', () => {
                         'Updated CorrectUserItem not found after transaction.'
                     );
 
-                console.log({
-                    initialCorrectUserItemBalanceInCents,
-                    expectedCashbackAmountInCents,
-                });
                 // Saldo final esperado em centavos: inicial + cashback
                 expect(updatedCorrectUserItem.balance).toBe(
                     initialCorrectUserItemBalanceInCents +
@@ -1538,15 +1535,153 @@ describe('E2E Transactions', () => {
                         'Updated BusinessAccount not found after transaction.'
                     );
 
-                console.log(
-                    'Updated BusinessAccount Balance (Cents):',
-                    updatedBusinessAccount.balance
-                );
                 // Saldo final esperado em centavos: inicial + valor a ser creditado ao parceiro
                 expect(updatedBusinessAccount.balance).toBe(
                     initialBusinessAccountBalanceInCents +
                         expectedPartnerCreditAmountInCents
                 );
+
+                // 4. Verificar a CorrectAccount da plataforma (saldo da taxa creditado)
+                const updatedCorrectAccount =
+                    await prismaClient.correctAccount.findUnique({
+                        where: { uuid: correct_account_uuid_platform },
+                    });
+                if (!updatedCorrectAccount)
+                    throw new Error(
+                        'Updated CorrectAccount not found after transaction.'
+                    );
+
+                console.log(
+                    'Updated CorrectAccount Balance (Cents):',
+                    updatedCorrectAccount.balance
+                );
+                
+                expect(updatedCorrectAccount.balance).toBe(
+                    initialCorrectAccountBalanceInCents +
+                        (expectedPlatformFeeAmountInCents -
+                            expectedCashbackAmountInCents)
+                );
+
+                // 5. Verificar o OfflineToken no banco de dados
+                const updatedOfflineToken =
+                    await prismaClient.offlineToken.findUnique({
+                        where: { token_code: activeOfflineToken },
+                    });
+                if (!updatedOfflineToken)
+                    throw new Error(
+                        'OfflineToken not found after transaction.'
+                    );
+
+                expect(updatedOfflineToken.status).toBe(
+                    OfflineTokenStatus.CONSUMED
+                );
+                expect(updatedOfflineToken.expires_at).toBeDefined(); // Token consumido deve ter data de expiração/consumo definida.
+
+
+                // 6. Verificar a TransactionEntity criada
+                const transaction = await prismaClient.transactions.findUnique({
+                    where: { uuid: transactionUuid },
+                });
+                if (!transaction)
+                    throw new Error(
+                        'Transaction not found in DB after creation.'
+                    );
+                expect(transaction.uuid).toBe(transactionUuid);
+                expect(transaction.status).toBe(TransactionStatus.success);
+                expect(transaction.transaction_type).toBe(
+                    TransactionType.POS_OFFLINE_PAYMENT
+                ); 
+                expect(transaction.favored_business_info_uuid).toBe(
+                    partner_info_uuid
+                );
+                
+                expect(transaction.original_price).toBe(
+                    originalPriceInCentsCalc
+                );
+                expect(transaction.net_price).toBe(netPriceInCentsCalc);
+                expect(transaction.fee_percentage).toBe(
+                    expectedPlatformFeePercentageScaled
+                );
+                expect(transaction.fee_amount).toBe(
+                    expectedPlatformFeeAmountInCents
+                );
+                expect(transaction.cashback).toBe(
+                    expectedCashbackAmountInCents
+                );
+                expect(transaction.partner_credit_amount).toBe(
+                    expectedPartnerCreditAmountInCents
+                );
+                expect(transaction.paid_at).toBeDefined();
+
+                // 7. Verificar os Históricos
+                // Para userItem2 (débito)
+
+                const userItem2History = await prismaClient.userItemHistory.findFirst({
+                    where: {
+                        user_item_uuid: userItem2EmployeeUuid,
+                        related_transaction_uuid: transactionUuid,
+                        // event_type: UserItemEventType.DEBIT // Se você tiver um enum para o tipo de evento
+                    },
+                    orderBy: { created_at: 'desc' }
+                });
+                if (!userItem2History) throw new Error("UserItem2 History not found.");
+                expect(userItem2History.amount).toBe(-netPriceInCentsCalc); // O débito deve ser negativo
+                expect(userItem2History.balance_after).toBe(updatedUserItem2.balance);
+
+                // Para correctUserItem (crédito)
+                const correctUserItemHistory = await prismaClient.userItemHistory.findFirst({
+                    where: {
+                        user_item_uuid: correct_item_uuid_employee1,
+                        related_transaction_uuid: transactionUuid,
+                        event_type: UserItemEventType.CASHBACK_RECEIVED,
+                                                
+                    },
+                    orderBy: { created_at: 'desc' }
+                });
+                if (!correctUserItemHistory) throw new Error("CorrectUserItem History not found.");
+                expect(correctUserItemHistory.amount).toBe(expectedCashbackAmountInCents); // O crédito deve ser positivo
+                expect(correctUserItemHistory.balance_after).toBe(updatedCorrectUserItem.balance);
+                // Para BusinessAccount (crédito)
+                const businessAccountHistory = await prismaClient.businessAccountHistory.findFirst({
+                    where: {
+                        //business_account_uuid: business_account_uuid_partner,
+                        related_transaction_uuid: transactionUuid,
+                        // event_type: BusinessAccountEventType.ITEM_SPENT // Se você tiver um enum para o tipo de evento
+                    },
+                    orderBy: { created_at: 'desc' }
+                });
+                if (!businessAccountHistory) throw new Error("BusinessAccount History not found.");
+                expect(businessAccountHistory.amount).toBe(expectedPartnerCreditAmountInCents);
+                expect(businessAccountHistory.balance_after).toBe(updatedBusinessAccount.balance);
+
+                // Para CorrectAccount (crédito/débito da taxa)
+                const correctAccountHistory = await prismaClient.correctAccountHistory.findFirst({
+                    where: {
+                        correct_account_uuid: correct_account_uuid_platform,
+                        related_transaction_uuid: transactionUuid,
+                        // event_type: CorrectAccountEventType.FEE_COLLECTION // Se você tiver um enum para o tipo de evento
+                    },
+                    orderBy: { created_at: 'desc' }
+                });
+                if (!correctAccountHistory) throw new Error("CorrectAccount History not found.");
+                // A lógica para o amount aqui dependerá de como a TransactionEntity registra o débito/crédito na CorrectAccount.
+                // Se for (taxa bruta - cashback), então:
+                expect(correctAccountHistory.amount).toBe(expectedPlatformFeeAmountInCents - expectedCashbackAmountInCents);
+                expect(correctAccountHistory.balance_after).toBe(updatedCorrectAccount.balance);
+
+                // Para OfflineTokenHistory (CONSUMED)
+                const offlineTokenHistory = await prismaClient.offlineTokenHistory.findFirst({
+                    where: {
+                        token_code: activeOfflineToken,
+                        related_transaction_uuid: transactionUuid,
+                        snapshot_status: OfflineTokenStatus.CONSUMED,
+                        // event_type: OfflineTokenHistoryEventType.CONSUMED // Se você tiver um enum para o tipo de evento
+                    },
+                });
+                if (!offlineTokenHistory) throw new Error("OfflineToken History not found.");
+                expect(offlineTokenHistory.event_type).toBe(OfflineTokenHistoryEventType.USED_IN_TRANSACTION);
+                expect(offlineTokenHistory.snapshot_status).toBe(OfflineTokenStatus.CONSUMED);
+                expect(offlineTokenHistory.user_item_uuid).toBe(userItem2EmployeeUuid);
             });
         });
     });

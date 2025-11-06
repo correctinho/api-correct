@@ -45,9 +45,8 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
     const favoredBusinessInfoId = dataToSave.favored_business_info_uuid;
     const totalAmountToDecrement = dataToSave.net_price; // Valor total gasto pelo usuário
     const netAmountToCreditBusiness = dataToSave.partner_credit_amount;
-    const netAmountToCreditPlatform = dataToSave.fee_amount;
+    const netAmountToCreditPlatform = dataToSave.platform_net_fee_amount;
     const cashbackAmountToCreditUser = dataToSave.cashback; // Valor do cashback a ser creditado
-    console.log({totalAmountToDecrement})
     // Dados do OfflineToken que serão atualizados/usados
     const offlineTokenUuid = offlineTokenEntity.uuid.uuid;
     const offlineTokenCode = offlineTokenEntity.token_code;
@@ -66,6 +65,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
             fee_percentage: dataToSave.fee_percentage,
             fee_amount: dataToSave.fee_amount,
             partner_credit_amount: dataToSave.partner_credit_amount,
+            platform_net_fee_amount: dataToSave.platform_net_fee_amount,
             cashback: dataToSave.cashback,
             description: dataToSave.description,
             status: dataToSave.status, // Inicialmente 'pending', será atualizado para 'success' depois
@@ -163,7 +163,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
           updated_at: new Date(),
         },
       });
-
+      console.log('Offline Token updated to CONSUMED:', offlineTokenCode);
       // NOVO: 10. Criar registro no OfflineTokenHistory
       await tx.offlineTokenHistory.create({
         data: {
@@ -205,7 +205,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
           related_transaction_uuid: transactionId,
         },
       });
-
       // 13. Histórico BusinessAccount do Parceiro
       await tx.businessAccountHistory.create({
         data: {
@@ -240,8 +239,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
           updated_at: newDateF(new Date()),
         },
       });
-      console.log({debitedUserItemBalanceBefore})
-      console.log({debitedUserItemBalanceAfter})
       // 16. Retorno
       return {
         success: true,
@@ -1153,9 +1150,26 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
     ): Promise<TransactionEntity> {
         const dataToSave = entity.toJSON();
         const createdTxData = await prismaClient.transactions.create({
-            data: dataToSave,
-        });
+            data: {
+                uuid: dataToSave.uuid,
+                favored_user_uuid: dataToSave.favored_user_uuid,
+                favored_business_info_uuid: dataToSave.favored_business_info_uuid,
+                payer_business_info_uuid: dataToSave.payer_business_info_uuid,
+                original_price: dataToSave.original_price,
+                discount_percentage: dataToSave.discount_percentage,
+                net_price: dataToSave.net_price,
+                fee_percentage: dataToSave.fee_percentage,
+                fee_amount: dataToSave.fee_amount,
+                partner_credit_amount: dataToSave.partner_credit_amount,
+                cashback: dataToSave.cashback,
+                description: dataToSave.description,
+                status: dataToSave.status,
+                transaction_type: dataToSave.transaction_type,
+                favored_partner_user_uuid: dataToSave.favored_partner_user_uuid,
+                created_at: dataToSave.created_at,
 
+            },
+        });
         // CRUCIAL: Após criar, buscamos novamente para ter todos os dados
         // e hidratamos para retornar uma instância de classe real.
         const finalTxData = await prismaClient.transactions.findUnique({
@@ -1194,6 +1208,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         return TransactionEntity.hydrate(transactionProps);
     }
 
+    
     public async processPaymentByBusiness(
         params: ProcessPaymentByBusinessParams
     ): Promise<ProcessPaymentByBusinessResult> {

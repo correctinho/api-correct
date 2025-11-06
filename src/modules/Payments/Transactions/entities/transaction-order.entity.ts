@@ -23,6 +23,7 @@ export type TransactionProps = {
   fee_amount?: number; // Optional: Defaults to 0
   partner_credit_amount: number; // valor que deve ser creditado ao parceiro
   cashback?: number; // Optional: Defaults to 0
+  platform_net_fee_amount?: number; // Valor líquido que a plataforma fica (bruto - cashback)
   description?: string | null; // Optional
   status: TransactionStatus; // Mandatory
   transaction_type?: TransactionType; // Mandatory
@@ -30,7 +31,8 @@ export type TransactionProps = {
   item_uuid?: string
   favored_partner_user_uuid?: Uuid | null; // Optional: FK to PartnerUser
   used_offline_token_code?: string
-  provider_tx_id?: string | null; //
+  provider_tx_id?: string | null; 
+  payer_business_info_uuid?: Uuid | null;
   pix_e2e_id?: string | null;
   created_at?: string; // Optional: Handled by constructor/DB
   updated_at?: string; // Optional: Handled by constructor/DB
@@ -72,6 +74,7 @@ export class TransactionEntity {
   private _fee_percentage?: number; // Optional: Defaults to 0
   private _fee_amount: number;
   private _cashback: number;
+  private _platform_net_fee_amount: number; // Valor líquido que a plataforma fica (bruto - cashback)
   private _description: string | null;
   private _status: TransactionStatus;
   private _transaction_type?: TransactionType;
@@ -83,6 +86,7 @@ export class TransactionEntity {
   private _provider_tx_id?: string | null; // <-- Adicionado
   private _pix_e2e_id?: string | null; 
   private _used_offline_token_code?: string
+  private _payer_business_info_uuid?: Uuid | null;
   private _created_at: string;
   private _updated_at: string;
 
@@ -104,6 +108,7 @@ export class TransactionEntity {
     // Campos calculados são inicializados
     this._fee_amount = props.fee_amount ?? 0;
     this._cashback = props.cashback ?? 0;
+    this._platform_net_fee_amount = props.platform_net_fee_amount ?? 0;
     this._partner_credit_amount = props.partner_credit_amount ?? 0;
     this._description = props.description ?? null;
     this._status = props.status ?? TransactionStatus.pending;
@@ -115,6 +120,7 @@ export class TransactionEntity {
     this._provider_tx_id = props.provider_tx_id ?? null;
     this._pix_e2e_id = props.pix_e2e_id ?? null; 
 
+    this._payer_business_info_uuid = props.payer_business_info_uuid ?? null;
     this._used_offline_token_code = props.used_offline_token_code
     this._created_at = props.created_at ?? newDateF(new Date());
     this._updated_at = newDateF(new Date());
@@ -137,7 +143,7 @@ export class TransactionEntity {
   get fee_amount(): number { return this._fee_amount / 100; }
   get cashback(): number { return this._cashback / 100; }
   get partner_credit_amount(): number { return this._partner_credit_amount / 100; }
-
+  get platform_net_fee_amount(): number { return this._platform_net_fee_amount / 100; }
   get description(): string | null { return this._description; }
   get status(): TransactionStatus { return this._status; }
   get transaction_type(): TransactionType { return this._transaction_type; }
@@ -145,9 +151,10 @@ export class TransactionEntity {
   get favored_partner_user_uuid(): Uuid | null { return this._favored_partner_user_uuid; }
   get correct_account_uuid(): Uuid | null { return this._correct_account_uuid; }
   get correct_account_balance(): number | null { return this._correct_account_balance; }
-   get provider_tx_id(): string | null { return this._provider_tx_id; }
+  get provider_tx_id(): string | null { return this._provider_tx_id; }
   get pix_e2e_id(): string | null { return this._pix_e2e_id; }
   get used_offline_token_code(): string | null { return this._used_offline_token_code }
+  get payer_business_info_uuid(): Uuid | null { return this._payer_business_info_uuid; }
   get created_at(): string { return this._created_at; }
   get updated_at(): string { return this._updated_at; }
 
@@ -262,7 +269,7 @@ export class TransactionEntity {
     // CORREÇÃO: Como os valores já vêm escalados do PartnerConfig (ex: 15000),
     // nós apenas os somamos. 
     this._fee_percentage = admin_tax + marketing_tax;
-
+    
     this.validate();
   }
 
@@ -286,8 +293,10 @@ export class TransactionEntity {
 
     // 3.  Calcula o valor a ser creditado ao parceiro
     this._partner_credit_amount = this._net_price - this._fee_amount;
+
+    //4. Calcula o valor líquido que a plataforma fica (bruto - cashback)
+    this._platform_net_fee_amount = this._fee_amount - this._cashback;
     this.validate();
-    // Não precisa retornar nada, pois o método modifica o estado interno
   }
 
 
@@ -378,6 +387,7 @@ export class TransactionEntity {
       fee_percentage: this._fee_percentage,
       fee_amount: this._fee_amount,
       cashback: this._cashback,
+      platform_net_fee_amount: this._platform_net_fee_amount,
       partner_credit_amount: this._partner_credit_amount,
       description: this._description,
       status: this._status,
@@ -386,6 +396,8 @@ export class TransactionEntity {
       provider_tx_id: this._provider_tx_id, 
       pix_e2e_id: this._pix_e2e_id,
       used_offline_token_code: this._used_offline_token_code,
+      paid_at: this._paid_at,
+      payer_business_info_uuid: this._payer_business_info_uuid ? this._payer_business_info_uuid.uuid : null,
       created_at: this._created_at,
     };
   }
@@ -409,6 +421,7 @@ export class TransactionEntity {
       fee_amount: 0,
       cashback: 0,
       partner_credit_amount: 0,
+      platform_net_fee_amount: 0
     };
 
     // 2. Cria a entidade com os dados preparados

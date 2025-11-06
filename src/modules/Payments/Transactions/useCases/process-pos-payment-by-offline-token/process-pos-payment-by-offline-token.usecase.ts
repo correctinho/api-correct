@@ -82,6 +82,7 @@ export class ProcessPOSTransactionWithOfflineTokenUsecase {
     transactionEntity.changePartnerUserUuid(new Uuid(data.partner_user_uuid));
     transactionEntity.changeDescription(data.description || "Transação POS com token offline.");
     transactionEntity.changeStatus('pending'); // Status inicial para esta transação combinada
+    transactionEntity.changeTransactionType(TransactionType.POS_OFFLINE_PAYMENT);
 
     // 7. Validações de Negócio do UserItem (associado ao token)
     const userItem = await this.userItemRepository.find(tokenUserItemUuid);
@@ -105,7 +106,6 @@ export class ProcessPOSTransactionWithOfflineTokenUsecase {
           tokenUserInfoUuid, // O UUID do app-user dono do token
         );
 
-        console.log(repoResult)
         return {
           transaction_uuid: transactionEntity.uuid.uuid,
           transaction_status: 'success', // Status final conforme sua entidade
