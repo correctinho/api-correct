@@ -23,6 +23,7 @@ export type TransactionProps = {
   fee_amount?: number; // Optional: Defaults to 0
   partner_credit_amount: number; // valor que deve ser creditado ao parceiro
   cashback?: number; // Optional: Defaults to 0
+  partner_cashback_percentage?: number; // Optional: Defaults to 0
   platform_net_fee_amount?: number; // Valor líquido que a plataforma fica (bruto - cashback)
   description?: string | null; // Optional
   status: TransactionStatus; // Mandatory
@@ -74,6 +75,7 @@ export class TransactionEntity {
   private _fee_percentage?: number; // Optional: Defaults to 0
   private _fee_amount: number;
   private _cashback: number;
+  private _partner_cashback_percentage: number
   private _platform_net_fee_amount: number; // Valor líquido que a plataforma fica (bruto - cashback)
   private _description: string | null;
   private _status: TransactionStatus;
@@ -108,6 +110,7 @@ export class TransactionEntity {
     // Campos calculados são inicializados
     this._fee_amount = props.fee_amount ?? 0;
     this._cashback = props.cashback ?? 0;
+    this._partner_cashback_percentage ?? 0
     this._platform_net_fee_amount = props.platform_net_fee_amount ?? 0;
     this._partner_credit_amount = props.partner_credit_amount ?? 0;
     this._description = props.description ?? null;
@@ -142,6 +145,7 @@ export class TransactionEntity {
   get fee_percentage(): number | undefined { return this._fee_percentage / 10000; }
   get fee_amount(): number { return this._fee_amount / 100; }
   get cashback(): number { return this._cashback / 100; }
+  get partner_cashback_percentage(): number { return this._partner_cashback_percentage / 10000; }
   get partner_credit_amount(): number { return this._partner_credit_amount / 100; }
   get platform_net_fee_amount(): number { return this._platform_net_fee_amount / 100; }
   get description(): string | null { return this._description; }
@@ -185,6 +189,11 @@ export class TransactionEntity {
     this.validate();
   }
 
+  setPartnerCashbackPercentage(percentage: number): void {
+    if (percentage < 0) throw new CustomError("Partner cashback percentage cannot be negative", 400);
+    this._partner_cashback_percentage = percentage;
+    this.validate();
+}
   completeTransaction(command: {
     user_item_uuid?: Uuid; // Source must be defined on completion
     favored_user_uuid?: Uuid | null;
@@ -278,26 +287,31 @@ export class TransactionEntity {
     this.validate()
   }
   calculateFee(): void {
-    // Verifica se os valores necessários existem antes de calcular
     if (this._net_price === undefined || this._fee_percentage === undefined) {
-      throw new CustomError("Net price and fee percentage must be set before calculating the fee", 400);
+        throw new CustomError("Net price and fee percentage must be set before calculating the fee", 400);
     }
 
     const calculated_fee = (BigInt(this._net_price) * BigInt(this._fee_percentage)) / BigInt(1000000);
+    this._fee_amount = Number(calculated_fee);
 
-    // Arredonda para o inteiro escalado mais próximo e armazena
-    this._fee_amount = Number(calculated_fee); // BigInt não precisa de Math.round para divisão inteira
+    let totalCashbackInCents = 0n;
 
-    // Calcula o cashback como 20% do valor da taxa
-    this._cashback = Number((BigInt(this._fee_amount) * 20n) / 100n);
+    // 1. Cashback do Parceiro (se o percentual foi definido)
+    if (this._partner_cashback_percentage !== undefined && this._partner_cashback_percentage > 0) {
+        const partner_cashback = (BigInt(this._net_price) * BigInt(this._partner_cashback_percentage)) / BigInt(1000000);
+        totalCashbackInCents += partner_cashback;
+    }
 
-    // 3.  Calcula o valor a ser creditado ao parceiro
+    // 2. Cashback da Plataforma (20% do fee_amount)
+    const platform_cashback = (BigInt(this._fee_amount) * 20n) / 100n;
+    totalCashbackInCents += platform_cashback;
+
+    this._cashback = Number(totalCashbackInCents); // O cashback agora é a soma
+
     this._partner_credit_amount = this._net_price - this._fee_amount;
-
-    //4. Calcula o valor líquido que a plataforma fica (bruto - cashback)
-    this._platform_net_fee_amount = this._fee_amount - this._cashback;
+    this._platform_net_fee_amount = this._fee_amount - this._cashback; // _cashback agora é o total
     this.validate();
-  }
+}
 
 
   changeDescription(description: string): void {

@@ -751,7 +751,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         const favoredBusinessInfoId = dataToSave.favored_business_info_uuid;
         const totalAmountToDecrement = dataToSave.net_price; // Valor total gasto pelo usuário
         const netAmountToCreditBusiness = dataToSave.partner_credit_amount;
-        const netAmountToCreditPlatform = dataToSave.fee_amount;
+        const netAmountToCreditPlatform = dataToSave.platform_net_fee_amount;
         const cashbackAmountToCreditUser = dataToSave.cashback; // Valor do cashback a ser creditado
 
         const result = await prismaClient.$transaction(async (tx) => {
@@ -1149,6 +1149,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         entity: TransactionEntity
     ): Promise<TransactionEntity> {
         const dataToSave = entity.toJSON();
+        console.log('dataToSave', dataToSave);
         const createdTxData = await prismaClient.transactions.create({
             data: {
                 uuid: dataToSave.uuid,
@@ -1161,6 +1162,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
                 fee_percentage: dataToSave.fee_percentage,
                 fee_amount: dataToSave.fee_amount,
                 partner_credit_amount: dataToSave.partner_credit_amount,
+                platform_net_fee_amount: dataToSave.platform_net_fee_amount,
                 cashback: dataToSave.cashback,
                 description: dataToSave.description,
                 status: dataToSave.status,

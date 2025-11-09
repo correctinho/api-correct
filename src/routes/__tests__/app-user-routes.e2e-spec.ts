@@ -3918,7 +3918,9 @@ describe('E2E App User tests', () => {
                 expected_fee_in_cents = createTransaction.body.fee_amount * 100; // fee em reais
                 expected_cashback_in_cents =
                     createTransaction.body.cashback * 100;
-
+                const transactionCreated = await prismaClient.transactions.findUnique({
+                    where: { uuid: transaction1_uuid },
+                })
                 const employeeItemsPrisma =
                     await prismaClient.userItem.findMany({
                         where: { user_info_uuid: employee_user_info },
@@ -4385,6 +4387,7 @@ describe('E2E App User tests', () => {
                             uuid: alimentacao_benefit_user2_uuid,
                         },
                     });
+
                     // 3. ACT: Executar o pagamento
                     const paymentInput = {
                         transactionId: transaction1_uuid,
