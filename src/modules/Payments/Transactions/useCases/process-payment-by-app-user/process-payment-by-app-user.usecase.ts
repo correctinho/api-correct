@@ -37,8 +37,6 @@ export class ProcessPaymentByAppUserUsecase {
     if (!transactionEntity.favored_business_info_uuid) {
       throw new CustomError("Transaction is missing partner information", 400);
     }
-    console.log('transactionEntity', transactionEntity);
-    // 3. Buscamos o UserItem
     const userItem = await this.userItemRepository.find(new Uuid(data.benefit_uuid));
     if (!userItem) throw new CustomError("User item not found", 404);
     // 4. Validações de Negócio

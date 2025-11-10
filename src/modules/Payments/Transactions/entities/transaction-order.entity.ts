@@ -299,7 +299,6 @@ calculateFee(): void {
     // 1. Calcular _fee_amount (taxa TOTAL que a plataforma cobra da transação)
     const calculatedFeeBigInt = (netPriceBigInt * BigInt(this._fee_percentage)) / BigInt(1000000);
     this._fee_amount = Number(calculatedFeeBigInt); // Armazenar em centavos como Number
-    console.log("DEBUG_ENTITY: _fee_amount (total fee, in cents):", this._fee_amount);
 
     let totalCashbackForUserBigInt = 0n;
     let partnerCashbackAmountBigInt = 0n;
@@ -318,7 +317,6 @@ calculateFee(): void {
         } else {
             partnerCashbackAmountBigInt = rawPartnerCashbackBigInt / 1000000n;
         }
-        console.log("DEBUG_ENTITY: Partner cashback calculated (in cents):", Number(partnerCashbackAmountBigInt));
     }
     totalCashbackForUserBigInt += partnerCashbackAmountBigInt;
 
@@ -333,18 +331,15 @@ calculateFee(): void {
     } else {
         platformCashbackAmountBigInt = rawPlatformCashbackBigInt / 100n;
     }
-    console.log("DEBUG_ENTITY: Platform cashback calculated (in cents):", Number(platformCashbackAmountBigInt));
     totalCashbackForUserBigInt += platformCashbackAmountBigInt;
 
 
     // 4. Setar o _cashback total (o que o usuário recebe)
     this._cashback = Number(totalCashbackForUserBigInt);
-    console.log("DEBUG_ENTITY: Total _cashback for user (in cents):", this._cashback);
 
 
     // 5. Calcular _partner_credit_amount (o que o parceiro recebe)
     this._partner_credit_amount = Number(netPriceBigInt - calculatedFeeBigInt);
-    console.log("DEBUG_ENTITY: _partner_credit_amount (in cents):", this._partner_credit_amount);
 
 
     // 6. Calcular _platform_net_fee_amount (o que a plataforma retém para si)
@@ -360,7 +355,6 @@ calculateFee(): void {
     if (this._platform_net_fee_amount < 0) {
         this._platform_net_fee_amount = 0; // Garantia, caso a regra de 20% ou outra condição mude
     }
-    console.log("DEBUG_ENTITY: _platform_net_fee_amount (in cents):", this._platform_net_fee_amount);
 
     this.validate();
 }

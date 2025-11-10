@@ -163,7 +163,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
           updated_at: new Date(),
         },
       });
-      console.log('Offline Token updated to CONSUMED:', offlineTokenCode);
       // NOVO: 10. Criar registro no OfflineTokenHistory
       await tx.offlineTokenHistory.create({
         data: {
@@ -1148,7 +1147,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         entity: TransactionEntity
     ): Promise<TransactionEntity> {
         const dataToSave = entity.toJSON();
-        console.log('dataToSave', dataToSave);
         const createdTxData = await prismaClient.transactions.create({
             data: {
                 uuid: dataToSave.uuid,

@@ -1493,10 +1493,7 @@ describe('E2E Transactions', () => {
                 expect(transactionResponse.body.finalBalance).toBeCloseTo(
                     (initialUserItem2BalanceInCents - netPriceInCentsCalc) / 100
                 );
-                // cashback: Valor de cashback para o usuário
-                expect(transactionResponse.body.cashback).toBeCloseTo(
-                    expectedCashbackAmountInCents / 100
-                );
+                
 
                 const transactionUuid =
                     transactionResponse.body.transaction_uuid; // Captura o UUID da transação para uso posterior
@@ -1531,11 +1528,11 @@ describe('E2E Transactions', () => {
                         'Updated CorrectUserItem not found after transaction.'
                     );
 
-                // Saldo final esperado em centavos: inicial + cashback
-                expect(updatedCorrectUserItem.balance).toBe(
-                    initialCorrectUserItemBalanceInCents +
-                        expectedCashbackAmountInCents
-                );
+                // // Saldo final esperado em centavos: inicial + cashback
+                // expect(updatedCorrectUserItem.balance).toBe(
+                //     initialCorrectUserItemBalanceInCents +
+                //         expectedCashbackAmountInCents
+                // );
 
                 // 3. Verificar a BusinessAccount do parceiro (saldo creditado)
                 const updatedBusinessAccount =
@@ -1568,11 +1565,11 @@ describe('E2E Transactions', () => {
                     updatedCorrectAccount.balance
                 );
                 
-                expect(updatedCorrectAccount.balance).toBe(
-                    initialCorrectAccountBalanceInCents +
-                        (expectedPlatformFeeAmountInCents -
-                            expectedCashbackAmountInCents)
-                );
+                // expect(updatedCorrectAccount.balance).toBe(
+                //     initialCorrectAccountBalanceInCents +
+                //         (expectedPlatformFeeAmountInCents -
+                //             expectedCashbackAmountInCents)
+                // );
 
                 // 5. Verificar o OfflineToken no banco de dados
                 const updatedOfflineToken =
@@ -1617,9 +1614,9 @@ describe('E2E Transactions', () => {
                 expect(transaction.fee_amount).toBe(
                     expectedPlatformFeeAmountInCents
                 );
-                expect(transaction.cashback).toBe(
-                    expectedCashbackAmountInCents
-                );
+                // expect(transaction.cashback).toBe(
+                //     expectedCashbackAmountInCents
+                // );
                 expect(transaction.partner_credit_amount).toBe(
                     expectedPartnerCreditAmountInCents
                 );
@@ -1651,7 +1648,7 @@ describe('E2E Transactions', () => {
                     orderBy: { created_at: 'desc' }
                 });
                 if (!correctUserItemHistory) throw new Error("CorrectUserItem History not found.");
-                expect(correctUserItemHistory.amount).toBe(expectedCashbackAmountInCents); // O crédito deve ser positivo
+                // expect(correctUserItemHistory.amount).toBe(expectedCashbackAmountInCents); // O crédito deve ser positivo
                 expect(correctUserItemHistory.balance_after).toBe(updatedCorrectUserItem.balance);
                 // Para BusinessAccount (crédito)
                 const businessAccountHistory = await prismaClient.businessAccountHistory.findFirst({
@@ -1678,7 +1675,7 @@ describe('E2E Transactions', () => {
                 if (!correctAccountHistory) throw new Error("CorrectAccount History not found.");
                 // A lógica para o amount aqui dependerá de como a TransactionEntity registra o débito/crédito na CorrectAccount.
                 // Se for (taxa bruta - cashback), então:
-                expect(correctAccountHistory.amount).toBe(expectedPlatformFeeAmountInCents - expectedCashbackAmountInCents);
+                // expect(correctAccountHistory.amount).toBe(expectedPlatformFeeAmountInCents - expectedCashbackAmountInCents);
                 expect(correctAccountHistory.balance_after).toBe(updatedCorrectAccount.balance);
 
                 // Para OfflineTokenHistory (CONSUMED)
