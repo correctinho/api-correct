@@ -286,30 +286,82 @@ export class TransactionEntity {
     this._used_offline_token_code = token
     this.validate()
   }
-  calculateFee(): void {
+
+// TransactionEntity.ts - Revisão FINAL com regra de arredondamento de 0.x para 1 centavo
+
+calculateFee(): void {
     if (this._net_price === undefined || this._fee_percentage === undefined) {
         throw new CustomError("Net price and fee percentage must be set before calculating the fee", 400);
     }
 
-    const calculated_fee = (BigInt(this._net_price) * BigInt(this._fee_percentage)) / BigInt(1000000);
-    this._fee_amount = Number(calculated_fee);
+    const netPriceBigInt = BigInt(this._net_price); // Garante que _net_price seja BigInt para cálculos
 
-    let totalCashbackInCents = 0n;
+    // 1. Calcular _fee_amount (taxa TOTAL que a plataforma cobra da transação)
+    const calculatedFeeBigInt = (netPriceBigInt * BigInt(this._fee_percentage)) / BigInt(1000000);
+    this._fee_amount = Number(calculatedFeeBigInt); // Armazenar em centavos como Number
+    console.log("DEBUG_ENTITY: _fee_amount (total fee, in cents):", this._fee_amount);
 
-    // 1. Cashback do Parceiro (se o percentual foi definido)
+    let totalCashbackForUserBigInt = 0n;
+    let partnerCashbackAmountBigInt = 0n;
+    let platformCashbackAmountBigInt = 0n;
+
+    // 2. Cashback do Parceiro (se _partner_cashback_percentage > 0)
     if (this._partner_cashback_percentage !== undefined && this._partner_cashback_percentage > 0) {
-        const partner_cashback = (BigInt(this._net_price) * BigInt(this._partner_cashback_percentage)) / BigInt(1000000);
-        totalCashbackInCents += partner_cashback;
+        // Cálculo do cashback base antes do arredondamento
+        const rawPartnerCashbackBigInt = (netPriceBigInt * BigInt(this._partner_cashback_percentage)); // Numerador
+        // Arredondamento para 1 centavo se a fração for > 0, senão truncar para 0
+        if (rawPartnerCashbackBigInt > 0n && (rawPartnerCashbackBigInt % 1000000n !== 0n)) {
+             // Se o valor real seria 0.x centavos (ex: 0.8), e queremos 1 centavo.
+             // Isso significa que a parte inteira de centavos (rawPartnerCashbackBigInt / 1000000n) seria 0,
+             // mas o resto é > 0. Neste caso, forçamos para 1 centavo.
+            partnerCashbackAmountBigInt = (rawPartnerCashbackBigInt / 1000000n) + 1n; // Arredonda para cima se houver fração
+        } else {
+            partnerCashbackAmountBigInt = rawPartnerCashbackBigInt / 1000000n;
+        }
+        console.log("DEBUG_ENTITY: Partner cashback calculated (in cents):", Number(partnerCashbackAmountBigInt));
     }
+    totalCashbackForUserBigInt += partnerCashbackAmountBigInt;
 
-    // 2. Cashback da Plataforma (20% do fee_amount)
-    const platform_cashback = (BigInt(this._fee_amount) * 20n) / 100n;
-    totalCashbackInCents += platform_cashback;
 
-    this._cashback = Number(totalCashbackInCents); // O cashback agora é a soma
+    // 3. Cashback da Plataforma (SEMPRE 20% do _fee_amount total)
+    const PLATFORM_CASHBACK_PERCENTAGE = 20n;
+    const rawPlatformCashbackBigInt = (calculatedFeeBigInt * PLATFORM_CASHBACK_PERCENTAGE); // Numerador
+    // Arredondamento para 1 centavo se a fração for > 0, senão truncar para 0
+    if (rawPlatformCashbackBigInt > 0n && (rawPlatformCashbackBigInt % 100n !== 0n)) {
+        // Se o valor real seria 0.x centavos, e queremos 1 centavo.
+        platformCashbackAmountBigInt = (rawPlatformCashbackBigInt / 100n) + 1n; // Arredonda para cima se houver fração
+    } else {
+        platformCashbackAmountBigInt = rawPlatformCashbackBigInt / 100n;
+    }
+    console.log("DEBUG_ENTITY: Platform cashback calculated (in cents):", Number(platformCashbackAmountBigInt));
+    totalCashbackForUserBigInt += platformCashbackAmountBigInt;
 
-    this._partner_credit_amount = this._net_price - this._fee_amount;
-    this._platform_net_fee_amount = this._fee_amount - this._cashback; // _cashback agora é o total
+
+    // 4. Setar o _cashback total (o que o usuário recebe)
+    this._cashback = Number(totalCashbackForUserBigInt);
+    console.log("DEBUG_ENTITY: Total _cashback for user (in cents):", this._cashback);
+
+
+    // 5. Calcular _partner_credit_amount (o que o parceiro recebe)
+    this._partner_credit_amount = Number(netPriceBigInt - calculatedFeeBigInt);
+    console.log("DEBUG_ENTITY: _partner_credit_amount (in cents):", this._partner_credit_amount);
+
+
+    // 6. Calcular _platform_net_fee_amount (o que a plataforma retém para si)
+    // A plataforma retém a taxa total MENOS o cashback que ELA mesma gerou.
+    // Como platformCashbackAmountBigInt pode ser 1 centavo agora, mesmo para fee_amount de 4 centavos,
+    // o _platform_net_fee_amount pode diminuir.
+    this._platform_net_fee_amount = Number(calculatedFeeBigInt - platformCashbackAmountBigInt);
+    // Embora a regra de 20% normalmente não leve a negativo, se o fee_amount for 0 e o cashback for 1,
+    // isso seria negativo. A regra de negócio é que cashback não pode consumir *toda* a taxa.
+    // Se o fee_amount for 0, o cashback da plataforma é 0.
+    // Se o fee_amount for 4, o cashback da plataforma é 1. platform_net_fee_amount = 3.
+    // Isso está ok.
+    if (this._platform_net_fee_amount < 0) {
+        this._platform_net_fee_amount = 0; // Garantia, caso a regra de 20% ou outra condição mude
+    }
+    console.log("DEBUG_ENTITY: _platform_net_fee_amount (in cents):", this._platform_net_fee_amount);
+
     this.validate();
 }
 

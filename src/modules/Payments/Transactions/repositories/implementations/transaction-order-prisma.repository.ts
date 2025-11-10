@@ -753,7 +753,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         const netAmountToCreditBusiness = dataToSave.partner_credit_amount;
         const netAmountToCreditPlatform = dataToSave.platform_net_fee_amount;
         const cashbackAmountToCreditUser = dataToSave.cashback; // Valor do cashback a ser creditado
-
         const result = await prismaClient.$transaction(async (tx) => {
             // 1. Buscar UserItem DEBITADO e verificar saldo atomicamente
             const debitedUserItem = await tx.userItem.findUnique({
@@ -1195,6 +1194,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
             fee_percentage: finalTxData.fee_percentage,
             fee_amount: finalTxData.fee_amount,
             partner_credit_amount: finalTxData.partner_credit_amount,
+            platform_net_fee_amount: finalTxData.platform_net_fee_amount,
             cashback: finalTxData.cashback,
             description: finalTxData.description,
             status: finalTxData.status,
@@ -1392,6 +1392,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
             fee_percentage: transactionData.fee_percentage,
             fee_amount: transactionData.fee_amount,
             partner_credit_amount: transactionData.partner_credit_amount,
+            platform_net_fee_amount: transactionData.platform_net_fee_amount,
             cashback: transactionData.cashback,
             description: transactionData.description,
             status: transactionData.status,

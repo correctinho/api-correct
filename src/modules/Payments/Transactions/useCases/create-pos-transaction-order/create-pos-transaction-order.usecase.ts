@@ -35,7 +35,6 @@ export class CreatePOSTransactionOrderUsecase {
     //Get partner config details
     const partnerConfig = await this.partnerConfigRepository.findByPartnerId(businessInfo.uuid)
     if (!partnerConfig) throw new CustomError("Partner config not found", 400)
-    console.log('partnerConfig', partnerConfig);
     const transactionEntity = TransactionEntity.create(data)
 
     transactionEntity.setPartnerCashbackPercentage(partnerConfig.cashback_tax)
@@ -52,9 +51,7 @@ export class CreatePOSTransactionOrderUsecase {
     transactionEntity.changePartnerUserUuid(new Uuid(data.partner_user_uuid))
 
     transactionEntity.changeDescription("Transação do ponto de venda (POS)")
-    console.log('transactionEntity', transactionEntity);
     const transaction = await this.transactionOrderRepository.savePOSTransaction(transactionEntity)
-    console.log('transaction', transaction);
     return {
       transaction_uuid: transaction.uuid.uuid,
       user_item_uuid: transaction.user_item_uuid ? transaction.user_item_uuid.uuid : null,
@@ -65,6 +62,7 @@ export class CreatePOSTransactionOrderUsecase {
       net_price: transaction.net_price,
       fee_percentage: transaction.fee_percentage,
       fee_amount: transaction.fee_amount,
+      platform_net_fee_amount: transaction.platform_net_fee_amount,
       cashback: transaction.cashback,
       description: transaction.description,
       transaction_status: transaction.status,

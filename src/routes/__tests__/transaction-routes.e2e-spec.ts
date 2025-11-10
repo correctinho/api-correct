@@ -1221,19 +1221,31 @@ describe('E2E Transactions', () => {
             expectedPlatformFeeAmountInCents = Number(calculatedFeeAmount);
 
             // 5. Calcular o VALOR TOTAL do cashback para o usuário
-            // Conforme TransactionEntity.calculateFee() -> _cashback é 20% do _fee_amount
-            expectedCashbackAmountInCents = Number(
-                (BigInt(expectedPlatformFeeAmountInCents) * 20n) / 100n
-            );
-            // Adicionar cashback fornecido pelo parceiro
-            // cashback = (20% da taxa da plataforma) + (cashback do parceiro sobre net_price)
-            // ENTÃO:
-            const partnerAdditionalCashback =
-                (BigInt(netPriceInCentsCalc) *
-                    BigInt(cashbackProvidedByPartnerScaled)) /
-                BigInt(1000000);
-            expectedCashbackAmountInCents += Number(partnerAdditionalCashback);
+            // O cálculo do cashback da plataforma deve seguir a regra de arredondamento de 0.x para 1 centavo.
+            const rawPlatformCashbackBigInt = BigInt(expectedPlatformFeeAmountInCents) * 20n;
+            const divisorPlatform = 100n;
+        let platformCashbackAmountBigInt = 0n;
+        const tempPlatformCents = rawPlatformCashbackBigInt / divisorPlatform;
+        if (tempPlatformCents === 0n && rawPlatformCashbackBigInt > 0n) {
+            platformCashbackAmountBigInt = 1n; // Força 1 centavo se era 0.x
+        } else {
+            platformCashbackAmountBigInt = tempPlatformCents;
+        }
+        expectedCashbackAmountInCents = Number(platformCashbackAmountBigInt); // Cashback inicial da plataforma
 
+        // Adicionar cashback fornecido pelo parceiro
+        // O cálculo do cashback do parceiro também deve seguir a regra de arredondamento de 0.x para 1 centavo.
+        const rawPartnerCashbackBigInt = BigInt(netPriceInCentsCalc) * BigInt(cashbackProvidedByPartnerScaled);
+        const divisorPartner = 1000000n; // Para percentuais de net_price
+
+        let partnerAdditionalCashbackBigInt = 0n;
+        const tempPartnerCents = rawPartnerCashbackBigInt / divisorPartner;
+        if (tempPartnerCents === 0n && rawPartnerCashbackBigInt > 0n) {
+            partnerAdditionalCashbackBigInt = 1n; // Força 1 centavo se era 0.x
+        } else {
+            partnerAdditionalCashbackBigInt = tempPartnerCents;
+        }
+        expectedCashbackAmountInCents += Number(partnerAdditionalCashbackBigInt);
             // 6. Calcular o VALOR a ser creditado ao parceiro
             // Conforme TransactionEntity.calculateFee() -> _partner_credit_amount
             expectedPartnerCreditAmountInCents =
