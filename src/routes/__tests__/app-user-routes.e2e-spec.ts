@@ -3800,6 +3800,7 @@ describe('E2E App User tests', () => {
             let expected_fee_in_cents: number;
             let expected_cashback_in_cents: number;
             let expected_partner_net_amount_in_cents: number;
+            let expect_platform_net_fee_amount_in_cents: number;
 
             let partner3_initial_liquid_balance_in_cents: number;
             let correct_admin_initial_balance_in_cents: number;
@@ -3908,6 +3909,7 @@ describe('E2E App User tests', () => {
                     discount_percentage: 0,
                     net_price: 1.5,
                 };
+
                 const createTransaction = await request(app)
                     .post('/pos-transaction')
                     .set('Authorization', `Bearer ${partner_auth_token3}`)
@@ -3915,12 +3917,16 @@ describe('E2E App User tests', () => {
                 transaction1_uuid = createTransaction.body.transaction_uuid;
                 expect(createTransaction.statusCode).toBe(201);
 
-                expected_fee_in_cents = createTransaction.body.fee_amount * 100; // fee em reais
-                expected_cashback_in_cents =
-                    createTransaction.body.cashback * 100;
+                //Get transaction created from DB - Result will come scaled
+                const transaction1FromDB = await prismaClient.transactions.findUnique({
+                    where:{ uuid: transaction1_uuid },
+                })
 
-                const employeeItemsPrisma =
-                    await prismaClient.userItem.findMany({
+                expected_fee_in_cents = transaction1FromDB.fee_amount; // fee em reais
+                expect_platform_net_fee_amount_in_cents = transaction1FromDB.platform_net_fee_amount;
+                expected_cashback_in_cents = transaction1FromDB.cashback;
+               
+                const employeeItemsPrisma =  await prismaClient.userItem.findMany({
                         where: { user_info_uuid: employee_user_info },
                     });
 
@@ -4380,11 +4386,16 @@ describe('E2E App User tests', () => {
                 });
 
                 it('should correctly process a pre-paid benefit and update all account balances', async () => {
+                    //busca pelo transação
+                    const transactionDetails = await prismaClient.transactions.findUnique({where: {uuid: transaction1_uuid}})
+                    if(!transactionDetails) throw new Error('Transaction not found in setup')
+                        
                     const alimentaco = await prismaClient.userItem.findUnique({
                         where: {
                             uuid: alimentacao_benefit_user2_uuid,
                         },
                     });
+
                     // 3. ACT: Executar o pagamento
                     const paymentInput = {
                         transactionId: transaction1_uuid,
@@ -4412,9 +4423,10 @@ describe('E2E App User tests', () => {
                     const correctAdminAccountAfter = await request(app)
                         .get('/admin/account')
                         .set('Authorization', `Bearer ${correctAdminToken}`);
+                    
                     expect(correctAdminAccountAfter.body.balance * 100).toBe(
                         correct_admin_initial_balance_in_cents +
-                            expected_fee_in_cents
+                            expect_platform_net_fee_amount_in_cents
                     );
 
                     // b) Carteira de cashback do usuário
@@ -4753,7 +4765,7 @@ describe('E2E App User tests', () => {
                     const correctAdminAccountAfter = await request(app)
                         .get('/admin/account')
                         .set('Authorization', `Bearer ${correctAdminToken}`);
-                    expect(correctAdminAccountAfter.body.balance * 100).toBe(
+                    expect(Math.round(correctAdminAccountAfter.body.balance * 100)).toBe(
                         correct_admin_initial_balance_in_cents +
                             expected_post_paid_fee_in_cents
                     );

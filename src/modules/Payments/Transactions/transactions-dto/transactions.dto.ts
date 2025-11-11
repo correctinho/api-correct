@@ -20,6 +20,7 @@ export type OutputCreatePOSTransactionByBusinessDTO = {
   net_price: number,
   fee_percentage?: number, // Optional: Defaults to 0
   fee_amount: number,
+  platform_net_fee_amount: number,
   cashback?: number,
   description?: string | null,
   transaction_status: TransactionStatus

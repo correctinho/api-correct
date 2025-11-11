@@ -4,6 +4,9 @@ import { CalculateSplitPrePaidOutput } from '../../../../paymentSplit/prePaidSpl
 import { AppUserItemEntity } from '../../../AppUser/AppUserManagement/entities/app-user-item.entity';
 import { BusinessAccountEntity } from '../../Accounts/entities/business-account.entity';
 import { PartnerCreditEntity } from '../../Accounts/entities/partner-credit.entity';
+import { OfflineTokenEntity } from '../../OfflineTokens/entities/offline-token.entity';
+import { IOfflineTokenHistoryRepository } from '../../OfflineTokens/repositories/offline-tokens-history.repository';
+import { IOfflineTokenRepository } from '../../OfflineTokens/repositories/offline-tokens.repository';
 import { TransactionEntity } from '../entities/transaction-order.entity';
 
 export type ProcessPaymentByBusinessParams = {
@@ -66,4 +69,15 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
     processAppUserPixCreditPayment(
         transactionEntity: TransactionEntity,
         amountReceivedInCents: number,
-    ): Promise<ProcessAppUserPixCreditPaymentResult>;}
+    ): Promise<ProcessAppUserPixCreditPaymentResult>;
+    processOfflineTokenPayment(
+    transactionEntity: TransactionEntity,
+    offlineTokenEntity: OfflineTokenEntity, // Recebe a entidade do token
+    userInfoUuid: Uuid,
+  ): Promise<{
+    success: boolean;
+    finalDebitedUserItemBalance: number;
+    user_cashback_amount: number;
+  }>;
+}
+    

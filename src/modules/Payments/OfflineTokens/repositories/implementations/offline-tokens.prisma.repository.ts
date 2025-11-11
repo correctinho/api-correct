@@ -1,7 +1,7 @@
 import { OfflineTokenStatus } from "@prisma/client";
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { IOfflineTokenRepository } from "../offline-tokens.repository";
-import { OfflineTokenEntity } from "../../entities/offline-token.entity";
+import { OfflineTokenEntity, OfflineTokenProps } from "../../entities/offline-token.entity";
 import { prismaClient } from "../../../../../infra/databases/prisma.config";
 
 export class OfflineTokensPrismaRepository implements IOfflineTokenRepository{
@@ -25,8 +25,29 @@ export class OfflineTokensPrismaRepository implements IOfflineTokenRepository{
       updated_at: prismaToken.updated_at,
     }));
   }
-    findByTokenCode(tokenCode: string): Promise<OfflineTokenEntity | null> {
-        throw new Error("Method not implemented.");
+    async findByTokenCode(tokenCode: string): Promise<OfflineTokenEntity | null> {
+      const token = await prismaClient.offlineToken.findUnique({
+          where:{ 
+            token_code: tokenCode
+          }
+        })
+        if(!token) return null
+        const returnData: OfflineTokenProps = {
+          uuid: new Uuid(token.uuid),
+          token_code: token.token_code,
+          user_info_uuid: new Uuid(token.user_info_uuid),
+          user_item_uuid: new Uuid(token.user_item_uuid),
+          status: token.status,
+          expires_at: token.expires_at,
+          activated_at: token.activated_at,
+          last_accessed_at: token.last_accessed_at,
+          last_used_at: token.last_used_at,
+          sequence_number: token.sequence_number,
+          created_at: token.created_at,
+          updated_at: token.updated_at
+        }
+
+        return OfflineTokenEntity.hydrate(returnData)
     }
     async findByUserItem(
     userInfoUuid: Uuid,

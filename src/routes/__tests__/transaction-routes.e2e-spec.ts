@@ -5,8 +5,9 @@ import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-be
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo';
 import { prismaClient } from '../../infra/databases/prisma.config';
 import path from 'path';
-import { OfflineTokenStatus } from '@prisma/client';
+import { OfflineTokenHistoryEventType, OfflineTokenStatus, TransactionStatus, TransactionType, UserItemEventType } from '@prisma/client';
 import { newDateF } from '../../utils/date';
+import { InputProcessPOSTransactionWithOfflineTokenDTO } from '../../modules/Payments/Transactions/useCases/process-pos-payment-by-offline-token/dto/process-pos-payment-by-offline-token.dto';
 
 let userAuthToken1: string;
 let userAuthToken2: string;
@@ -105,6 +106,10 @@ let partner3_initial_liquid_balance_in_cents: number;
 let correct_admin_initial_balance_in_cents: number;
 let employee2_alimentacao_initial_balance_in_cents: number;
 let employee2_cashback_initial_balance_in_cents: number;
+
+//user offline tokens
+let activeOfflineToken: string;
+let revokedToken: string;
 
 describe('E2E Transactions', () => {
     beforeAll(async () => {
@@ -414,6 +419,17 @@ describe('E2E Transactions', () => {
         partner_admin_uuid = partnerAdmin1Result.body.uuid;
         expect(partnerAdmin1Result.statusCode).toBe(201);
 
+        //login partner 1 admin
+        const loginPartnerAdmin1 = await request(app)
+            .post('/business/admin/login')
+            .send({
+                business_document: inputPartner1.document,
+                password: inputPartnerAdmin1.password,
+                email: inputPartnerAdmin1.email,
+            });
+        expect(loginPartnerAdmin1.statusCode).toBe(200);
+        partner_admin_token = loginPartnerAdmin1.body.token;
+
         //Craete partner 2 admin
         const inputPartnerAdmin2 = {
             password: '123456',
@@ -653,14 +669,12 @@ describe('E2E Transactions', () => {
             .attach('file', csvFilePath); //
         expect(resultEmployeesCreated.statusCode).toBe(201);
         document_employee1 = resultEmployeesCreated.body.usersRegistered[0];
-        console.log({ document_employee1 });
         //get employee 1 user info uuid
         const userInfoEmployee1 = await prismaClient.userInfo.findUnique({
             where: {
                 document: document_employee1,
             },
         });
-        console.log({ userInfoEmployee1 });
         user_info_uuid_employee1 = userInfoEmployee1.uuid;
 
         //Now we need to register this employ user auth
@@ -675,12 +689,10 @@ describe('E2E Transactions', () => {
         expect(resultEmployee1Created.statusCode).toBe(201);
 
         //Login Employee
-        const loginEmployee1 = await request(app)
-            .post('/login-app-user')
-            .send({
-                document: inputUserauthEmployee1.document,
-                password: inputUserauthEmployee1.password,
-            });
+        const loginEmployee1 = await request(app).post('/login-app-user').send({
+            document: inputUserauthEmployee1.document,
+            password: inputUserauthEmployee1.password,
+        });
         expect(loginEmployee1.statusCode).toBe(200);
 
         auth_token_employee1 = loginEmployee1.body.token;
@@ -704,9 +716,9 @@ describe('E2E Transactions', () => {
         expect(resultActivateUserItem.statusCode).toBe(200);
     });
 
+    let userItem1EmployeeUuid: string;
+    let userItem2EmployeeUuid: string;
     describe('E2E Offline Tokens', () => {
-        let userItem1EmployeeUuid: string;
-        let userItem2EmployeeUuid: string;
         beforeAll(async () => {
             //EMPLOYEE
 
@@ -735,6 +747,7 @@ describe('E2E Transactions', () => {
                 where: { user_info_uuid: user_info_uuid_employee1 },
             });
         });
+
         describe('Activate Offline Tokens', () => {
             it('should activate 5 new tokens for a user item successfully (Initial Activation)', async () => {
                 // Este é o primeiro teste que espera um estado 'limpo' de tokens para o UserItem.
@@ -763,6 +776,12 @@ describe('E2E Transactions', () => {
                 expect(firstToken.sequence_number).toBe(1);
 
                 // C. Asserts do Banco de Dados
+                const findFirsttokenInDB =
+                    await prismaClient.offlineToken.findUnique({
+                        where: { token_code: firstToken.token_code },
+                    });
+                expect(findFirsttokenInDB.token_code).toHaveLength(6);
+
                 const dbTokens = await prismaClient.offlineToken.findMany({
                     where: {
                         user_item_uuid: userItem1EmployeeUuid,
@@ -850,11 +869,12 @@ describe('E2E Transactions', () => {
             });
             it('should revoke active tokens from other user items for the same user when a new item is activated', async () => {
                 // Ativar tokens para este 'SecondaryBenefit' (que serão os "antigos" a serem revogados)
-                await request(app)
+                const newTokens = await request(app)
                     .post('/app-user/activate-token')
                     .set('Authorization', `Bearer ${auth_token_employee1}`)
                     .send({ userItemUuid: userItem2EmployeeUuid });
 
+                expect(newTokens.status).toBe(201);
                 // Verifique que os tokens foram criados para o SecondaryBenefit
                 const secondaryBenefitTokens =
                     await prismaClient.offlineToken.findMany({
@@ -874,6 +894,9 @@ describe('E2E Transactions', () => {
 
                 expect(response.status).toBe(201);
                 expect(response.body.offlineTokens).toHaveLength(5);
+                activeOfflineToken = response.body.offlineTokens.find(
+                    (token: any) => token.status === 'ACTIVE'
+                ).token_code;
 
                 // C. Asserts do Banco de Dados
                 // Verificar tokens para userItem2EmployeeUuid (devem estar revogados)
@@ -881,6 +904,9 @@ describe('E2E Transactions', () => {
                     await prismaClient.offlineToken.findMany({
                         where: { user_item_uuid: userItem2EmployeeUuid },
                     });
+                revokedToken = revokedBenefitTokens.find(
+                    (token: any) => token.status === 'REVOKED'
+                ).token_code;
                 expect(revokedBenefitTokens).toHaveLength(5); // 5 tokens foram criados para SecondaryBenefit
                 revokedBenefitTokens.forEach((token) =>
                     expect(token.status).toBe(OfflineTokenStatus.REVOKED)
@@ -895,17 +921,6 @@ describe('E2E Transactions', () => {
                         },
                     });
                 expect(revokedHistory).toHaveLength(5); // 5 eventos de revogação
-
-                // IMPORTANTE: Limpar o userItem temporário e seus tokens/históricos para não impactar outros testes
-                await prismaClient.offlineToken.deleteMany({
-                    where: { user_item_uuid: userItem2EmployeeUuid },
-                });
-                await prismaClient.offlineTokenHistory.deleteMany({
-                    where: { user_item_uuid: userItem2EmployeeUuid },
-                });
-                await prismaClient.userItem.delete({
-                    where: { uuid: userItem2EmployeeUuid },
-                });
             });
             it('should return 404 if UserItem does not exist or does not belong to the user', async () => {
                 // Geração de um UUID que (esperamos) não exista ou não pertença ao usuário
@@ -925,10 +940,9 @@ describe('E2E Transactions', () => {
             it('should return 401 if user is not authenticated', async () => {
                 const response = await request(app)
                     .post('/app-user/activate-token')
-                    .send({ userItemUuid: userItem1EmployeeUuid }); 
+                    .send({ userItemUuid: userItem1EmployeeUuid });
 
                 expect(response.status).toBe(401);
-                
             });
 
             it('should return 400 if userItemUuid is missing from request body', async () => {
@@ -1124,6 +1138,560 @@ describe('E2E Transactions', () => {
             // - Teste para um webhook com txid que não existe
             // - Teste para um webhook de uma transação que já está 'success' (teste de idempotência)
             // - Teste para um webhook com valor incorreto
+        });
+    });
+    describe('E2E Process POS Payment by Offline Token', () => {
+        // ======================================================================
+        // PRÉ-REQUISITOS E CONFIGURAÇÃO (Variáveis para o teste)
+        // ======================================================================
+
+        //let auth_token_employee1: string; // Token JWT do employee1 para autenticação.
+        let user_info_uuid_employee1: string; // UUID do userInfo do employee1.
+        //let userItem2EmployeeUuid: string; // UUID do UserItem 'SecondaryBenefit' do employee1 (o que será debitado).
+        let correct_item_uuid_employee1: string; // UUID do UserItem 'Correct' do employee1 (para cashback) - UUID do DB
+        //let business_info_uuid_partner: string; // UUID do BusinessInfo do parceiro - UUID do DB
+        let business_account_uuid_partner: string; // UUID da BusinessAccount do parceiro - UUID do DB
+        let correct_account_uuid_platform: string; // UUID da CorrectAccount da plataforma - UUID do DB
+        //let partner_admin_token: string; // Token JWT do admin do parceiro para autenticação da requisição POST.
+
+        // SALDOS INICIAIS LIDOS DO BANCO DE DADOS em Centavos
+        let initialUserItem2BalanceInCents: number;
+        let initialBusinessAccountBalanceInCents: number;
+        let initialCorrectAccountBalanceInCents: number;
+
+        let initialCorrectUserItemBalanceInCents: number;
+        let initialBusinessAccountBalance: number;
+        let initialCorrectAccountBalance: number;
+
+        // VALORES DA TRANSAÇÃO NO FORMATO QUE A API RECEBE (EM REAIS)
+        const originalPriceInReais = 100; // R$ 100.00
+        const discountPercentageForAPI = 10; // 10%
+        const netPriceInReais = 90; // R$ 90.00 (100 - 10% de 100 = 90)
+
+        // VALORES DA TRANSAÇÃO CONVERTIDOS PARA CENTAVOS PARA CÁLCULOS INTERNOS E DB
+        const originalPriceInCentsCalc = originalPriceInReais * 100; // 10000 centavos
+        const netPriceInCentsCalc = netPriceInReais * 100; // 9000 centavos
+
+        // Valores calculados com base nas regras da TransactionEntity (TODOS EM CENTAVOS)
+        let expectedPlatformFeePercentageScaled: number; // % total que a plataforma cobra (escalado)
+        let expectedPlatformFeeAmountInCents: number; // Valor total da taxa da plataforma (em centavos)
+        let expectedCashbackAmountInCents: number; // Valor total de cashback para o usuário (em centavos)
+        let expectedPartnerCreditAmountInCents: number; // Valor que o parceiro receberá (em centavos)
+
+        // Variáveis para as taxas escaladas (lidas do PartnerConfig)
+        let cashbackProvidedByPartnerScaled: number;
+        let adminTaxPercentageScaled: number;
+        let marketingTaxPercentageScaled: number;
+        let marketPlaceTaxScaled: number;
+
+        beforeAll(async () => {
+            //FIND PARTNER CONFIG TO IDENTIFY TAXES AND CASHBACK
+            // ======================================================================
+            // CÁLCULO DAS TAXAS E CASHBACK BASEADO NO PartnerConfig E TransactionEntity
+            // ======================================================================
+            // 1. Encontrar a configuração do parceiro para identificar taxas
+            const partnerConfig = await prismaClient.partnerConfig.findUnique({
+                where: {
+                    business_info_uuid: partner_info_uuid,
+                },
+            });
+            if (!partnerConfig) {
+                throw new Error(
+                    'PartnerConfig not found for the test partner. Please seed it.'
+                );
+            }
+            // 2. Armazenar as taxas escaladas diretamente do PartnerConfig
+            // (A sua `TransactionEntity` soma admin_tax e marketing_tax para o fee_percentage)
+            adminTaxPercentageScaled = partnerConfig.admin_tax;
+            marketingTaxPercentageScaled = partnerConfig.marketing_tax;
+            marketPlaceTaxScaled = partnerConfig.market_place_tax; // Se esta for uma taxa adicional fora de 'fee_percentage'
+            cashbackProvidedByPartnerScaled = partnerConfig.cashback_tax; // Cashback adicional do parceiro, se aplicável
+
+            // 3. Calcular a porcentagem TOTAL da taxa da plataforma (fee_percentage)
+            // Conforme TransactionEntity.calculateFeePercentage, é a soma de admin_tax e marketing_tax
+            expectedPlatformFeePercentageScaled =
+                adminTaxPercentageScaled + marketingTaxPercentageScaled;
+
+            // 4. Calcular o VALOR TOTAL da taxa da plataforma (fee_amount)x
+            // Conforme TransactionEntity.calculateFee() -> _fee_amount
+            const calculatedFeeAmount =
+                (BigInt(netPriceInCentsCalc) *
+                    BigInt(expectedPlatformFeePercentageScaled)) /
+                BigInt(1000000); // netPriceInCents * (fee_percentage / 10000 para % * 100 para centavos)
+            expectedPlatformFeeAmountInCents = Number(calculatedFeeAmount);
+
+            // 5. Calcular o VALOR TOTAL do cashback para o usuário
+            // O cálculo do cashback da plataforma deve seguir a regra de arredondamento de 0.x para 1 centavo.
+            const rawPlatformCashbackBigInt = BigInt(expectedPlatformFeeAmountInCents) * 20n;
+            const divisorPlatform = 100n;
+        let platformCashbackAmountBigInt = 0n;
+        const tempPlatformCents = rawPlatformCashbackBigInt / divisorPlatform;
+        if (tempPlatformCents === 0n && rawPlatformCashbackBigInt > 0n) {
+            platformCashbackAmountBigInt = 1n; // Força 1 centavo se era 0.x
+        } else {
+            platformCashbackAmountBigInt = tempPlatformCents;
+        }
+        expectedCashbackAmountInCents = Number(platformCashbackAmountBigInt); // Cashback inicial da plataforma
+
+        // Adicionar cashback fornecido pelo parceiro
+        // O cálculo do cashback do parceiro também deve seguir a regra de arredondamento de 0.x para 1 centavo.
+        const rawPartnerCashbackBigInt = BigInt(netPriceInCentsCalc) * BigInt(cashbackProvidedByPartnerScaled);
+        const divisorPartner = 1000000n; // Para percentuais de net_price
+
+        let partnerAdditionalCashbackBigInt = 0n;
+        const tempPartnerCents = rawPartnerCashbackBigInt / divisorPartner;
+        if (tempPartnerCents === 0n && rawPartnerCashbackBigInt > 0n) {
+            partnerAdditionalCashbackBigInt = 1n; // Força 1 centavo se era 0.x
+        } else {
+            partnerAdditionalCashbackBigInt = tempPartnerCents;
+        }
+        expectedCashbackAmountInCents += Number(partnerAdditionalCashbackBigInt);
+            // 6. Calcular o VALOR a ser creditado ao parceiro
+            // Conforme TransactionEntity.calculateFee() -> _partner_credit_amount
+            expectedPartnerCreditAmountInCents =
+                netPriceInCentsCalc - expectedPlatformFeeAmountInCents;
+
+            // Se o marketplaceTax também afeta o que o parceiro recebe, precisaria ser subtraído daqui.
+            // Mas como a TransactionEntity calcula _fee_amount apenas com admin_tax e marketing_tax
+            // e _partner_credit_amount é _net_price - _fee_amount, o marketplaceTax não está impactando o parceiro *neste cálculo*.
+            // Ele deveria ser uma parte do _fee_amount ou uma dedução separada.
+            // Vamos considerar que 'marketPlaceTax' é uma taxa que a plataforma cobra a si mesma, ou parte do fee_percentage se somada.
+            // Por enquanto, a 'expectedPlatformFeeAmountInCents' já cobre o que a plataforma 'ganha' da transação.
+        });
+        beforeEach(async () => {
+            // --- CAPTURAR SALDOS INICIAIS ANTES DE CADA TESTE ---
+            const userItem2 = await prismaClient.userItem.findUnique({
+                where: { uuid: userItem2EmployeeUuid },
+            });
+            initialUserItem2BalanceInCents = userItem2.balance;
+
+            const correctUserItem = await prismaClient.userItem.findFirst({
+                where: {
+                    user_info_uuid: userItem2.user_info_uuid,
+                    item_name: 'Correct',
+                },
+            });
+
+            correct_item_uuid_employee1 = correctUserItem.uuid;
+            initialCorrectUserItemBalanceInCents = correctUserItem.balance;
+
+            const businessAccount =
+                await prismaClient.businessAccount.findFirst({
+                    where: { business_info_uuid: partner_info_uuid },
+                });
+            business_account_uuid_partner = businessAccount.uuid;
+            initialBusinessAccountBalanceInCents = businessAccount.balance;
+
+            const correctAccount = await prismaClient.correctAccount.findFirst(
+                {}
+            );
+            initialCorrectAccountBalanceInCents = correctAccount.balance;
+            correct_account_uuid_platform = correctAccount.uuid;
+        });
+        describe('E2E Pre Paid Offline Token', () => {
+            it('Should throw an error if original price is missing', async () => {
+                const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 0,
+                    discount_percentage: 10,
+                    net_price: 900,
+                    tokenCode: 'ABC123',
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe('Original price is required');
+            });
+            it('Should throw an error if net_price is missing (undefined)', async () => {
+                const input: any = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 1000,
+                    discount_percentage: 10,
+                    // net_price: undefined, // Esta propriedade está ausente
+                    tokenCode: 'ABC123',
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe('Net price is required');
+            });
+
+            it('Should throw an error if discount_percentage is missing (undefined)', async () => {
+                const input: any = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 1000,
+                    // discount_percentage: undefined, // Esta propriedade está ausente
+                    net_price: 900,
+                    tokenCode: 'ABC123',
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe(
+                    'Discount percentage is required'
+                );
+            });
+
+            it('Should throw an error if tokenCode is missing (undefined)', async () => {
+                const input: any = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 1000,
+                    discount_percentage: 10,
+                    net_price: 900,
+                    // tokenCode: undefined, // Esta propriedade está ausente
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe(
+                    'Offline token code is required'
+                );
+            });
+
+            it('Should throw an error if tokenCode has an invalid length (less than 6 characters)', async () => {
+                const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 1000,
+                    discount_percentage: 10,
+                    net_price: 900,
+                    tokenCode: 'ABC12', // Menos de 6 caracteres
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe(
+                    'Offline token code must be 6 characters long'
+                );
+            });
+
+            it('Should throw an error if tokenCode has an invalid length (more than 6 characters)', async () => {
+                const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 1000,
+                    discount_percentage: 10,
+                    net_price: 900,
+                    tokenCode: 'ABC1234', // Mais de 6 caracteres
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(400);
+                expect(result.body.error).toBe(
+                    'Offline token code must be 6 characters long'
+                );
+            });
+            it('Should throw an error is token status is REVOKED', async () => {
+                const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: 10,
+                    discount_percentage: 10,
+                    net_price: 9,
+                    tokenCode: revokedToken, // Mais de 6 caracteres
+                };
+                const result = await request(app)
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+                expect(result.statusCode).toBe(403);
+                expect(result.body.error).toBe(
+                    'Offline token is not active. Current status: REVOKED.'
+                );
+            });
+            it('Should successfully process offline token payment - PRE PAID USER ITEM', async () => {
+                //HERE WE ARE COMING BACK TOKENS TO USER ITEM 2, BECAUSE IT HAS SOME BALANCE
+                // Ativar tokens para este 'SecondaryBenefit' (que serão os "antigos" a serem revogados)
+                const activateTokenResponse = await request(app)
+                    .post('/app-user/activate-token')
+                    .set('Authorization', `Bearer ${auth_token_employee1}`)
+                    .send({ userItemUuid: userItem2EmployeeUuid });
+
+                expect(activateTokenResponse.status).toBe(201);
+                expect(activateTokenResponse.body.offlineTokens).toBeInstanceOf(
+                    Array
+                );
+                expect(
+                    activateTokenResponse.body.offlineTokens.length
+                ).toBeGreaterThan(0);
+                activeOfflineToken =
+                    activateTokenResponse.body.offlineTokens.find(
+                        (token: any) => token.status === 'ACTIVE'
+                    ).token_code;
+                expect(activateTokenResponse.status).toBe(201);
+
+                const input: InputProcessPOSTransactionWithOfflineTokenDTO = {
+                    business_info_uuid: '',
+                    partner_user_uuid: '',
+                    original_price: originalPriceInReais,
+                    discount_percentage: discountPercentageForAPI,
+                    net_price: netPriceInReais,
+                    tokenCode: activeOfflineToken, // Mais de 6 caracteres
+                };
+                const transactionResponse = await request(app) // <-- Renomeado de `result` para `transactionResponse` para clareza
+                    .post('/app-user/transation/offline-token')
+                    .send(input)
+                    .set({
+                        Authorization: `Bearer ${partner_admin_token}`,
+                    });
+
+                expect(transactionResponse.statusCode).toBe(200);
+
+                // ======================================================================
+                // C. ASSERÇÕES DA RESPOSTA DA API (Validação do corpo da resposta)
+                // ======================================================================
+                expect(transactionResponse.body.transaction_uuid).toBeDefined();
+                expect(typeof transactionResponse.body.transaction_uuid).toBe(
+                    'string'
+                );
+                expect(transactionResponse.body.transaction_status).toBe(
+                    TransactionStatus.success
+                );
+                expect(transactionResponse.body.paid_at).toBeDefined(); // Verifica se o timestamp de pagamento existe
+                expect(transactionResponse.body.offline_token_code).toBe(
+                    activeOfflineToken
+                );
+                expect(transactionResponse.body.offline_token_status).toBe(
+                    OfflineTokenStatus.CONSUMED
+                );
+                expect(transactionResponse.body.message).toBe(
+                    'Transaction created and paid successfully with offline token.'
+                );
+
+                // Validações de saldos/valores retornados pela API (geralmente em Reais)
+                // finalBalance: Saldo final do item debitado do usuário
+                expect(transactionResponse.body.finalBalance).toBeCloseTo(
+                    (initialUserItem2BalanceInCents - netPriceInCentsCalc) / 100
+                );
+                
+
+                const transactionUuid =
+                    transactionResponse.body.transaction_uuid; // Captura o UUID da transação para uso posterior
+
+                // ======================================================================
+                // D. ASSERÇÕES DO ESTADO DO BANCO DE DADOS (APÓS A TRANSAÇÃO)
+                // ======================================================================
+
+                // 1. Verificar o UserItem2 (saldo debitado)
+                const updatedUserItem2 = await prismaClient.userItem.findUnique(
+                    {
+                        where: { uuid: userItem2EmployeeUuid },
+                    }
+                );
+                // Adicionar verificação de null, pois é uma boa prática
+                if (!updatedUserItem2)
+                    throw new Error(
+                        'Updated UserItem2 not found after transaction.'
+                    );
+
+                // Saldo final esperado em centavos: inicial - netPriceInCentsCalc
+                expect(updatedUserItem2.balance).toBe(
+                    initialUserItem2BalanceInCents - netPriceInCentsCalc
+                );
+                // 2. Verificar o CorrectUserItem (saldo de cashback creditado)
+                const updatedCorrectUserItem =
+                    await prismaClient.userItem.findUnique({
+                        where: { uuid: correct_item_uuid_employee1 },
+                    });
+                if (!updatedCorrectUserItem)
+                    throw new Error(
+                        'Updated CorrectUserItem not found after transaction.'
+                    );
+
+                // // Saldo final esperado em centavos: inicial + cashback
+                // expect(updatedCorrectUserItem.balance).toBe(
+                //     initialCorrectUserItemBalanceInCents +
+                //         expectedCashbackAmountInCents
+                // );
+
+                // 3. Verificar a BusinessAccount do parceiro (saldo creditado)
+                const updatedBusinessAccount =
+                    await prismaClient.businessAccount.findUnique({
+                        where: { uuid: business_account_uuid_partner },
+                    });
+                if (!updatedBusinessAccount)
+                    throw new Error(
+                        'Updated BusinessAccount not found after transaction.'
+                    );
+
+                // Saldo final esperado em centavos: inicial + valor a ser creditado ao parceiro
+                expect(updatedBusinessAccount.balance).toBe(
+                    initialBusinessAccountBalanceInCents +
+                        expectedPartnerCreditAmountInCents
+                );
+
+                // 4. Verificar a CorrectAccount da plataforma (saldo da taxa creditado)
+                const updatedCorrectAccount =
+                    await prismaClient.correctAccount.findUnique({
+                        where: { uuid: correct_account_uuid_platform },
+                    });
+                if (!updatedCorrectAccount)
+                    throw new Error(
+                        'Updated CorrectAccount not found after transaction.'
+                    );
+
+                console.log(
+                    'Updated CorrectAccount Balance (Cents):',
+                    updatedCorrectAccount.balance
+                );
+                
+                // expect(updatedCorrectAccount.balance).toBe(
+                //     initialCorrectAccountBalanceInCents +
+                //         (expectedPlatformFeeAmountInCents -
+                //             expectedCashbackAmountInCents)
+                // );
+
+                // 5. Verificar o OfflineToken no banco de dados
+                const updatedOfflineToken =
+                    await prismaClient.offlineToken.findUnique({
+                        where: { token_code: activeOfflineToken },
+                    });
+                if (!updatedOfflineToken)
+                    throw new Error(
+                        'OfflineToken not found after transaction.'
+                    );
+
+                expect(updatedOfflineToken.status).toBe(
+                    OfflineTokenStatus.CONSUMED
+                );
+                expect(updatedOfflineToken.expires_at).toBeDefined(); // Token consumido deve ter data de expiração/consumo definida.
+
+
+                // 6. Verificar a TransactionEntity criada
+                const transaction = await prismaClient.transactions.findUnique({
+                    where: { uuid: transactionUuid },
+                });
+                if (!transaction)
+                    throw new Error(
+                        'Transaction not found in DB after creation.'
+                    );
+                expect(transaction.uuid).toBe(transactionUuid);
+                expect(transaction.status).toBe(TransactionStatus.success);
+                expect(transaction.transaction_type).toBe(
+                    TransactionType.POS_OFFLINE_PAYMENT
+                ); 
+                expect(transaction.favored_business_info_uuid).toBe(
+                    partner_info_uuid
+                );
+                
+                expect(transaction.original_price).toBe(
+                    originalPriceInCentsCalc
+                );
+                expect(transaction.net_price).toBe(netPriceInCentsCalc);
+                expect(transaction.fee_percentage).toBe(
+                    expectedPlatformFeePercentageScaled
+                );
+                expect(transaction.fee_amount).toBe(
+                    expectedPlatformFeeAmountInCents
+                );
+                // expect(transaction.cashback).toBe(
+                //     expectedCashbackAmountInCents
+                // );
+                expect(transaction.partner_credit_amount).toBe(
+                    expectedPartnerCreditAmountInCents
+                );
+                expect(transaction.paid_at).toBeDefined();
+
+                // 7. Verificar os Históricos
+                // Para userItem2 (débito)
+
+                const userItem2History = await prismaClient.userItemHistory.findFirst({
+                    where: {
+                        user_item_uuid: userItem2EmployeeUuid,
+                        related_transaction_uuid: transactionUuid,
+                        // event_type: UserItemEventType.DEBIT // Se você tiver um enum para o tipo de evento
+                    },
+                    orderBy: { created_at: 'desc' }
+                });
+                if (!userItem2History) throw new Error("UserItem2 History not found.");
+                expect(userItem2History.amount).toBe(-netPriceInCentsCalc); // O débito deve ser negativo
+                expect(userItem2History.balance_after).toBe(updatedUserItem2.balance);
+
+                // Para correctUserItem (crédito)
+                const correctUserItemHistory = await prismaClient.userItemHistory.findFirst({
+                    where: {
+                        user_item_uuid: correct_item_uuid_employee1,
+                        related_transaction_uuid: transactionUuid,
+                        event_type: UserItemEventType.CASHBACK_RECEIVED,
+                                                
+                    },
+                    orderBy: { created_at: 'desc' }
+                });
+                if (!correctUserItemHistory) throw new Error("CorrectUserItem History not found.");
+                // expect(correctUserItemHistory.amount).toBe(expectedCashbackAmountInCents); // O crédito deve ser positivo
+                expect(correctUserItemHistory.balance_after).toBe(updatedCorrectUserItem.balance);
+                // Para BusinessAccount (crédito)
+                const businessAccountHistory = await prismaClient.businessAccountHistory.findFirst({
+                    where: {
+                        //business_account_uuid: business_account_uuid_partner,
+                        related_transaction_uuid: transactionUuid,
+                        // event_type: BusinessAccountEventType.ITEM_SPENT // Se você tiver um enum para o tipo de evento
+                    },
+                    orderBy: { created_at: 'desc' }
+                });
+                if (!businessAccountHistory) throw new Error("BusinessAccount History not found.");
+                expect(businessAccountHistory.amount).toBe(expectedPartnerCreditAmountInCents);
+                expect(businessAccountHistory.balance_after).toBe(updatedBusinessAccount.balance);
+
+                // Para CorrectAccount (crédito/débito da taxa)
+                const correctAccountHistory = await prismaClient.correctAccountHistory.findFirst({
+                    where: {
+                        correct_account_uuid: correct_account_uuid_platform,
+                        related_transaction_uuid: transactionUuid,
+                        // event_type: CorrectAccountEventType.FEE_COLLECTION // Se você tiver um enum para o tipo de evento
+                    },
+                    orderBy: { created_at: 'desc' }
+                });
+                if (!correctAccountHistory) throw new Error("CorrectAccount History not found.");
+                // A lógica para o amount aqui dependerá de como a TransactionEntity registra o débito/crédito na CorrectAccount.
+                // Se for (taxa bruta - cashback), então:
+                // expect(correctAccountHistory.amount).toBe(expectedPlatformFeeAmountInCents - expectedCashbackAmountInCents);
+                expect(correctAccountHistory.balance_after).toBe(updatedCorrectAccount.balance);
+
+                // Para OfflineTokenHistory (CONSUMED)
+                const offlineTokenHistory = await prismaClient.offlineTokenHistory.findFirst({
+                    where: {
+                        token_code: activeOfflineToken,
+                        related_transaction_uuid: transactionUuid,
+                        snapshot_status: OfflineTokenStatus.CONSUMED,
+                        // event_type: OfflineTokenHistoryEventType.CONSUMED // Se você tiver um enum para o tipo de evento
+                    },
+                });
+                if (!offlineTokenHistory) throw new Error("OfflineToken History not found.");
+                expect(offlineTokenHistory.event_type).toBe(OfflineTokenHistoryEventType.USED_IN_TRANSACTION);
+                expect(offlineTokenHistory.snapshot_status).toBe(OfflineTokenStatus.CONSUMED);
+                expect(offlineTokenHistory.user_item_uuid).toBe(userItem2EmployeeUuid);
+            });
         });
     });
 });

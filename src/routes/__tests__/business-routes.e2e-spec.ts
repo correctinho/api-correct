@@ -8,6 +8,8 @@ import {
     ItemType,
     PrismaClient,
     SalesType,
+    TransactionStatus,
+    TransactionType,
 } from '@prisma/client';
 import { prismaClient } from '../../infra/databases/prisma.config';
 
@@ -43,6 +45,12 @@ let branch4_uuid: string;
 let branch5_uuid: string;
 
 let item_details_1: string;
+
+const toCents = (value: number) => Math.round(value * 100);
+const fromPointsBaseToPercentage = (value: number) => value / 10000;
+const fromPointsBaseToApiFloat = (value: number) => value / 10000;
+const fromCentsToReais = (value: number) => value / 100;
+
 describe('E2E Business tests', () => {
     beforeAll(async () => {
         const inputNewAdmin = {
@@ -2691,7 +2699,7 @@ describe('E2E Business tests', () => {
 
             it('Should return a group', async () => {
                 const group1 = await prismaClient.benefitGroups.findFirst({
-                    where: { uuid: group1_uuid},
+                    where: { uuid: group1_uuid },
                 });
                 expect(group1).toBeTruthy();
 
@@ -2711,7 +2719,6 @@ describe('E2E Business tests', () => {
                 expect(group1.value).toBe(result.body.value * 100);
             });
         });
-    
     });
     describe('Partner First register by correct seller', () => {
         describe('E2E Registering partner by correft seller', () => {
@@ -2861,7 +2868,28 @@ describe('E2E Business tests', () => {
     });
 
     describe('E2E Transactions', () => {
+        let partnerAdminTax: number;
+        let partnerMarketingTax: number;
+        let partnerMarketPlaceTax: number;
+        let partnerCashbackPercentage: number;
         describe('Create POS transaction order by partner', () => {
+            beforeAll(async () => {
+                // Obter as configurações do parceiro para usar nos cálculos
+                const partnerConfig =
+                    await prismaClient.partnerConfig.findFirst({
+                        where: { business_info_uuid: partner_info_uuid },
+                    });
+
+                if (!partnerConfig) {
+                    throw new Error(
+                        'PartnerConfig not found for partner_info_uuid. Please seed partner config data.'
+                    );
+                }
+                partnerAdminTax = partnerConfig.admin_tax; // Ex: 15000 para 1.5%
+                partnerMarketingTax = partnerConfig.marketing_tax; // Ex: 12000 para 1.2%
+                partnerCashbackPercentage = partnerConfig.cashback_tax; // Ex: 3000 para 0.3%
+                partnerMarketPlaceTax = partnerConfig.market_place_tax;
+            });
             it('Should throw an error if original price is missing', async () => {
                 const input = {};
                 const result = await request(app)
@@ -2946,80 +2974,169 @@ describe('E2E Business tests', () => {
                 expect(result.statusCode).toBe(403);
                 expect(result.body.error).toBe('Business type is not allowed');
             });
-            // it("Should create a POS transaction", async () => {
-            //   //ACTIVATE PARTNER TO BE ABLE TO CREATE TRANSACTIONS
-            //   const inputToActivate = {
-            //     status: "active"
-            //   }
-            //   const query = {
-            //     business_info_uuid: partner_info_uuid
-            //   }
-            //   const activePartner = await request(app).put("/business/info/correct").set('Authorization', `Bearer ${correctAdminToken}`).query(query).send(inputToActivate)
-            //   expect(activePartner.statusCode).toBe(200)
 
-            //   //CREATE TRANSACTION
-            //   const input = {
-            //     original_price: 100, //100 reais
-            //     discount_percentage: 10, // 10%
-            //     net_price: 90 //90 reais
-            //   }
-            //   const result = await request(app).post("/pos-transaction").set('Authorization', `Bearer ${partner_admin_token}`).send(input)
-
-            //   expect(result.statusCode).toBe(201)
-            //   expect(result.body.user_item_uuid).toBeFalsy()
-            //   expect(result.body.favored_business_info_uuid).toEqual(partner_info_uuid)
-            //   expect(result.body.original_price).toBe(input.original_price)
-            //   expect(result.body.discount_percentage).toBe(input.discount_percentage)
-            //   expect(result.body.net_price).toBe(input.net_price)
-            //   expect(result.body.fee_percentage).toBe(1) //considering that fee percentage is 1% for this partner
-
-            //   const fee_percentage = result.body.fee_percentage
-            //   const expected_fee_amount = (input.net_price * (fee_percentage / 100))// 1% de 90 = 0.9
-            //   const expected_cashback = expected_fee_amount * 0.20 //20% de 0.9 = 0.18
-
-            //   expect(result.body.fee_amount).toBe(expected_fee_amount)
-            //   expect(result.body.cashback).toBeCloseTo(expected_cashback) //considering that fee percentage is 1% for this partner
-            //   expect(result.body.description).toBe("Transação do ponto de venda (POS)")
-            //   expect(result.body.transaction_status).toBe("pending")
-            //   expect(result.body.transaction_type).toBe("POS_PAYMENT")
-            //   expect(result.body.favored_partner_user_uuid).toBeTruthy()
-            //   expect(result.body.paid_at).toBeFalsy()
-            //   expect(result.body.created_at).toBeTruthy()
-            //   expect(result.body.updated_at).toBeFalsy()
-
-            // })
-            it('DEVE criar uma transação POS com o cálculo de taxas correto', async () => {
+            it('Should create a POS transaction', async () => {
                 // --- ARRANGE (Preparação) ---
                 const inputToActivate = { status: 'active' };
                 const query = { business_info_uuid: partner_info_uuid };
-                await request(app)
+
+                //partner must be active to create transactions
+                const activatePartner = await request(app)
                     .put('/business/info/correct')
                     .set('Authorization', `Bearer ${correctAdminToken}`)
                     .query(query)
                     .send(inputToActivate);
+                expect(activatePartner.statusCode).toBe(200);
+
+                // 2. Dados da Transação (Input para a API)
+                const originalPriceInReais = 100.0;
+                const discountPercentage = 10; // 10%
+                const netPriceInReais = 90.0; // 100 - 10% de 100
 
                 const transactionInput = {
-                    original_price: 100.0,
-                    discount_percentage: 10,
-                    net_price: 90.0,
+                    original_price: originalPriceInReais,
+                    discount_percentage: discountPercentage,
+                    net_price: netPriceInReais,
                 };
+                // 3. Cálculos Esperados (em centavos para precisão)
+                const originalPriceInCents = toCents(originalPriceInReais);
+                const netPriceInCents = toCents(netPriceInReais);
 
+                const expectedFeePercentageRaw =
+                    partnerAdminTax + partnerMarketingTax; // Ex: 15000 + 12000 = 27000
+                const expectedFeePercentageApi = fromPointsBaseToApiFloat(
+                    expectedFeePercentageRaw
+                ); // Ex: 2.7
+
+                // O valor da taxa é calculado sobre o `net_price`
+                const expectedFeeAmountInCents = Math.round(
+                    netPriceInCents * (expectedFeePercentageApi / 100)
+                ); // 9000 * (2.7 / 100) = 243
+
+                // -- Calcular o Cashback --
+                const cashbackPartnerPercentageApi = fromPointsBaseToApiFloat(
+                    partnerCashbackPercentage
+                ); // Ex: 0.3
+                const cashbackPartnerAmountInCents = Math.round(
+                    netPriceInCents * (cashbackPartnerPercentageApi / 100)
+                ); // 9000 * (0.3 / 100) = 27
+
+                const PLATFORM_CASHBACK_PERCENTAGE = 0.2; // 20% do valor da taxa da plataforma
+                const cashbackPlatformAmountInCents = Math.round(
+                    expectedFeeAmountInCents * PLATFORM_CASHBACK_PERCENTAGE
+                ); // 243 * 0.20 = 49
+
+                const expectedCashbackTotalAmountInCents =
+                    cashbackPartnerAmountInCents +
+                    cashbackPlatformAmountInCents; // 27 + 49 = 76
+
+                const expectedPartnerCreditAmountInCents =
+                    netPriceInCents - expectedFeeAmountInCents; // Ex: 9000 - 135 = 8865
+                const expectedPlatformNetFeeAmountInCents =
+                    expectedFeeAmountInCents -
+                    expectedCashbackTotalAmountInCents; // Ex: 135 - 54 = 81
                 // --- ACT (Ação) ---
-                const result = await request(app)
+                const transactionResponse = await request(app)
                     .post('/pos-transaction')
                     .set('Authorization', `Bearer ${partner_admin_token}`)
                     .send(transactionInput);
-
                 // --- ASSERT (Verificação) ---
-                expect(result.statusCode).toBe(201);
+                expect(transactionResponse.statusCode).toBe(201);
 
-                // O teste espera 1.5%, que vem da taxa de admin do Ramo "Hipermercados" (15000 / 10000)
-                const expected_tax_percentage = 1.5;
+                // ======================================================================
+                // C. ASSERÇÕES DA RESPOSTA DA API (Validação do corpo da resposta)
+                // ======================================================================
 
-                // Esta é a asserção que está falhando.
-                expect(result.body.fee_percentage).toBeCloseTo(
-                    expected_tax_percentage
+                //Busca a transação criada no banco de dados para validações adicionais
+                const transactionInDb =
+                    await prismaClient.transactions.findUnique({
+                        where: {
+                            uuid: transactionResponse.body.transaction_uuid,
+                        },
+                    });
+                expect(transactionResponse.body.transaction_uuid).toBeDefined();
+                expect(typeof transactionResponse.body.transaction_uuid).toBe(
+                    'string'
                 );
+                expect(transactionResponse.body.transaction_status).toBe(
+                    TransactionStatus.pending
+                );
+                expect(transactionResponse.body.original_price).toBe(
+                    originalPriceInReais
+                );
+                expect(transactionResponse.body.discount_percentage).toBe(
+                    discountPercentage
+                );
+                expect(transactionResponse.body.net_price).toBe(
+                    netPriceInReais
+                );
+
+                expect(transactionInDb.uuid).toBe(
+                    transactionResponse.body.transaction_uuid
+                );
+                expect(transactionInDb.status).toBe(TransactionStatus.pending);
+                expect(transactionInDb.transaction_type).toBe(
+                    TransactionType.POS_PAYMENT
+                );
+                expect(transactionInDb.favored_business_info_uuid).toBe(
+                    partner_info_uuid
+                );
+                expect(transactionInDb.original_price).toBe(
+                    originalPriceInCents
+                ); // Em centavos no DB
+                expect(transactionInDb.net_price).toBe(netPriceInCents); // Em centavos no DB
+                expect(transactionInDb.fee_percentage).toBe(
+                    expectedFeePercentageRaw
+                ); // Em pontos base no DB (Ex: 15000)
+                expect(transactionInDb.fee_amount).toBe(
+                    expectedFeeAmountInCents
+                ); // Em centavos no DB (Ex: 135)
+                expect(transactionInDb.cashback).toBe(
+                    expectedCashbackTotalAmountInCents
+                ); // Em centavos no DB (Ex: 54)
+                expect(transactionInDb.partner_credit_amount).toBe(
+                    expectedPartnerCreditAmountInCents
+                ); // Em centavos no DB (Ex: 8865)
+                expect(transactionInDb.platform_net_fee_amount).toBe(
+                    expectedPlatformNetFeeAmountInCents
+                ); // Em centavos no DB (Ex: 81)
+
+                expect(transactionInDb.discount_percentage).toBe(
+                    discountPercentage * 10000
+                ); // 100000
+
+                expect(transactionInDb.paid_at).toBeNull();
+
+                expect(transactionInDb.created_at).toBeDefined();
+                expect(transactionInDb.updated_at).toBeNull();
+
+                // 2. user_item_uuid deve ser null
+                expect(transactionInDb.user_item_uuid).toBeNull();
+
+                // 3. Verificar que não houve impacto em BusinessAccount ou CorrectAccount (status pending)
+                const businessAccountHistoryCount =
+                    await prismaClient.businessAccountHistory.count({
+                        where: {
+                            related_transaction_uuid: transactionInDb.uuid,
+                        },
+                    });
+                expect(businessAccountHistoryCount).toBe(0);
+
+                const correctAccountHistoryCount =
+                    await prismaClient.correctAccountHistory.count({
+                        where: {
+                            related_transaction_uuid: transactionInDb.uuid,
+                        },
+                    });
+                expect(correctAccountHistoryCount).toBe(0);
+
+                const userItemHistoryCount =
+                    await prismaClient.userItemHistory.count({
+                        where: {
+                            related_transaction_uuid: transactionInDb.uuid,
+                        },
+                    });
+                expect(userItemHistoryCount).toBe(0);
             });
             it('Should correctly calculate fee and cashback for a high-value transaction', async () => {
                 // ARRANGE - Preparação
@@ -3060,17 +3177,66 @@ describe('E2E Business tests', () => {
                     .set('Authorization', `Bearer ${partner_admin_token}`)
                     .send(input);
 
-                const fee_cents = Math.floor(
-                    input.net_price * 100 * (result.body.fee_percentage / 100)
-                ); // fee em centavos, truncado
-                const expected_fee_amount = fee_cents / 100; // fee em reais
-                const cashback_cents = Math.floor(fee_cents * 0.2); // cashback em centavos, truncado
-                const expected_cashback = cashback_cents / 100;
+                // BUSCA A TRANSAÇÃO DIRETAMENTE NO BANCO DE DADOS para obter os valores ESCALADOS
+                const transactionFromDb = await prismaClient.transactions.findUnique({
+                    where: { uuid: result.body.transaction_uuid },
+                });
 
-                // ASSERT
-                expect(result.statusCode).toBe(201);
-                expect(result.body.fee_amount).toBe(expected_fee_amount);
-                expect(result.body.cashback).toBeCloseTo(expected_cashback);
+                // VERIFICA SE A TRANSAÇÃO FOI ENCONTRADA
+                expect(transactionFromDb).toBeDefined();
+
+                // VALORES ESPERADOS DO TESTE (calculados com base nas regras de negócio)
+                // Para 99.55 (net_price), e 1.5% de fee_percentage (15000 escalado)
+
+                const expected_net_price_in_cents = Math.round(input.net_price * 100); // 9955
+                const expected_fee_percentage_scaled = 15000; // 1.5% escalado
+
+                // --- CÁLCULOS QUE A ENTIDADE DEVE REALIZAR ---
+
+                // 1. calculatedFeeBigInt (fee_amount)
+                const calculatedFeeBigInt = (BigInt(expected_net_price_in_cents) * BigInt(expected_fee_percentage_scaled)) / BigInt(1000000);
+                const expected_fee_amount_in_cents = Number(calculatedFeeBigInt); // 149
+
+                // 2. Cashback da Plataforma (20% da fee_amount, arredondando 0.x para 1 centavo)
+                const PLATFORM_CASHBACK_PERCENTAGE = 20n;
+                const rawPlatformCashbackBigInt = (BigInt(expected_fee_amount_in_cents) * PLATFORM_CASHBACK_PERCENTAGE); // 149n * 20n = 2980n
+                const divisorPlatform = 100n;
+                let expected_platform_cashback_in_cents = 0n;
+                if (rawPlatformCashbackBigInt === 0n) {
+                    expected_platform_cashback_in_cents = 0n;
+                } else {
+                    expected_platform_cashback_in_cents = (rawPlatformCashbackBigInt + divisorPlatform - 1n) / divisorPlatform; // (2980 + 100 - 1) / 100 = 30n
+                }
+                
+                // 3. Cashback do Parceiro (assumindo 0 para este teste específico, ou configure conforme o cenário)
+                const expected_partner_cashback_in_cents = 0n; // Se o partnerConfig.cashback_tax for 0 para este parceiro
+
+                // 4. Total Cashback
+                const expected_total_cashback_in_cents = Number(expected_platform_cashback_in_cents + expected_partner_cashback_in_cents); // 30
+
+                // 5. platform_net_fee_amount
+                const expected_platform_net_fee_amount_in_cents = expected_fee_amount_in_cents - expected_total_cashback_in_cents; // 149 - 30 = 119
+
+                // 6. partner_credit_amount
+                const expected_partner_credit_amount_in_cents = expected_net_price_in_cents - expected_fee_amount_in_cents; // 9955 - 149 = 9806
+
+
+                // ASSERTIONS (TODAS BASEADAS EM transactionFromDb)
+                expect(result.statusCode).toBe(201); // O status code da API ainda é relevante
+
+                expect(transactionFromDb!.original_price).toBe(expected_net_price_in_cents); // Original price
+                expect(transactionFromDb!.net_price).toBe(expected_net_price_in_cents); // Net price
+                expect(transactionFromDb!.discount_percentage).toBe(input.discount_percentage); // Discount percentage
+
+                expect(transactionFromDb!.fee_percentage).toBe(expected_fee_percentage_scaled); // fee_percentage escalado
+                expect(transactionFromDb!.fee_amount).toBe(expected_fee_amount_in_cents); // fee_amount em centavos
+
+                expect(transactionFromDb!.cashback).toBe(expected_total_cashback_in_cents); // cashback em centavos (30)
+
+                expect(transactionFromDb!.platform_net_fee_amount).toBe(expected_platform_net_fee_amount_in_cents); // platform_net_fee_amount em centavos (119)
+                expect(transactionFromDb!.partner_credit_amount).toBe(expected_partner_credit_amount_in_cents); // partner_credit_amount em centavos (9806)
+
+                // Adicione outras asserções para campos como transaction_type, status, etc., se desejar.
             });
 
             it('Should create a POS transaction with zero discount', async () => {
@@ -3844,21 +4010,24 @@ describe('E2E Business tests', () => {
             // ASSERT - Resposta da API
             expect(newPinRes.statusCode).toBe(200);
 
-            const historyPrepaidBenefitUserItem = await prismaClient.userItem.findUnique({
-                where:{
-                    uuid: historyPrepaidBenefitUserItemUuid
-                }
-            })
+            const historyPrepaidBenefitUserItem =
+                await prismaClient.userItem.findUnique({
+                    where: {
+                        uuid: historyPrepaidBenefitUserItemUuid,
+                    },
+                });
             expect(historyPrepaidBenefitUserItem).toBeDefined();
-            const historyPrepaidBenefitUserItemBalance = historyPrepaidBenefitUserItem.balance;
+            const historyPrepaidBenefitUserItemBalance =
+                historyPrepaidBenefitUserItem.balance;
 
             const tx1Res = await request(app)
                 .post('/pos-transaction')
                 .set('Authorization', `Bearer ${historyPartnerAdminToken}`)
                 .send({
-                    original_price: (historyPrepaidBenefitUserItemBalance / 100) - 100,
+                    original_price:
+                        historyPrepaidBenefitUserItemBalance / 100 - 100,
                     discount_percentage: 0,
-                    net_price: (historyPrepaidBenefitUserItemBalance / 100) - 100,
+                    net_price: historyPrepaidBenefitUserItemBalance / 100 - 100,
                 });
             const tx1Prisma = await prismaClient.transactions.findUnique({
                 where: { uuid: tx1Res.body.transaction_uuid },
@@ -3955,12 +4124,11 @@ describe('E2E Business tests', () => {
             const tx1Id = result.body[1].related_transaction_uuid; // A mais antiga
             const tx2Id = result.body[0].related_transaction_uuid; // A mais recente
 
-
             // --- Validação da ordem e dos valores ---
             // A taxa do branch3 (Mercearias) é 1.4% (admin_tax).
             const firstEntry = result.body[0]; // A mais recente
             const secondEntry = result.body[1]; // A mais antiga
-            
+
             const tx1InDb = await prismaClient.transactions.findUnique({
                 where: { uuid: tx1Id },
             });
