@@ -16,6 +16,7 @@ export class ProcessPixWebhookController {
 
             return res.json(result);
         } catch (err: any) {
+            console.log({err})
             const statusCode = err.statusCode || 500;
             return res.status(statusCode).json({
                 error: err.message || 'Internal Server Error',

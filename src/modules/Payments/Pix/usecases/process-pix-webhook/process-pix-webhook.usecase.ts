@@ -31,94 +31,109 @@ export class ProcessPixWebhookUsecase {
     public async execute(payload: SicrediPixWebhookPayload): Promise<void> {
         console.log('\n✅✅✅ WEBHOOK DO SICREDI RECEBIDO! ✅✅✅');
         console.log('Payload recebido:', JSON.stringify(payload, null, 2));
+        
+        //Resposta da API
+//         "pix": [
+//     {
+//       "endToEndId": "E03042597202511241449436k9xOoGHb",
+//       "txid": "7594d8828ac9487c94e4a2d40de6856c",
+//       "valor": "0.01",
+//       "chave": "62960b52-9f19-4c5e-8ce3-b9528fa848c4",
+//       "componentesValor": {
+//         "original": {
+//           "valor": "0.01"
+//         }
+//       },
+//       "horario": "2025-11-24T14:50:03.988Z"
+//     }
+//   ]
+        // if (!payload?.pix?.length) {
+        //     console.warn(
+        //         "AVISO: Webhook recebido com formato inválido ou sem a chave 'pix'."
+        //     );
+        //     throw new CustomError('Webhook payload inválido.', 400);
+        // }
+        
+        // // Para lidar com múltiplos PIX no mesmo webhook (se aplicável) e reportar erros consolidados
+        // // ou falhar o processamento total se qualquer item PIX tiver um erro crítico
+        // const processingFailures: string[] = []; // Para coletar mensagens de erro que devem levar a um 4xx/5xx
 
-        if (!payload?.pix?.length) {
-            console.warn(
-                "AVISO: Webhook recebido com formato inválido ou sem a chave 'pix'."
-            );
-            throw new CustomError('Webhook payload inválido.', 400);
-        }
+        // for (const pixPayment of payload.pix) {
+        //     const providerTxId = pixPayment.txid;
+        //     if (!providerTxId) {
+        //         const errorMessage = 'ERRO: Item do webhook sem txid.';
+        //         console.error(errorMessage, pixPayment);
+        //         processingFailures.push(`[unknown_txid] ${errorMessage}`);
+        //         continue; // Passa para o próximo item do webhook, mas registra a falha
+        //     }
 
-        // Para lidar com múltiplos PIX no mesmo webhook (se aplicável) e reportar erros consolidados
-        // ou falhar o processamento total se qualquer item PIX tiver um erro crítico
-        const processingFailures: string[] = []; // Para coletar mensagens de erro que devem levar a um 4xx/5xx
+        //     try {
+        //         // Passo 1: Encontrar a transação pelo providerTxId (txid)
+        //         const transaction =
+        //             await this.transactionRepository.findByProviderTxId(
+        //                 providerTxId
+        //             );
+        //         if (!transaction) {
+        //             const errorMessage = `ERRO: Transação interna não encontrada para o txid: ${providerTxId}. O Sicredi pode estar enviando um PIX para uma cobrança desconhecida.`;
+        //             console.error(errorMessage);
+        //             processingFailures.push(
+        //                 `[${providerTxId}] ${errorMessage}`
+        //             );
+        //             continue; // Registra a falha e passa para o próximo item
+        //         }
 
-        for (const pixPayment of payload.pix) {
-            const providerTxId = pixPayment.txid;
-            if (!providerTxId) {
-                const errorMessage = 'ERRO: Item do webhook sem txid.';
-                console.error(errorMessage, pixPayment);
-                processingFailures.push(`[unknown_txid] ${errorMessage}`);
-                continue; // Passa para o próximo item do webhook, mas registra a falha
-            }
+        //         // Passo 2: Validação de idempotência (comum a todos os tipos de cash-in)
+        //         if (transaction.status !== TransactionStatus.pending) {
+        //             console.warn(
+        //                 `AVISO: Transação ${transaction.uuid.uuid} (txid: ${providerTxId}) já processada (status: ${transaction.status}). Ignorando re-processamento.`
+        //             );
+        //             continue; // Esta é uma condição "já OK", não falha.
+        //         }
 
-            try {
-                // Passo 1: Encontrar a transação pelo providerTxId (txid)
-                const transaction =
-                    await this.transactionRepository.findByProviderTxId(
-                        providerTxId
-                    );
-                if (!transaction) {
-                    const errorMessage = `ERRO: Transação interna não encontrada para o txid: ${providerTxId}. O Sicredi pode estar enviando um PIX para uma cobrança desconhecida.`;
-                    console.error(errorMessage);
-                    processingFailures.push(
-                        `[${providerTxId}] ${errorMessage}`
-                    );
-                    continue; // Registra a falha e passa para o próximo item
-                }
+        //         // Passo 3: Roteamento com base no tipo de transação
+        //         switch (transaction.transaction_type) {
+        //             case TransactionType.CASH_IN_PIX_USER:
+        //                 await this.processCashInUser(transaction, pixPayment);
+        //                 break;
 
-                // Passo 2: Validação de idempotência (comum a todos os tipos de cash-in)
-                if (transaction.status !== TransactionStatus.pending) {
-                    console.warn(
-                        `AVISO: Transação ${transaction.uuid.uuid} (txid: ${providerTxId}) já processada (status: ${transaction.status}). Ignorando re-processamento.`
-                    );
-                    continue; // Esta é uma condição "já OK", não falha.
-                }
+        //             case TransactionType.CASH_IN_PIX_PARTNER:
+        //                 await this.processCashInPartner(
+        //                     transaction,
+        //                     pixPayment
+        //                 );
+        //                 break;
 
-                // Passo 3: Roteamento com base no tipo de transação
-                switch (transaction.transaction_type) {
-                    case TransactionType.CASH_IN_PIX_USER:
-                        await this.processCashInUser(transaction, pixPayment);
-                        break;
+        //             // Adicione outros tipos de CASH_IN aqui conforme forem surgindo
+        //             // case TransactionType.CASH_IN_PIX_MERCHANT:
+        //             //    await this.processCashInMerchant(transaction, pixPayment);
+        //             //    break;
 
-                    case TransactionType.CASH_IN_PIX_PARTNER:
-                        await this.processCashInPartner(
-                            transaction,
-                            pixPayment
-                        );
-                        break;
+        //             default:
+        //                 const errorMessage = `AVISO: Tipo de transação PIX '${transaction.transaction_type}' não suportado ou configurado para o txid ${providerTxId}.`;
+        //                 console.warn(errorMessage);
+        //                 processingFailures.push(
+        //                     `[${providerTxId}] ${errorMessage}`
+        //                 );
+        //                 // Este é um caso onde o sistema não sabe como lidar, então é uma falha.
+        //                 break; // Permite que o loop continue, mas o erro será lançado no final
+        //         }
+        //     } catch (error) {
+        //         // Captura qualquer CustomError lançado pelos métodos de processamento específicos
+        //         const errorMessage = `ERRO ao processar PIX para txid ${providerTxId}: ${error instanceof Error ? error.message : 'Erro desconhecido.'}`;
+        //         console.error(errorMessage, error);
+        //         processingFailures.push(`[${providerTxId}] ${errorMessage}`);
+        //         // Não relançamos aqui para que o loop possa continuar tentando processar outros PIX no mesmo webhook.
+        //     }
+        // }
 
-                    // Adicione outros tipos de CASH_IN aqui conforme forem surgindo
-                    // case TransactionType.CASH_IN_PIX_MERCHANT:
-                    //    await this.processCashInMerchant(transaction, pixPayment);
-                    //    break;
-
-                    default:
-                        const errorMessage = `AVISO: Tipo de transação PIX '${transaction.transaction_type}' não suportado ou configurado para o txid ${providerTxId}.`;
-                        console.warn(errorMessage);
-                        processingFailures.push(
-                            `[${providerTxId}] ${errorMessage}`
-                        );
-                        // Este é um caso onde o sistema não sabe como lidar, então é uma falha.
-                        break; // Permite que o loop continue, mas o erro será lançado no final
-                }
-            } catch (error) {
-                // Captura qualquer CustomError lançado pelos métodos de processamento específicos
-                const errorMessage = `ERRO ao processar PIX para txid ${providerTxId}: ${error instanceof Error ? error.message : 'Erro desconhecido.'}`;
-                console.error(errorMessage, error);
-                processingFailures.push(`[${providerTxId}] ${errorMessage}`);
-                // Não relançamos aqui para que o loop possa continuar tentando processar outros PIX no mesmo webhook.
-            }
-        }
-
-        // Passo 4: Decisão final da resposta HTTP para o Sicredi
-        if (processingFailures.length > 0) {
-            // Se houver qualquer falha que não seja por idempotência, lançamos um CustomError.
-            // O controlador irá capturá-lo e responder com um status HTTP de erro (4xx/5xx).
-            const consolidatedErrorMessage = `Falhas no processamento do webhook PIX: ${processingFailures.join(' | ')}`;
-            // Pode ser um 400 para erros de validação ou 500 para erros internos mais graves
-            throw new CustomError(consolidatedErrorMessage, 400); // Ou 500, dependendo da sua política
-        }
+        // // Passo 4: Decisão final da resposta HTTP para o Sicredi
+        // if (processingFailures.length > 0) {
+        //     // Se houver qualquer falha que não seja por idempotência, lançamos um CustomError.
+        //     // O controlador irá capturá-lo e responder com um status HTTP de erro (4xx/5xx).
+        //     const consolidatedErrorMessage = `Falhas no processamento do webhook PIX: ${processingFailures.join(' | ')}`;
+        //     // Pode ser um 400 para erros de validação ou 500 para erros internos mais graves
+        //     throw new CustomError(consolidatedErrorMessage, 400); // Ou 500, dependendo da sua política
+        // }
 
         // Se chegarmos aqui, significa que todos os itens foram processados com sucesso ou já estavam em estado final.
         // O controlador responderá 200 OK.
