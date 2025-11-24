@@ -1,20 +1,19 @@
 import { Response, Request } from "express";
 import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repository";
 import { GetUserInfoByUserUsecase } from "./get-user-info-by-user.usecase";
-import { ICompanyDataRepository } from "../../../../../Company/CompanyData/repositories/company-data.repository";
-import { InputFindUserByUserDTO } from "./dto/get-user-by-user.dto";
+import { IOfflineTokenRepository } from "../../../../../Payments/OfflineTokens/repositories/offline-tokens.repository";
 
 export class GetUserInfoByUserController{
     constructor(
-        private appUsersRepository: IAppUserInfoRepository,
-        private businessInfoRepository: ICompanyDataRepository
+         private appUsersRepository: IAppUserInfoRepository,
+        private activeTokenRepository: IOfflineTokenRepository
     ){}
 
     async handle(req: Request, res: Response){
 
         try{
             const userDocument = req.appUser.document
-            const usecase = new GetUserInfoByUserUsecase(this.appUsersRepository, this.businessInfoRepository)
+            const usecase = new GetUserInfoByUserUsecase(this.appUsersRepository, this.activeTokenRepository)
 
             const result = await usecase.execute(userDocument)
             return res.json(result)

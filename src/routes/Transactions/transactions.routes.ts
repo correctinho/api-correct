@@ -13,6 +13,7 @@ import { processPixWebhook } from "../../modules/Payments/Pix/usecases/process-p
 import { createMockPixChargeController } from "../../infra/providers/PixProvider/implementations/sicredi/tests/index.mock";
 import { activateTokenController } from "../../modules/Payments/OfflineTokens/usecases/activate-tokens-offline";
 import { processOfflineTokenController } from "../../modules/Payments/Transactions/useCases/process-pos-payment-by-offline-token";
+import { getTokensOffline } from "../../modules/Payments/OfflineTokens/usecases/get-tokens-offline";
 
 const transactionsRouter = Router()
 
@@ -69,6 +70,10 @@ transactionsRouter.post("/app-user/activate-token", appUserIsAuth, async (reques
   await activateTokenController.handle(request, response)
 })
 
+//Get Offiline Tokens
+transactionsRouter.get("/app-user/offline-tokens", appUserIsAuth, async (request, response) => {
+  await getTokensOffline.handle(request, response)
+})
 //Process POS Offline Token transaction
 transactionsRouter.post("/app-user/transation/offline-token", companyIsAuth, async (request, response) => {
   await processOfflineTokenController.handle(request, response)
