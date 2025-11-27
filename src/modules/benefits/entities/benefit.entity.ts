@@ -7,6 +7,7 @@ export type BenefitsProps = {
   uuid?: Uuid
   name: string;
   description: string;
+  img_url?: string;
   item_type: ItemType;
   item_category: ItemCategory;
   parent_uuid: Uuid | null
@@ -18,6 +19,7 @@ export type BenefitsProps = {
 export type BenefitCreateCommand = {
   name: string;
   description: string;
+  img_url?: string;
   item_type: ItemType;
   item_category: ItemCategory;
   parent_uuid: Uuid | null
@@ -30,6 +32,7 @@ export class BenefitsEntity {
   private _uuid: Uuid;
   private _name: string;
   private _description: string;
+  private _img_url?: string;
   private _item_type: ItemType;
   private _item_category: ItemCategory;
   private _parent_uuid: Uuid | null
@@ -41,6 +44,7 @@ export class BenefitsEntity {
     this._uuid = props.uuid ?? new Uuid();
     this._name = props.name;
     this._description = props.description;
+    this._img_url = props.img_url;
     this._item_type = props.item_type;
     this._item_category = props.item_category;
     this._parent_uuid = props.parent_uuid ?? null
@@ -67,6 +71,10 @@ export class BenefitsEntity {
 
   get description(): string {
     return this._description;
+  }
+
+  get img_url(): string | undefined {
+    return this._img_url;
   }
 
   get item_type(): ItemType {

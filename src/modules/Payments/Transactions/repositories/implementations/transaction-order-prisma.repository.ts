@@ -30,6 +30,9 @@ import { IOfflineTokenRepository } from '../../../OfflineTokens/repositories/off
 import { IOfflineTokenHistoryRepository } from '../../../OfflineTokens/repositories/offline-tokens-history.repository';
 
 export class TransactionOrderPrismaRepository implements ITransactionOrderRepository {
+    saveSubscriptionPaymentTransaction(entity: TransactionEntity): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
     async processOfflineTokenPayment(
     transactionEntity: TransactionEntity,
     offlineTokenEntity: OfflineTokenEntity,
@@ -249,7 +252,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
     return result;
   }
 
-     async processAppUserPixCreditPayment(
+    async processAppUserPixCreditPayment(
         transactionEntity: TransactionEntity, // <--- Recebe a TransactionEntity
         amountReceivedInCents: number,
     ): Promise<ProcessAppUserPixCreditPaymentResult> {
@@ -1408,9 +1411,47 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         return TransactionEntity.hydrate(transactionProps);
     }
 
-    create(entity: TransactionEntity): Promise<void> {
-        throw new CustomError('Method not implemented.');
-    }
+   async create(entity: TransactionEntity): Promise<void> {
+    const dataToPersist = {
+      // IDs Básicos
+      uuid: entity.uuid.uuid,
+      created_at: entity.created_at,
+      updated_at: new Date().toISOString(), // Atualiza sempre que salvar
+
+      subscription_uuid: entity.subscription_uuid?.uuid ?? null,
+      
+      user_item_uuid: entity.user_item_uuid?.uuid ?? null,
+      favored_user_uuid: entity.favored_user_uuid?.uuid ?? null,
+      favored_business_info_uuid: entity.favored_business_info_uuid?.uuid ?? null,
+      payer_business_info_uuid: entity.payer_business_info_uuid?.uuid ?? null,
+      favored_partner_user_uuid: entity.favored_partner_user_uuid?.uuid ?? null,
+      original_price: Math.round(entity.original_price * 100),
+      net_price: Math.round(entity.net_price * 100),
+      fee_amount: Math.round(entity.fee_amount * 100),
+      cashback: Math.round(entity.cashback * 100),
+      platform_net_fee_amount: Math.round(entity.platform_net_fee_amount * 100),
+      partner_credit_amount: Math.round(entity.partner_credit_amount * 100),      
+      discount_percentage: Math.round(entity.discount_percentage * 10000),
+      fee_percentage: Math.round((entity.fee_percentage ?? 0) * 10000),
+      description: entity.description,
+      status: entity.status,
+      transaction_type: entity.transaction_type,
+      
+      // Dados do Provedor / Pix
+      provider_tx_id: entity.provider_tx_id,
+      pix_e2e_id: entity.pix_e2e_id,
+      paid_at: entity.paid_at ?? null,
+      
+      // Outros
+      used_offline_token_code: entity.used_offline_token_code ?? null,
+      // item_uuid: entity.item_uuid ?? null, // Se este campo existir no prisma schema
+    };
+
+    // --- PERSISTÊNCIA ---
+    await prismaClient.transactions.create({
+      data: dataToPersist,
+    });
+  }
     update(entity: TransactionEntity): Promise<void> {
         throw new CustomError('Method not implemented.');
     }

@@ -4,6 +4,8 @@ import { ITransactionOrderRepository } from '../../../Transactions/repositories/
 import { TransactionStatus, TransactionType } from '@prisma/client';
 import { newDateF } from '../../../../../utils/date';
 import { TransactionEntity } from '../../../Transactions/entities/transaction-order.entity';
+import { ISubscriptionRepository } from '../../../SubscriptionsPlans/repositories/subscription.repository';
+import { IAppUserItemRepository } from '../../../../AppUser/AppUserManagement/repositories/app-user-item-repository';
 
 // Tipagem do payload do Sicredi
 export interface SicrediPix {
@@ -25,115 +27,120 @@ interface SicrediPixWebhookPayload {
 
 export class ProcessPixWebhookUsecase {
     constructor(
-        private readonly transactionRepository: ITransactionOrderRepository
+        private readonly transactionRepository: ITransactionOrderRepository,
+        private readonly subscriptionRepository: ISubscriptionRepository,
+        private readonly userItemRepository: IAppUserItemRepository
     ) {}
 
     public async execute(payload: SicrediPixWebhookPayload): Promise<void> {
         console.log('\n✅✅✅ WEBHOOK DO SICREDI RECEBIDO! ✅✅✅');
         console.log('Payload recebido:', JSON.stringify(payload, null, 2));
-        
+
         //Resposta da API
-//         "pix": [
-//     {
-//       "endToEndId": "E03042597202511241449436k9xOoGHb",
-//       "txid": "7594d8828ac9487c94e4a2d40de6856c",
-//       "valor": "0.01",
-//       "chave": "62960b52-9f19-4c5e-8ce3-b9528fa848c4",
-//       "componentesValor": {
-//         "original": {
-//           "valor": "0.01"
-//         }
-//       },
-//       "horario": "2025-11-24T14:50:03.988Z"
-//     }
-//   ]
+        //         "pix": [
+        //     {
+        //       "endToEndId": "E03042597202511241449436k9xOoGHb",
+        //       "txid": "7594d8828ac9487c94e4a2d40de6856c",
+        //       "valor": "0.01",
+        //       "chave": "62960b52-9f19-4c5e-8ce3-b9528fa848c4",
+        //       "componentesValor": {
+        //         "original": {
+        //           "valor": "0.01"
+        //         }
+        //       },
+        //       "horario": "2025-11-24T14:50:03.988Z"
+        //     }
+        //   ]
         // if (!payload?.pix?.length) {
         //     console.warn(
         //         "AVISO: Webhook recebido com formato inválido ou sem a chave 'pix'."
         //     );
         //     throw new CustomError('Webhook payload inválido.', 400);
         // }
-        
+
         // // Para lidar com múltiplos PIX no mesmo webhook (se aplicável) e reportar erros consolidados
         // // ou falhar o processamento total se qualquer item PIX tiver um erro crítico
-        // const processingFailures: string[] = []; // Para coletar mensagens de erro que devem levar a um 4xx/5xx
+        const processingFailures: string[] = []; // Para coletar mensagens de erro que devem levar a um 4xx/5xx
 
-        // for (const pixPayment of payload.pix) {
-        //     const providerTxId = pixPayment.txid;
-        //     if (!providerTxId) {
-        //         const errorMessage = 'ERRO: Item do webhook sem txid.';
-        //         console.error(errorMessage, pixPayment);
-        //         processingFailures.push(`[unknown_txid] ${errorMessage}`);
-        //         continue; // Passa para o próximo item do webhook, mas registra a falha
-        //     }
+        for (const pixPayment of payload.pix) {
+            const providerTxId = pixPayment.txid;
+            if (!providerTxId) {
+                const errorMessage = 'ERRO: Item do webhook sem txid.';
+                console.error(errorMessage, pixPayment);
+                processingFailures.push(`[unknown_txid] ${errorMessage}`);
+                continue; // Passa para o próximo item do webhook, mas registra a falha
+            }
 
-        //     try {
-        //         // Passo 1: Encontrar a transação pelo providerTxId (txid)
-        //         const transaction =
-        //             await this.transactionRepository.findByProviderTxId(
-        //                 providerTxId
-        //             );
-        //         if (!transaction) {
-        //             const errorMessage = `ERRO: Transação interna não encontrada para o txid: ${providerTxId}. O Sicredi pode estar enviando um PIX para uma cobrança desconhecida.`;
-        //             console.error(errorMessage);
-        //             processingFailures.push(
-        //                 `[${providerTxId}] ${errorMessage}`
-        //             );
-        //             continue; // Registra a falha e passa para o próximo item
-        //         }
+            try {
+                // Passo 1: Encontrar a transação pelo providerTxId (txid)
+                const transaction =
+                    await this.transactionRepository.findByProviderTxId(
+                        providerTxId
+                    );
+                if (!transaction) {
+                    const errorMessage = `ERRO: Transação interna não encontrada para o txid: ${providerTxId}. O Sicredi pode estar enviando um PIX para uma cobrança desconhecida.`;
+                    console.error(errorMessage);
+                    processingFailures.push(
+                        `[${providerTxId}] ${errorMessage}`
+                    );
+                    continue; // Registra a falha e passa para o próximo item
+                }
 
-        //         // Passo 2: Validação de idempotência (comum a todos os tipos de cash-in)
-        //         if (transaction.status !== TransactionStatus.pending) {
-        //             console.warn(
-        //                 `AVISO: Transação ${transaction.uuid.uuid} (txid: ${providerTxId}) já processada (status: ${transaction.status}). Ignorando re-processamento.`
-        //             );
-        //             continue; // Esta é uma condição "já OK", não falha.
-        //         }
+                // Passo 2: Validação de idempotência (comum a todos os tipos de cash-in)
+                if (transaction.status !== TransactionStatus.pending) {
+                    console.warn(
+                        `AVISO: Transação ${transaction.uuid.uuid} (txid: ${providerTxId}) já processada (status: ${transaction.status}). Ignorando re-processamento.`
+                    );
+                    continue; // Esta é uma condição "já OK", não falha.
+                }
 
-        //         // Passo 3: Roteamento com base no tipo de transação
-        //         switch (transaction.transaction_type) {
-        //             case TransactionType.CASH_IN_PIX_USER:
-        //                 await this.processCashInUser(transaction, pixPayment);
-        //                 break;
+                // Passo 3: Roteamento com base no tipo de transação
+                switch (transaction.transaction_type) {
+                    case TransactionType.CASH_IN_PIX_USER:
+                        await this.processCashInUser(transaction, pixPayment);
+                        break;
 
-        //             case TransactionType.CASH_IN_PIX_PARTNER:
-        //                 await this.processCashInPartner(
-        //                     transaction,
-        //                     pixPayment
-        //                 );
-        //                 break;
+                    case TransactionType.CASH_IN_PIX_PARTNER:
+                        await this.processCashInPartner(
+                            transaction,
+                            pixPayment
+                        );
+                        break;
 
-        //             // Adicione outros tipos de CASH_IN aqui conforme forem surgindo
-        //             // case TransactionType.CASH_IN_PIX_MERCHANT:
-        //             //    await this.processCashInMerchant(transaction, pixPayment);
-        //             //    break;
+                    case 'SUBSCRIPTION_PAYMENT' as TransactionType: // Casting se necessário
+                        // Ou se você importou o enum: case TransactionType.SUBSCRIPTION_PAYMENT:
+                        await this.processSubscriptionPayment(
+                            transaction,
+                            pixPayment
+                        );
+                        break;
 
-        //             default:
-        //                 const errorMessage = `AVISO: Tipo de transação PIX '${transaction.transaction_type}' não suportado ou configurado para o txid ${providerTxId}.`;
-        //                 console.warn(errorMessage);
-        //                 processingFailures.push(
-        //                     `[${providerTxId}] ${errorMessage}`
-        //                 );
-        //                 // Este é um caso onde o sistema não sabe como lidar, então é uma falha.
-        //                 break; // Permite que o loop continue, mas o erro será lançado no final
-        //         }
-        //     } catch (error) {
-        //         // Captura qualquer CustomError lançado pelos métodos de processamento específicos
-        //         const errorMessage = `ERRO ao processar PIX para txid ${providerTxId}: ${error instanceof Error ? error.message : 'Erro desconhecido.'}`;
-        //         console.error(errorMessage, error);
-        //         processingFailures.push(`[${providerTxId}] ${errorMessage}`);
-        //         // Não relançamos aqui para que o loop possa continuar tentando processar outros PIX no mesmo webhook.
-        //     }
-        // }
+                    default:
+                        const errorMessage = `AVISO: Tipo de transação PIX '${transaction.transaction_type}' não suportado ou configurado para o txid ${providerTxId}.`;
+                        console.warn(errorMessage);
+                        processingFailures.push(
+                            `[${providerTxId}] ${errorMessage}`
+                        );
+                        // Este é um caso onde o sistema não sabe como lidar, então é uma falha.
+                        break; // Permite que o loop continue, mas o erro será lançado no final
+                }
+            } catch (error) {
+                // Captura qualquer CustomError lançado pelos métodos de processamento específicos
+                const errorMessage = `ERRO ao processar PIX para txid ${providerTxId}: ${error instanceof Error ? error.message : 'Erro desconhecido.'}`;
+                console.error(errorMessage, error);
+                processingFailures.push(`[${providerTxId}] ${errorMessage}`);
+                // Não relançamos aqui para que o loop possa continuar tentando processar outros PIX no mesmo webhook.
+            }
+        }
 
-        // // Passo 4: Decisão final da resposta HTTP para o Sicredi
-        // if (processingFailures.length > 0) {
-        //     // Se houver qualquer falha que não seja por idempotência, lançamos um CustomError.
-        //     // O controlador irá capturá-lo e responder com um status HTTP de erro (4xx/5xx).
-        //     const consolidatedErrorMessage = `Falhas no processamento do webhook PIX: ${processingFailures.join(' | ')}`;
-        //     // Pode ser um 400 para erros de validação ou 500 para erros internos mais graves
-        //     throw new CustomError(consolidatedErrorMessage, 400); // Ou 500, dependendo da sua política
-        // }
+        // Passo 4: Decisão final da resposta HTTP para o Sicredi
+        if (processingFailures.length > 0) {
+            // Se houver qualquer falha que não seja por idempotência, lançamos um CustomError.
+            // O controlador irá capturá-lo e responder com um status HTTP de erro (4xx/5xx).
+            const consolidatedErrorMessage = `Falhas no processamento do webhook PIX: ${processingFailures.join(' | ')}`;
+            // Pode ser um 400 para erros de validação ou 500 para erros internos mais graves
+            throw new CustomError(consolidatedErrorMessage, 400); // Ou 500, dependendo da sua política
+        }
 
         // Se chegarmos aqui, significa que todos os itens foram processados com sucesso ou já estavam em estado final.
         // O controlador responderá 200 OK.
@@ -174,7 +181,7 @@ export class ProcessPixWebhookUsecase {
                 `✅ SUCESSO: Crédito PIX para AppUser processado para a transação ${transaction.uuid.uuid}.`
             );
         } else {
-            console.log("Deu erro aqui 1")
+            console.log('Deu erro aqui 1');
             // Se o repositório retornar 'success: false' sem lançar um erro
             const errorMessage = `❌ FALHA: Repositório falhou ao processar crédito PIX para AppUser (tx: ${transaction.uuid.uuid}).`;
             console.error(errorMessage);
@@ -206,6 +213,84 @@ export class ProcessPixWebhookUsecase {
         throw new CustomError(errorMessage, 501); // 501 Not Implemented
     }
 
+    private async processSubscriptionPayment(
+        transaction: TransactionEntity,
+        pixPayment: SicrediPix
+    ): Promise<void> {
+        console.log(
+            `Iniciando processamento de SUBSCRIPTION_PAYMENT para a transação ${transaction.uuid.uuid}`
+        );
+
+        // 1. Validação de Valor (Crucial para evitar fraudes)
+        const receivedAmountInCents = Math.round(
+            parseFloat(pixPayment.valor) * 100
+        );
+        const expectedAmountInCents = transaction.net_price; // Já está em centavos na entidade
+
+        // Permite uma pequena margem de erro se necessário, mas para PIX exato, deve ser igual.
+        if (receivedAmountInCents !== expectedAmountInCents) {
+            const errorMessage = `ERRO DE VALOR para SUBSCRIPTION_PAYMENT (tx: ${transaction.uuid.uuid}). Esperado: ${expectedAmountInCents} centavos, Recebido: ${receivedAmountInCents} centavos.`;
+            console.error(errorMessage);
+            // Lança erro para que o webhook falhe e o banco tente novamente (se for erro de arredondamento do banco)
+            // ou para marcar como fraude.
+            throw new CustomError(errorMessage, 400);
+        }
+
+        // 2. Validar se a transação tem os vínculos necessários
+        if (!transaction.subscription_uuid || !transaction.user_item_uuid) {
+            const errorMessage = `ERRO: Transação de assinatura ${transaction.uuid.uuid} sem subscription_uuid ou user_item_uuid vinculado.`;
+            console.error(errorMessage);
+            throw new CustomError(errorMessage, 500); // Erro interno grave de inconsistência
+        }
+
+        // 3. Buscar as entidades relacionadas
+        const subscription = await this.subscriptionRepository.find(
+            transaction.subscription_uuid
+        );
+        if (!subscription) {
+            throw new CustomError(
+                `Assinatura ${transaction.subscription_uuid.uuid} não encontrada.`,
+                404
+            );
+        }
+
+        const userItem = await this.userItemRepository.find(
+            transaction.user_item_uuid
+        );
+        if (!userItem) {
+            throw new CustomError(
+                `UserItem ${transaction.user_item_uuid.uuid} não encontrado.`,
+                404
+            );
+        }
+
+        // 4. Atualizar a Transação para SUCCESS
+        const paidAtString = newDateF(new Date(pixPayment.horario));
+        transaction.setPixPaymentDetails(pixPayment.endToEndId, paidAtString);
+        // Salva a transação atualizada. Use o método genérico 'create' (que faz upsert) ou um 'update' específico.
+        // Assumindo que seu repositório tem um método genérico 'save' ou 'update'.
+        // Se o ITransactionOrderRepository só tiver 'create', você precisará de um método 'update'.
+        // Vou assumir que existe um método genérico 'save(entity)' no repositório base.
+        await this.transactionRepository.create(transaction);
+        console.log(`Transação ${transaction.uuid.uuid} marcada como SUCCESS.`);
+
+        // 5. Ativar a Assinatura
+        subscription.markAsPaidAndActivate('MONTHLY')
+        await this.subscriptionRepository.create(subscription); // Repositório deve ter save/update
+        console.log(`Assinatura ${subscription.uuid.uuid} ATIVADA.`);
+
+        // 6. Ativar o UserItem (Liberar o benefício)
+        userItem.activateStatus(); // Método na entidade AppUserItemEntity
+
+        await this.userItemRepository.create(userItem); // Repositório deve ter save/update
+        console.log(
+            `UserItem ${userItem.uuid.uuid} ATIVADO e liberado para uso.`
+        );
+
+        console.log(
+            `✅ SUCESSO: Pagamento de assinatura processado e serviço liberado.`
+        );
+    }
     // Futuramente, você pode adicionar mais métodos como:
     // private async processCashInMerchant(transaction: TransactionEntity, pixPayment: SicrediPix): Promise<void> { ... }
 }
