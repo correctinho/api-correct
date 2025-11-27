@@ -1,8 +1,10 @@
+import { DomainEvents } from "../../../../../../@shared/domain/events/DomainEvents";
 import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../../errors/custom.error";
 import { IBenefitsRepository } from "../../../../../benefits/repositories/benefit.repository";
 import { BenefitGroupsEntity } from "../../../../BenefitGroups/entities/benefit-groups.entity";
 import { ICompanyDataRepository } from "../../../../CompanyData/repositories/company-data.repository";
+import { EmployerItemDetailsCreatedEvent } from "../../../domain/events/EmployerItemDetailsCreated.event";
 import { BusinessItemsDetailsEntity } from "../../../entities/businessItemDetails.entity";
 import { IBusinessItemDetailsRepository } from "../../../repositories/business-item-details.repository";
 import { InputCreateItemAndGroupByCorrectDTO, OutputCreateItemAndGroupByCorrectDTO } from "./dto/create-item-by-correct.dto";
@@ -64,6 +66,12 @@ export class CreateEmployerItemByCorrectUsecase {
     }
     //create or update item and group
     const result = await this.itemDetailsRepository.createOrUpdateItemAndGroup(itemDetailsEntity, groupEntity)
+   
+    DomainEvents.publish(new EmployerItemDetailsCreatedEvent(
+        result.employerItem, // A entidade do detalhe criada/atualizada
+        findItem             // A entidade do item completo (que tem a categoria)
+    ));
+    
     return {
       employerItem: {
         uuid: result.employerItem.uuid,

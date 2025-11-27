@@ -15,7 +15,7 @@ async function register() {
             throw new Error("Variável SICREDI_PIX_KEY não encontrada no .env");
         }
 
-        const ngrokUrl = "https://webhook.jserenautomations.org/webhook/pix-sicredi-webhook";
+        const ngrokUrl = "https://9595a1da7c92.ngrok-free.app/webhooks/sicredi-pix";
         // return {status: 'ok', message: 'teste' }
         await sicrediClient.registerWebhook(pixKey, ngrokUrl);
 

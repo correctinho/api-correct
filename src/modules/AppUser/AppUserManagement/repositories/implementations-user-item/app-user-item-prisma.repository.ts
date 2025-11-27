@@ -10,7 +10,90 @@ import { IAppUserItemRepository } from '../app-user-item-repository';
 import { newDateF } from '../../../../../utils/date';
 
 export class AppUserItemPrismaRepository implements IAppUserItemRepository {
-    // Implementação do método transacional para atualização
+    async upsert(entity: AppUserItemEntity): Promise<void> {
+        console.log("Iniciando upsert do AppUserItemEntity com UUID:", entity.uuid.uuid);
+        // 1. Obtém os dados formatados da entidade via toJSON()
+        const data = entity.toJSON();
+        console.log("Dados extraídos da entidade:", data);
+        const now = new Date().toISOString();
+
+        // 2. Chamada do Prisma Upsert
+        await prismaClient.userItem.upsert({
+            where: {
+                uuid: data.uuid, // Chave de busca
+            },
+            // --- SE FOR CRIAR (Mapear TUDO usando os dados do JSON) ---
+            create: {
+                uuid: data.uuid,
+                user_info_uuid: data.user_info_uuid,
+                business_info_uuid: data.business_info_uuid, // Pode ser null (B2C)
+                item_uuid: data.item_uuid,
+                item_name: data.item_name,
+                balance: data.balance,
+                group_uuid: data.group_uuid ? data.group_uuid : null,
+                status: data.status,
+
+                blocked_at: data.blocked_at,
+                block_reason: data.block_reason,
+                cancelled_at: data.cancelled_at,
+                cancel_reason: data.cancel_reason,
+                cancelling_request_at: data.cancelling_request_at,
+                grace_period_end_date: data.grace_period_end_date,
+                created_at: data.created_at,
+                updated_at: now, // Primeira data de atualização
+            },
+            // 
+            update: {
+                // Chaves Estrangeiras (user_info e item geralmente não mudam, mas business e group podem)
+                user_info_uuid: data.user_info_uuid,
+                business_info_uuid: data.business_info_uuid,
+                item_uuid: data.item_uuid,
+                group_uuid: data.group_uuid ? data.group_uuid : null,
+
+                item_name: data.item_name,
+                
+
+                // Valores (podem mudar)
+                balance: data.balance,
+                
+                status: data.status,
+
+                // Datas e Motivos (podem mudar)
+                blocked_at: data.blocked_at,
+                block_reason: data.block_reason,
+                cancelled_at: data.cancelled_at,
+                cancel_reason: data.cancel_reason,
+                cancelling_request_at: data.cancelling_request_at,
+                grace_period_end_date: data.grace_period_end_date,
+
+                updated_at: now, // Força nova data de atualização
+            },
+        });
+    }
+    async findSpecificUserItem(
+        userInfoId: string,
+        itemId: string,
+        businessInfoId: string | null
+    ): Promise<AppUserItemEntity | null> {
+        const raw = await prismaClient.userItem.findFirst({
+            where: {
+                user_info_uuid: userInfoId,
+                item_uuid: itemId,
+                // Aqui está a mágica: se businessInfoId for null, o Prisma busca onde é NULL.
+                business_info_uuid: businessInfoId,
+            },
+            include: {
+                Item: true,
+                BenefitGroups: true,
+            },
+        });
+
+        if (!raw) return null;
+
+        // Reutiliza a lógica de mapeamento (veja o método privado abaixo)
+        return this.mapToDomain(raw);
+    }
+
     async updateBalanceAndHistory(
         userItemUuid: string,
         newBalanceInCents: number,
@@ -53,8 +136,8 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
                 status: UserItemStatus.active, // Exemplo
             },
             include: {
-               BenefitGroups: true,
-               Item: true
+                BenefitGroups: true,
+                Item: true,
             },
         });
 
@@ -74,10 +157,18 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
                 item_category: userItem.Item.item_category,
                 item_uuid: new Uuid(userItem.item_uuid),
                 status: userItem.status,
-                group_uuid: userItem.BenefitGroups ? new Uuid(userItem.BenefitGroups.uuid) : null,
-                group_name: userItem.BenefitGroups ? userItem.BenefitGroups.group_name : null, 
-                group_value: userItem.BenefitGroups ? userItem.BenefitGroups.value : null,
-                group_is_default: userItem.BenefitGroups ? userItem.BenefitGroups.is_default : null, // Assumindo 'is_default' no BenefitGroups
+                group_uuid: userItem.BenefitGroups
+                    ? new Uuid(userItem.BenefitGroups.uuid)
+                    : null,
+                group_name: userItem.BenefitGroups
+                    ? userItem.BenefitGroups.group_name
+                    : null,
+                group_value: userItem.BenefitGroups
+                    ? userItem.BenefitGroups.value
+                    : null,
+                group_is_default: userItem.BenefitGroups
+                    ? userItem.BenefitGroups.is_default
+                    : null, // Assumindo 'is_default' no BenefitGroups
                 created_at: userItem.created_at,
                 updated_at: userItem.updated_at,
             };
@@ -200,6 +291,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         itemId: string
     ): Promise<AppUserItemEntity | null> {
         const userItemData = await prismaClient.userItem.findFirst({
+            // Use this.prisma
             where: {
                 item_uuid: itemId,
                 user_info_uuid: userInfoId,
@@ -211,38 +303,8 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         });
 
         if (!userItemData) return null;
-        const userItemProps: AppUserItemProps = {
-            uuid: new Uuid(userItemData.uuid),
-            user_info_uuid: new Uuid(userItemData.user_info_uuid),
-            business_info_uuid: userItemData.business_info_uuid
-                ? new Uuid(userItemData.business_info_uuid)
-                : null,
-            item_uuid: new Uuid(userItemData.item_uuid),
-            item_name: userItemData.item_name,
-            item_category: userItemData.Item.item_category,
-            balance: userItemData.balance, // O valor já vem em centavos do banco
-            status: userItemData.status,
-            group_uuid: userItemData.group_uuid
-                ? new Uuid(userItemData.group_uuid)
-                : null,
-            // Incluímos os dados do grupo, que são parte do estado da entidade
-            group_name: userItemData.BenefitGroups?.group_name,
-            group_value: userItemData.BenefitGroups?.value,
-            group_is_default: userItemData.BenefitGroups?.is_default,
-            // Incluímos outros campos importantes que a entidade precisa
-            img_url: userItemData.Item.img_url,
-            cancelled_at: userItemData.cancelled_at,
-            blocked_at: userItemData.blocked_at,
-            block_reason: userItemData.block_reason,
-            cancel_reason: userItemData.cancel_reason,
-            cancelling_request_at: userItemData.cancelling_request_at,
-            grace_period_end_date: userItemData.grace_period_end_date,
-            created_at: userItemData.created_at,
-            updated_at: userItemData.updated_at,
-        };
-
-        // 2. Usamos o método de fábrica `hydrate` para reconstruir a entidade.
-        return AppUserItemEntity.hydrate(userItemProps);
+        // Reutiliza a lógica de mapeamento
+        return this.mapToDomain(userItemData);
     }
 
     async findItemByEmployeeAndBusiness(
@@ -275,7 +337,9 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
             item_category: userItemData.Item.item_category,
             balance: userItemData.balance, // O valor já vem em centavos do banco
             status: userItemData.status,
-            group_uuid: userItemData.group_uuid ? new Uuid(userItemData.group_uuid) : null,
+            group_uuid: userItemData.group_uuid
+                ? new Uuid(userItemData.group_uuid)
+                : null,
             // Incluímos os dados do grupo, que são parte do estado da entidade
             group_name: userItemData.BenefitGroups?.group_name,
             group_value: userItemData.BenefitGroups?.value,
@@ -316,7 +380,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         });
     }
     async update(entity: AppUserItemEntity): Promise<void> {
-        const dataToSave = entity.toJSON()
+        const dataToSave = entity.toJSON();
         await prismaClient.userItem.update({
             where: {
                 uuid: dataToSave.uuid,
@@ -450,5 +514,37 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
             };
             return AppUserItemEntity.hydrate(itemProps);
         });
+    }
+
+    private mapToDomain(userItemData: any): AppUserItemEntity {
+        const userItemProps: AppUserItemProps = {
+            uuid: new Uuid(userItemData.uuid),
+            user_info_uuid: new Uuid(userItemData.user_info_uuid),
+            business_info_uuid: userItemData.business_info_uuid
+                ? new Uuid(userItemData.business_info_uuid)
+                : null,
+            item_uuid: new Uuid(userItemData.item_uuid),
+            item_name: userItemData.item_name,
+            // Assumindo que sua entidade AppUserItemEntity espera o enum ItemCategory
+            item_category: userItemData.Item.item_category,
+            balance: userItemData.balance,
+            status: userItemData.status,
+            group_uuid: userItemData.group_uuid
+                ? new Uuid(userItemData.group_uuid)
+                : null,
+            group_name: userItemData.BenefitGroups?.group_name,
+            group_value: userItemData.BenefitGroups?.value,
+            group_is_default: userItemData.BenefitGroups?.is_default,
+            img_url: userItemData.Item.img_url,
+            cancelled_at: userItemData.cancelled_at,
+            blocked_at: userItemData.blocked_at,
+            block_reason: userItemData.block_reason,
+            cancel_reason: userItemData.cancel_reason,
+            cancelling_request_at: userItemData.cancelling_request_at,
+            grace_period_end_date: userItemData.grace_period_end_date,
+            created_at: userItemData.created_at,
+            updated_at: userItemData.updated_at,
+        };
+        return AppUserItemEntity.hydrate(userItemProps);
     }
 }

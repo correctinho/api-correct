@@ -102,6 +102,7 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
     return {
       uuid: new Uuid(item.uuid),
       name: item.name,
+      img_url: item.img_url,
       description: item.description,
       item_type: item.item_type,
       item_category: item.item_category,

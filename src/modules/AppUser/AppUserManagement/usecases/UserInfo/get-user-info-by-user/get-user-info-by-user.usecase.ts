@@ -1,18 +1,24 @@
+import { Uuid } from "../../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../../errors/custom.error";
+import { IAppUserToken } from "../../../../../../infra/shared/crypto/token/AppUser/token";
 import { ICompanyDataRepository } from "../../../../../Company/CompanyData/repositories/company-data.repository";
+import { IOfflineTokenRepository } from "../../../../../Payments/OfflineTokens/repositories/offline-tokens.repository";
 import { IAppUserInfoRepository } from "../../../repositories/app-user-info.repository";
 import { OutputFindUserByUserDTO, OutputFindUserDTO } from "./dto/get-user-by-user.dto";
 
 export class GetUserInfoByUserUsecase {
   constructor(
     private appUsersRepository: IAppUserInfoRepository,
-    private businessInfoRepository: ICompanyDataRepository
+    private activeTokenRepository: IOfflineTokenRepository
   ) { }
 
   async execute(userdocument: string): Promise<OutputFindUserDTO> {
     // Buscar informações do usuário pelo documento processado
     const userInfo = await this.appUsersRepository.findByDocumentUserInfo(userdocument);
     if (!userInfo) throw new CustomError("User info not found", 404);
+
+    //Verifica se ele tem o token offline ativado ou não
+    const activeToken = await this.activeTokenRepository.checkActiveTokensByUserInfo(new Uuid(userInfo.uuid));
 
     return {
       uuid: userInfo.uuid,
@@ -43,7 +49,8 @@ export class GetUserInfoByUserUsecase {
         dependents_quantity: emp.dependents_quantity || 0,
         created_at: emp.created_at || null,
         updated_at: emp.updated_at || null
-      }))
+      })),
+      is_offline_enabled: activeToken
     };
   }
 

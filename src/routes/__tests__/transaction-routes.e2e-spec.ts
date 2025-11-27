@@ -5,7 +5,13 @@ import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-be
 import { Uuid } from '../../@shared/ValueObjects/uuid.vo';
 import { prismaClient } from '../../infra/databases/prisma.config';
 import path from 'path';
-import { OfflineTokenHistoryEventType, OfflineTokenStatus, TransactionStatus, TransactionType, UserItemEventType } from '@prisma/client';
+import {
+    OfflineTokenHistoryEventType,
+    OfflineTokenStatus,
+    TransactionStatus,
+    TransactionType,
+    UserItemEventType,
+} from '@prisma/client';
 import { newDateF } from '../../utils/date';
 import { InputProcessPOSTransactionWithOfflineTokenDTO } from '../../modules/Payments/Transactions/useCases/process-pos-payment-by-offline-token/dto/process-pos-payment-by-offline-token.dto';
 
@@ -706,7 +712,7 @@ describe('E2E Transactions', () => {
         const inpuActivateUserItem = {
             user_info_uuid: user_info_uuid_employee1,
             item_uuid: userItemsForEmployee1.find(
-                (item) => item.status === 'inactive'
+                (item: any) => item.status === 'inactive'
             ).item_uuid,
         };
         const resultActivateUserItem = await request(app)
@@ -789,7 +795,7 @@ describe('E2E Transactions', () => {
                     },
                 });
                 expect(dbTokens).toHaveLength(5);
-                dbTokens.forEach((token) => {
+                dbTokens.forEach((token: any) => {
                     expect(token.status).toBe('ACTIVE');
                     expect(token.token_code).toBeDefined();
                 });
@@ -802,7 +808,7 @@ describe('E2E Transactions', () => {
                         },
                     });
                 expect(dbHistory).toHaveLength(5);
-                dbHistory.forEach((history) => {
+                dbHistory.forEach((history: any) => {
                     expect(history.original_token_uuid).toBeDefined();
                     expect(history.event_description).toContain(
                         'New offline token activated'
@@ -834,7 +840,7 @@ describe('E2E Transactions', () => {
                         },
                     });
                 expect(
-                    oldTokensFromHistory.map((h) => h.token_code)
+                    oldTokensFromHistory.map((h: any) => h.token_code)
                 ).not.toEqual(expect.arrayContaining(newTokensCodes));
 
                 // C. Asserts do Banco de Dados
@@ -845,7 +851,7 @@ describe('E2E Transactions', () => {
                     },
                 });
                 expect(finalTokens).toHaveLength(5); // Apenas 5 tokens ativos para este item
-                finalTokens.forEach((token) =>
+                finalTokens.forEach((token: any) =>
                     expect(token.status).toBe('ACTIVE')
                 );
 
@@ -956,6 +962,71 @@ describe('E2E Transactions', () => {
                     'userItemUuid is required in request body.'
                 );
             });
+        });
+
+        describe("Get User's Offline Tokens", () => {
+            it("should retrieve all offline tokens for the authenticated user's UserItems", async () => {
+                const response = await request(app)
+                    .get('/app-user/offline-tokens')
+                    .set('Authorization', `Bearer ${auth_token_employee1}`);
+
+                console.log('GetOfflineTokens Response Body:', response.body); // Mantém o log para depuração
+
+                // --- Asserções da Resposta da API ---
+                expect(response.status).toBe(200);
+
+                // 1. Verificar a estrutura geral da resposta
+                expect(response.body).toHaveProperty('offlineTokens');
+                expect(response.body.offlineTokens).toBeInstanceOf(Array);
+
+                // 2. Verificar a regra de negócio (Pool de 5 tokens)
+                // O Usecase GetOfflineTokens deve garantir que a pool seja reabastecida para 5.
+                expect(response.body.offlineTokens).toHaveLength(5);
+
+                // 3. Verificar as propriedades do primeiro token (como amostra)
+                const firstToken = response.body.offlineTokens[0];
+
+                expect(firstToken.uuid).toBeDefined();
+                expect(typeof firstToken.uuid).toBe('string');
+
+                expect(firstToken.token_code).toBeDefined();
+                expect(firstToken.token_code).toMatch(/^[A-Z0-9]{6}$/); // Verifica o formato do token
+
+                // 4. Verificar se TODOS os tokens pertencem ao usuário e ao UserItem correto
+                // (Assumindo que user_info_uuid_employee1 e userItem1EmployeeUuid estão disponíveis no teste)
+                response.body.offlineTokens.forEach((token: any) => {
+                    // Verifica se pertence ao usuário autenticado
+                    expect(token.user_info_uuid).toBe(user_info_uuid_employee1);
+
+                    // Verifica se todos os tokens são do MESMO UserItem (o único ativo)
+                    expect(token.user_item_uuid).toBe(userItem1EmployeeUuid);
+
+                    // Verifica se todos estão ATIVOS
+                    expect(token.status).toBe('ACTIVE');
+
+                    // Verifica se todos têm uma data de expiração válida no futuro
+                    expect(
+                        new Date(token.expires_at).getTime()
+                    ).toBeGreaterThan(Date.now());
+
+                    // Verifica se os campos de data e sequência existem
+                    expect(token.activated_at).toBeDefined();
+                    expect(token.created_at).toBeDefined();
+                    expect(token.updated_at).toBeDefined();
+                    expect(token.sequence_number).toBeGreaterThan(0);
+                });
+
+                // 5. Verificar se os sequence_numbers são únicos e corretos (1 a 5)
+                const sequenceNumbers = response.body.offlineTokens
+                    .map((token: any) => token.sequence_number)
+                    .sort((a: number, b: number) => a - b); // Ordena para fácil verificação
+
+                expect(sequenceNumbers).toEqual([1, 2, 3, 4, 5]);
+            });
+
+            // Você pode adicionar mais testes aqui para cenários de erro, como:
+            // it("should return 401 if user is not authenticated", async () => { ... });
+            // it("should return an empty array if user has no activated benefits", async () => { ... });
         });
     });
     describe('E2E Pix Transactions', () => {
@@ -1222,30 +1293,38 @@ describe('E2E Transactions', () => {
 
             // 5. Calcular o VALOR TOTAL do cashback para o usuário
             // O cálculo do cashback da plataforma deve seguir a regra de arredondamento de 0.x para 1 centavo.
-            const rawPlatformCashbackBigInt = BigInt(expectedPlatformFeeAmountInCents) * 20n;
+            const rawPlatformCashbackBigInt =
+                BigInt(expectedPlatformFeeAmountInCents) * 20n;
             const divisorPlatform = 100n;
-        let platformCashbackAmountBigInt = 0n;
-        const tempPlatformCents = rawPlatformCashbackBigInt / divisorPlatform;
-        if (tempPlatformCents === 0n && rawPlatformCashbackBigInt > 0n) {
-            platformCashbackAmountBigInt = 1n; // Força 1 centavo se era 0.x
-        } else {
-            platformCashbackAmountBigInt = tempPlatformCents;
-        }
-        expectedCashbackAmountInCents = Number(platformCashbackAmountBigInt); // Cashback inicial da plataforma
+            let platformCashbackAmountBigInt = 0n;
+            const tempPlatformCents =
+                rawPlatformCashbackBigInt / divisorPlatform;
+            if (tempPlatformCents === 0n && rawPlatformCashbackBigInt > 0n) {
+                platformCashbackAmountBigInt = 1n; // Força 1 centavo se era 0.x
+            } else {
+                platformCashbackAmountBigInt = tempPlatformCents;
+            }
+            expectedCashbackAmountInCents = Number(
+                platformCashbackAmountBigInt
+            ); // Cashback inicial da plataforma
 
-        // Adicionar cashback fornecido pelo parceiro
-        // O cálculo do cashback do parceiro também deve seguir a regra de arredondamento de 0.x para 1 centavo.
-        const rawPartnerCashbackBigInt = BigInt(netPriceInCentsCalc) * BigInt(cashbackProvidedByPartnerScaled);
-        const divisorPartner = 1000000n; // Para percentuais de net_price
+            // Adicionar cashback fornecido pelo parceiro
+            // O cálculo do cashback do parceiro também deve seguir a regra de arredondamento de 0.x para 1 centavo.
+            const rawPartnerCashbackBigInt =
+                BigInt(netPriceInCentsCalc) *
+                BigInt(cashbackProvidedByPartnerScaled);
+            const divisorPartner = 1000000n; // Para percentuais de net_price
 
-        let partnerAdditionalCashbackBigInt = 0n;
-        const tempPartnerCents = rawPartnerCashbackBigInt / divisorPartner;
-        if (tempPartnerCents === 0n && rawPartnerCashbackBigInt > 0n) {
-            partnerAdditionalCashbackBigInt = 1n; // Força 1 centavo se era 0.x
-        } else {
-            partnerAdditionalCashbackBigInt = tempPartnerCents;
-        }
-        expectedCashbackAmountInCents += Number(partnerAdditionalCashbackBigInt);
+            let partnerAdditionalCashbackBigInt = 0n;
+            const tempPartnerCents = rawPartnerCashbackBigInt / divisorPartner;
+            if (tempPartnerCents === 0n && rawPartnerCashbackBigInt > 0n) {
+                partnerAdditionalCashbackBigInt = 1n; // Força 1 centavo se era 0.x
+            } else {
+                partnerAdditionalCashbackBigInt = tempPartnerCents;
+            }
+            expectedCashbackAmountInCents += Number(
+                partnerAdditionalCashbackBigInt
+            );
             // 6. Calcular o VALOR a ser creditado ao parceiro
             // Conforme TransactionEntity.calculateFee() -> _partner_credit_amount
             expectedPartnerCreditAmountInCents =
@@ -1493,7 +1572,6 @@ describe('E2E Transactions', () => {
                 expect(transactionResponse.body.finalBalance).toBeCloseTo(
                     (initialUserItem2BalanceInCents - netPriceInCentsCalc) / 100
                 );
-                
 
                 const transactionUuid =
                     transactionResponse.body.transaction_uuid; // Captura o UUID da transação para uso posterior
@@ -1564,7 +1642,7 @@ describe('E2E Transactions', () => {
                     'Updated CorrectAccount Balance (Cents):',
                     updatedCorrectAccount.balance
                 );
-                
+
                 // expect(updatedCorrectAccount.balance).toBe(
                 //     initialCorrectAccountBalanceInCents +
                 //         (expectedPlatformFeeAmountInCents -
@@ -1586,7 +1664,6 @@ describe('E2E Transactions', () => {
                 );
                 expect(updatedOfflineToken.expires_at).toBeDefined(); // Token consumido deve ter data de expiração/consumo definida.
 
-
                 // 6. Verificar a TransactionEntity criada
                 const transaction = await prismaClient.transactions.findUnique({
                     where: { uuid: transactionUuid },
@@ -1599,11 +1676,11 @@ describe('E2E Transactions', () => {
                 expect(transaction.status).toBe(TransactionStatus.success);
                 expect(transaction.transaction_type).toBe(
                     TransactionType.POS_OFFLINE_PAYMENT
-                ); 
+                );
                 expect(transaction.favored_business_info_uuid).toBe(
                     partner_info_uuid
                 );
-                
+
                 expect(transaction.original_price).toBe(
                     originalPriceInCentsCalc
                 );
@@ -1625,72 +1702,97 @@ describe('E2E Transactions', () => {
                 // 7. Verificar os Históricos
                 // Para userItem2 (débito)
 
-                const userItem2History = await prismaClient.userItemHistory.findFirst({
-                    where: {
-                        user_item_uuid: userItem2EmployeeUuid,
-                        related_transaction_uuid: transactionUuid,
-                        // event_type: UserItemEventType.DEBIT // Se você tiver um enum para o tipo de evento
-                    },
-                    orderBy: { created_at: 'desc' }
-                });
-                if (!userItem2History) throw new Error("UserItem2 History not found.");
+                const userItem2History =
+                    await prismaClient.userItemHistory.findFirst({
+                        where: {
+                            user_item_uuid: userItem2EmployeeUuid,
+                            related_transaction_uuid: transactionUuid,
+                            // event_type: UserItemEventType.DEBIT // Se você tiver um enum para o tipo de evento
+                        },
+                        orderBy: { created_at: 'desc' },
+                    });
+                if (!userItem2History)
+                    throw new Error('UserItem2 History not found.');
                 expect(userItem2History.amount).toBe(-netPriceInCentsCalc); // O débito deve ser negativo
-                expect(userItem2History.balance_after).toBe(updatedUserItem2.balance);
+                expect(userItem2History.balance_after).toBe(
+                    updatedUserItem2.balance
+                );
 
                 // Para correctUserItem (crédito)
-                const correctUserItemHistory = await prismaClient.userItemHistory.findFirst({
-                    where: {
-                        user_item_uuid: correct_item_uuid_employee1,
-                        related_transaction_uuid: transactionUuid,
-                        event_type: UserItemEventType.CASHBACK_RECEIVED,
-                                                
-                    },
-                    orderBy: { created_at: 'desc' }
-                });
-                if (!correctUserItemHistory) throw new Error("CorrectUserItem History not found.");
+                const correctUserItemHistory =
+                    await prismaClient.userItemHistory.findFirst({
+                        where: {
+                            user_item_uuid: correct_item_uuid_employee1,
+                            related_transaction_uuid: transactionUuid,
+                            event_type: UserItemEventType.CASHBACK_RECEIVED,
+                        },
+                        orderBy: { created_at: 'desc' },
+                    });
+                if (!correctUserItemHistory)
+                    throw new Error('CorrectUserItem History not found.');
                 // expect(correctUserItemHistory.amount).toBe(expectedCashbackAmountInCents); // O crédito deve ser positivo
-                expect(correctUserItemHistory.balance_after).toBe(updatedCorrectUserItem.balance);
+                expect(correctUserItemHistory.balance_after).toBe(
+                    updatedCorrectUserItem.balance
+                );
                 // Para BusinessAccount (crédito)
-                const businessAccountHistory = await prismaClient.businessAccountHistory.findFirst({
-                    where: {
-                        //business_account_uuid: business_account_uuid_partner,
-                        related_transaction_uuid: transactionUuid,
-                        // event_type: BusinessAccountEventType.ITEM_SPENT // Se você tiver um enum para o tipo de evento
-                    },
-                    orderBy: { created_at: 'desc' }
-                });
-                if (!businessAccountHistory) throw new Error("BusinessAccount History not found.");
-                expect(businessAccountHistory.amount).toBe(expectedPartnerCreditAmountInCents);
-                expect(businessAccountHistory.balance_after).toBe(updatedBusinessAccount.balance);
+                const businessAccountHistory =
+                    await prismaClient.businessAccountHistory.findFirst({
+                        where: {
+                            //business_account_uuid: business_account_uuid_partner,
+                            related_transaction_uuid: transactionUuid,
+                            // event_type: BusinessAccountEventType.ITEM_SPENT // Se você tiver um enum para o tipo de evento
+                        },
+                        orderBy: { created_at: 'desc' },
+                    });
+                if (!businessAccountHistory)
+                    throw new Error('BusinessAccount History not found.');
+                expect(businessAccountHistory.amount).toBe(
+                    expectedPartnerCreditAmountInCents
+                );
+                expect(businessAccountHistory.balance_after).toBe(
+                    updatedBusinessAccount.balance
+                );
 
                 // Para CorrectAccount (crédito/débito da taxa)
-                const correctAccountHistory = await prismaClient.correctAccountHistory.findFirst({
-                    where: {
-                        correct_account_uuid: correct_account_uuid_platform,
-                        related_transaction_uuid: transactionUuid,
-                        // event_type: CorrectAccountEventType.FEE_COLLECTION // Se você tiver um enum para o tipo de evento
-                    },
-                    orderBy: { created_at: 'desc' }
-                });
-                if (!correctAccountHistory) throw new Error("CorrectAccount History not found.");
+                const correctAccountHistory =
+                    await prismaClient.correctAccountHistory.findFirst({
+                        where: {
+                            correct_account_uuid: correct_account_uuid_platform,
+                            related_transaction_uuid: transactionUuid,
+                            // event_type: CorrectAccountEventType.FEE_COLLECTION // Se você tiver um enum para o tipo de evento
+                        },
+                        orderBy: { created_at: 'desc' },
+                    });
+                if (!correctAccountHistory)
+                    throw new Error('CorrectAccount History not found.');
                 // A lógica para o amount aqui dependerá de como a TransactionEntity registra o débito/crédito na CorrectAccount.
                 // Se for (taxa bruta - cashback), então:
                 // expect(correctAccountHistory.amount).toBe(expectedPlatformFeeAmountInCents - expectedCashbackAmountInCents);
-                expect(correctAccountHistory.balance_after).toBe(updatedCorrectAccount.balance);
+                expect(correctAccountHistory.balance_after).toBe(
+                    updatedCorrectAccount.balance
+                );
 
                 // Para OfflineTokenHistory (CONSUMED)
-                const offlineTokenHistory = await prismaClient.offlineTokenHistory.findFirst({
-                    where: {
-                        token_code: activeOfflineToken,
-                        related_transaction_uuid: transactionUuid,
-                        snapshot_status: OfflineTokenStatus.CONSUMED,
-                        // event_type: OfflineTokenHistoryEventType.CONSUMED // Se você tiver um enum para o tipo de evento
-                    },
-                });
-                if (!offlineTokenHistory) throw new Error("OfflineToken History not found.");
-                expect(offlineTokenHistory.event_type).toBe(OfflineTokenHistoryEventType.USED_IN_TRANSACTION);
-                expect(offlineTokenHistory.snapshot_status).toBe(OfflineTokenStatus.CONSUMED);
-                expect(offlineTokenHistory.user_item_uuid).toBe(userItem2EmployeeUuid);
+                const offlineTokenHistory =
+                    await prismaClient.offlineTokenHistory.findFirst({
+                        where: {
+                            token_code: activeOfflineToken,
+                            related_transaction_uuid: transactionUuid,
+                            snapshot_status: OfflineTokenStatus.CONSUMED,
+                            // event_type: OfflineTokenHistoryEventType.CONSUMED // Se você tiver um enum para o tipo de evento
+                        },
+                    });
+                if (!offlineTokenHistory)
+                    throw new Error('OfflineToken History not found.');
+                expect(offlineTokenHistory.event_type).toBe(
+                    OfflineTokenHistoryEventType.USED_IN_TRANSACTION
+                );
+                expect(offlineTokenHistory.snapshot_status).toBe(
+                    OfflineTokenStatus.CONSUMED
+                );
+                expect(offlineTokenHistory.user_item_uuid).toBe(
+                    userItem2EmployeeUuid
+                );
             });
         });
     });

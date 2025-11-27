@@ -2,6 +2,7 @@ import { TransactionStatus, TransactionType } from "@prisma/client"; // Import e
 import { Uuid } from '../../../../@shared/ValueObjects/uuid.vo'; // Assuming Uuid VO path
 import { CustomError } from '../../../../errors/custom.error'; // Assuming CustomError path
 import { newDateF } from '../../../../utils/date'; // Assuming date utility path
+import { sub } from "date-fns";
 
 //VALORES MONETÁRIOS SÃO INTEIROS EM CENTAVOS
 // Exemplo: 1000 representa R$ 10,00
@@ -35,6 +36,7 @@ export type TransactionProps = {
   provider_tx_id?: string | null; 
   payer_business_info_uuid?: Uuid | null;
   pix_e2e_id?: string | null;
+  subscription_uuid?: Uuid | null; // Optional: FK to Subscription (if applicable)
   created_at?: string; // Optional: Handled by constructor/DB
   updated_at?: string; // Optional: Handled by constructor/DB
 };
@@ -52,7 +54,7 @@ export type TransactionCreateCommand = {
   favored_business_info_uuid?: Uuid | null;
   transaction_type?: TransactionType;
   description?: string | null;
-  // ... e outros campos que vêm da requisição inicial
+  subscription_uuid?: Uuid | null;
 
   used_offline_token_code?: string
 };
@@ -89,6 +91,7 @@ export class TransactionEntity {
   private _pix_e2e_id?: string | null; 
   private _used_offline_token_code?: string
   private _payer_business_info_uuid?: Uuid | null;
+  private _subscription_uuid?: Uuid | null;
   private _created_at: string;
   private _updated_at: string;
 
@@ -125,6 +128,7 @@ export class TransactionEntity {
 
     this._payer_business_info_uuid = props.payer_business_info_uuid ?? null;
     this._used_offline_token_code = props.used_offline_token_code
+    this._subscription_uuid = props.subscription_uuid ?? null;
     this._created_at = props.created_at ?? newDateF(new Date());
     this._updated_at = newDateF(new Date());
   }
@@ -159,6 +163,7 @@ export class TransactionEntity {
   get pix_e2e_id(): string | null { return this._pix_e2e_id; }
   get used_offline_token_code(): string | null { return this._used_offline_token_code }
   get payer_business_info_uuid(): Uuid | null { return this._payer_business_info_uuid; }
+  get subscription_uuid(): Uuid | null { return this._subscription_uuid; }
   get created_at(): string { return this._created_at; }
   get updated_at(): string { return this._updated_at; }
 
@@ -458,6 +463,7 @@ calculateFee(): void {
       used_offline_token_code: this._used_offline_token_code,
       paid_at: this._paid_at,
       payer_business_info_uuid: this._payer_business_info_uuid ? this._payer_business_info_uuid.uuid : null,
+      subscription_uuid: this._subscription_uuid ? this._subscription_uuid.uuid : null,
       created_at: this._created_at,
     };
   }
@@ -490,5 +496,48 @@ calculateFee(): void {
     // 3. Valida o estado inicial da entidade
     entity.validate();
     return entity;
+  }
+
+  static createForSubscriptionPixPayment(command: {
+    subscription_uuid: Uuid;
+    user_info_uuid: Uuid; // Quem está pagando
+    user_item_uuid: Uuid; // O item que será ativado
+    amountInCents: number; // Valor total em CENTAVOS
+    provider_tx_id: string; // O ID do Sicredi
+  }): TransactionEntity {
+    
+    const props: TransactionProps = {
+      uuid: new Uuid(),
+      
+   
+      subscription_uuid: command.subscription_uuid,
+      
+      user_item_uuid: command.user_item_uuid,
+      favored_user_uuid: command.user_info_uuid, 
+
+      // Valores Monetários
+      original_price: command.amountInCents,
+      net_price: command.amountInCents,
+      discount_percentage: 0,
+
+      // Campos Calculados Zerados
+      fee_percentage: 0,
+      fee_amount: 0,
+      cashback: 0,
+      partner_cashback_percentage: 0,
+      partner_credit_amount: 0,
+      platform_net_fee_amount: 0,
+
+      status: TransactionStatus.pending,
+      transaction_type: TransactionType.SUBSCRIPTION_PAYMENT, 
+
+      // O ID DO SICREDI
+      provider_tx_id: command.provider_tx_id,
+      
+      created_at: newDateF(new Date()),
+      updated_at: newDateF(new Date())
+    };
+
+    return new TransactionEntity(props);
   }
 }

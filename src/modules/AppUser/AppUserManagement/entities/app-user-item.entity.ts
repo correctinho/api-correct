@@ -9,7 +9,7 @@ import { addDaysToDate, newDateF } from "../../../../utils/date";
 export type AppUserItemProps = {
     uuid?: Uuid;
     user_info_uuid: Uuid;
-    business_info_uuid: Uuid;
+    business_info_uuid: Uuid | null;
     item_uuid: Uuid;
     item_name: string;
     item_category?: ItemCategory;
@@ -18,7 +18,7 @@ export type AppUserItemProps = {
     img_url?: string | null;
     balance: number; // Em centavos
     status: UserItemStatus;
-    group_uuid: Uuid;
+    group_uuid: Uuid | null;
     group_name?: string;
     group_value?: number; // Em centavos
     group_is_default?: boolean;
@@ -39,7 +39,7 @@ export type AppUserItemProps = {
  */
 export type AppUserItemCreateCommand = {
     user_info_uuid: Uuid;
-    business_info_uuid: Uuid;
+    business_info_uuid: Uuid | null;
     item_uuid: Uuid;
     item_name: string;
     item_category: ItemCategory;
@@ -47,7 +47,7 @@ export type AppUserItemCreateCommand = {
     fantasy_name?: string | null;
     balance: number; // Em Reais (ex: 500.00)
     status: UserItemStatus;
-    group_uuid: Uuid;
+    group_uuid: Uuid | null;
     group_value: number; // Em Reais
     group_name: string;
     group_is_default: boolean;
@@ -58,7 +58,7 @@ export type AppUserItemCreateCommand = {
 export class AppUserItemEntity {
     private _uuid: Uuid;
     private _user_info_uuid: Uuid;
-    private _business_info_uuid: Uuid;
+    private _business_info_uuid: Uuid | null;
     private _item_uuid: Uuid;
     private _item_name: string;
     private _item_category: ItemCategory;
@@ -67,7 +67,7 @@ export class AppUserItemEntity {
     private _balance: number; // Armazenado internamente como centavos
     private _status: UserItemStatus;
     private _fantasy_name: string | null;
-    private _group_uuid: Uuid;
+    private _group_uuid: Uuid | null;
     private _group_name: string;
     private _group_value: number; // Armazenado internamente como centavos
     private _group_is_default: boolean;
@@ -84,7 +84,7 @@ export class AppUserItemEntity {
     private constructor(props: AppUserItemProps) {
         this._uuid = props.uuid ?? new Uuid();
         this._user_info_uuid = props.user_info_uuid;
-        this._business_info_uuid = props.business_info_uuid;
+        this._business_info_uuid = props.business_info_uuid ??  null;
         this._item_uuid = props.item_uuid;
         this._item_name = props.item_name;
         this._item_category = props.item_category;
@@ -93,7 +93,7 @@ export class AppUserItemEntity {
         this._balance = props.balance;
         this._status = props.status;
         this._fantasy_name = props.fantasy_name ?? null
-        this._group_uuid = props.group_uuid;
+        this._group_uuid = props.group_uuid ?? null;
         this._group_name = props.group_name;
         this._group_value = props.group_value;
         this._group_is_default = props.group_is_default;
@@ -237,8 +237,8 @@ export class AppUserItemEntity {
   public toJSON(){
     return {
       uuid: this._uuid.uuid,
-      user_info_uuid: this._user_info_uuid.uuid,
-      business_info_uuid: this._business_info_uuid.uuid,
+      user_info_uuid: this._user_info_uuid ? this._user_info_uuid.uuid : null,
+      business_info_uuid: this._business_info_uuid ? this._business_info_uuid.uuid : null,
       item_uuid: this._item_uuid.uuid,
       item_name: this._item_name,
       item_category: this._item_category,
@@ -247,7 +247,7 @@ export class AppUserItemEntity {
       balance: this._balance,
       status: this._status,
       fantasy_name: this._fantasy_name,
-      group_uuid: this._group_uuid.uuid,
+      group_uuid: this._group_uuid ? this._group_uuid.uuid : null,
       group_name: this._group_name,
       group_value: this._group_value,
       group_is_default: this._group_is_default,
