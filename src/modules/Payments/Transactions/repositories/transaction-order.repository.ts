@@ -79,5 +79,6 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
     finalDebitedUserItemBalance: number;
     user_cashback_amount: number;
   }>;
+  upsert(entity: TransactionEntity): Promise<void>;
 }
     

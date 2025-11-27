@@ -26,262 +26,386 @@ import {
 } from '../../../../../utils/date';
 import { prismaClient } from '../../../../../infra/databases/prisma.config';
 import { OfflineTokenEntity } from '../../../OfflineTokens/entities/offline-token.entity';
-import { IOfflineTokenRepository } from '../../../OfflineTokens/repositories/offline-tokens.repository';
-import { IOfflineTokenHistoryRepository } from '../../../OfflineTokens/repositories/offline-tokens-history.repository';
 
-export class TransactionOrderPrismaRepository implements ITransactionOrderRepository {
-    saveSubscriptionPaymentTransaction(entity: TransactionEntity): Promise<void> {
+export class TransactionOrderPrismaRepository
+    implements ITransactionOrderRepository
+{
+    async upsert(entity: TransactionEntity): Promise<void> {
+        // 1. Obtém os dados formatados da entidade via toJSON()
+        const data = entity.toJSON();
+
+        const now = new Date().toISOString();
+
+        // 2. Chamada do Prisma Upsert
+        await prismaClient.transactions.upsert({
+            where: {
+                uuid: data.uuid, // Chave de busca obtida do JSON
+            },
+            create: {
+                uuid: data.uuid,
+                // Chaves Estrangeiras
+                subscription_uuid: data.subscription_uuid,
+                user_item_uuid: data.user_item_uuid,
+                favored_user_uuid: data.favored_user_uuid,
+                favored_business_info_uuid: data.favored_business_info_uuid,
+                payer_business_info_uuid: data.payer_business_info_uuid,
+                favored_partner_user_uuid: data.favored_partner_user_uuid,
+
+                // Valores Monetários e Porcentagens (Já formatados no JSON)
+                original_price: data.original_price,
+                net_price: data.net_price,
+                fee_percentage: data.fee_percentage ?? 0,
+                fee_amount: data.fee_amount ?? 0,
+                platform_net_fee_amount: data.platform_net_fee_amount ?? 0,
+                partner_credit_amount: data.partner_credit_amount,
+                cashback: data.cashback,
+                discount_percentage: data.discount_percentage,
+
+                // Campos Padrão
+                description: data.description,
+                status: data.status,
+                transaction_type: data.transaction_type,
+                provider_tx_id: data.provider_tx_id,
+                pix_e2e_id: data.pix_e2e_id,
+                used_offline_token_code: data.used_offline_token_code,
+
+                // Datas
+                paid_at: data.paid_at,
+                created_at: data.created_at, // Usa a data do JSON da entidade
+                updated_at: now, // Define a primeira data de atualização
+            },
+            // --- SE FOR ATUALIZAR (Mapear tudo do JSON, EXCETO uuid e created_at) ---
+            update: {
+                // Chaves Estrangeiras
+                subscription_uuid: data.subscription_uuid,
+                user_item_uuid: data.user_item_uuid,
+                favored_user_uuid: data.favored_user_uuid,
+                favored_business_info_uuid: data.favored_business_info_uuid,
+                payer_business_info_uuid: data.payer_business_info_uuid,
+                favored_partner_user_uuid: data.favored_partner_user_uuid,
+
+                // Valores
+                original_price: data.original_price,
+                net_price: data.net_price,
+                fee_percentage: data.fee_percentage ?? 0,
+                fee_amount: data.fee_amount ?? 0,
+                platform_net_fee_amount: data.platform_net_fee_amount ?? 0,
+                partner_credit_amount: data.partner_credit_amount,
+                cashback: data.cashback,
+                discount_percentage: data.discount_percentage,
+
+                // Campos Padrão
+                description: data.description,
+                status: data.status,
+                transaction_type: data.transaction_type,
+                provider_tx_id: data.provider_tx_id,
+                pix_e2e_id: data.pix_e2e_id,
+                used_offline_token_code: data.used_offline_token_code,
+
+                // Datas
+                paid_at: data.paid_at,
+                // created_at: NÃO ATUALIZAR
+                updated_at: now, // Força nova data de atualização
+            },
+        });
+    }
+    async saveSubscriptionPaymentTransaction(
+        entity: TransactionEntity
+    ): Promise<void> {
         throw new Error('Method not implemented.');
     }
     async processOfflineTokenPayment(
-    transactionEntity: TransactionEntity,
-    offlineTokenEntity: OfflineTokenEntity,
-    userInfoUuid: Uuid,
-  ): Promise<{
-    success: boolean;
-    finalDebitedUserItemBalance: number;
-    user_cashback_amount: number;
-  }> {
-    const dataToSave = transactionEntity.toJSON();
-    const debitedUserItemId = dataToSave.user_item_uuid; // UUID do benefício que está sendo debitado
-    const transactionId = dataToSave.uuid;
-    const favoredBusinessInfoId = dataToSave.favored_business_info_uuid;
-    const totalAmountToDecrement = dataToSave.net_price; // Valor total gasto pelo usuário
-    const netAmountToCreditBusiness = dataToSave.partner_credit_amount;
-    const netAmountToCreditPlatform = dataToSave.platform_net_fee_amount;
-    const cashbackAmountToCreditUser = dataToSave.cashback; // Valor do cashback a ser creditado
-    // Dados do OfflineToken que serão atualizados/usados
-    const offlineTokenUuid = offlineTokenEntity.uuid.uuid;
-    const offlineTokenCode = offlineTokenEntity.token_code;
+        transactionEntity: TransactionEntity,
+        offlineTokenEntity: OfflineTokenEntity,
+        userInfoUuid: Uuid
+    ): Promise<{
+        success: boolean;
+        finalDebitedUserItemBalance: number;
+        user_cashback_amount: number;
+    }> {
+        const dataToSave = transactionEntity.toJSON();
+        const debitedUserItemId = dataToSave.user_item_uuid; // UUID do benefício que está sendo debitado
+        const transactionId = dataToSave.uuid;
+        const favoredBusinessInfoId = dataToSave.favored_business_info_uuid;
+        const totalAmountToDecrement = dataToSave.net_price; // Valor total gasto pelo usuário
+        const netAmountToCreditBusiness = dataToSave.partner_credit_amount;
+        const netAmountToCreditPlatform = dataToSave.platform_net_fee_amount;
+        const cashbackAmountToCreditUser = dataToSave.cashback; // Valor do cashback a ser creditado
+        // Dados do OfflineToken que serão atualizados/usados
+        const offlineTokenUuid = offlineTokenEntity.uuid.uuid;
+        const offlineTokenCode = offlineTokenEntity.token_code;
 
-    const result = await prismaClient.$transaction(async (tx) => {
-        // 0. CRIAR A TRANSAÇÃO NO BANCO DE DADOS PRIMEIRO!
-    //    Isso garante que o 'transactionId' (UUID da transação) exista no DB antes de ser referenciado.
-     await tx.transactions.create({
-        data: {
-            uuid: dataToSave.uuid, // O UUID da sua entidade dataToSave
-            user_item_uuid: debitedUserItemId, // O item que foi debitado
-            favored_business_info_uuid: favoredBusinessInfoId, // O negócio que recebeu o pagamento
-            original_price: dataToSave.original_price,
-            discount_percentage: dataToSave.discount_percentage,
-            net_price: dataToSave.net_price,
-            fee_percentage: dataToSave.fee_percentage,
-            fee_amount: dataToSave.fee_amount,
-            partner_credit_amount: dataToSave.partner_credit_amount,
-            platform_net_fee_amount: dataToSave.platform_net_fee_amount,
-            cashback: dataToSave.cashback,
-            description: dataToSave.description,
-            status: dataToSave.status, // Inicialmente 'pending', será atualizado para 'success' depois
-            transaction_type: dataToSave.transaction_type,
-            used_offline_token_code: dataToSave.used_offline_token_code, // Código do token offline usado
-            created_at: newDateF(new Date()),
+        const result = await prismaClient.$transaction(async (tx) => {
+            // 0. CRIAR A TRANSAÇÃO NO BANCO DE DADOS PRIMEIRO!
+            //    Isso garante que o 'transactionId' (UUID da transação) exista no DB antes de ser referenciado.
+            await tx.transactions.create({
+                data: {
+                    uuid: dataToSave.uuid, // O UUID da sua entidade dataToSave
+                    user_item_uuid: debitedUserItemId, // O item que foi debitado
+                    favored_business_info_uuid: favoredBusinessInfoId, // O negócio que recebeu o pagamento
+                    original_price: dataToSave.original_price,
+                    discount_percentage: dataToSave.discount_percentage,
+                    net_price: dataToSave.net_price,
+                    fee_percentage: dataToSave.fee_percentage,
+                    fee_amount: dataToSave.fee_amount,
+                    partner_credit_amount: dataToSave.partner_credit_amount,
+                    platform_net_fee_amount: dataToSave.platform_net_fee_amount,
+                    cashback: dataToSave.cashback,
+                    description: dataToSave.description,
+                    status: dataToSave.status, // Inicialmente 'pending', será atualizado para 'success' depois
+                    transaction_type: dataToSave.transaction_type,
+                    used_offline_token_code: dataToSave.used_offline_token_code, // Código do token offline usado
+                    created_at: newDateF(new Date()),
+                },
+            });
+            // 1. Buscar UserItem DEBITADO e verificar saldo atomicamente
+            const debitedUserItem = await tx.userItem.findUnique({
+                where: { uuid: debitedUserItemId },
+                select: { balance: true, user_info_uuid: true },
+            });
+            if (!debitedUserItem) {
+                throw new CustomError(
+                    `Debited UserItem with UUID ${debitedUserItemId} not found.`,
+                    404
+                );
+            }
+            if (debitedUserItem.user_info_uuid !== userInfoUuid.uuid) {
+                throw new CustomError(
+                    `Debited UserItem ${debitedUserItemId} does not belong to user ${userInfoUuid.uuid}.`,
+                    409
+                );
+            }
+            if (debitedUserItem.balance < totalAmountToDecrement) {
+                throw new CustomError(
+                    `Insufficient balance in UserItem ${debitedUserItemId}. Required: ${totalAmountToDecrement}, Available: ${debitedUserItem.balance}`,
+                    403
+                );
+            }
+            const debitedUserItemBalanceBefore = debitedUserItem.balance;
+            const debitedUserItemBalanceAfter =
+                debitedUserItemBalanceBefore - totalAmountToDecrement;
 
-        },
-    });
-      // 1. Buscar UserItem DEBITADO e verificar saldo atomicamente
-      const debitedUserItem = await tx.userItem.findUnique({
-        where: { uuid: debitedUserItemId },
-        select: { balance: true, user_info_uuid: true },
-      });
-      if (!debitedUserItem) {
-        throw new CustomError(`Debited UserItem with UUID ${debitedUserItemId} not found.`, 404);
-      }
-      if (debitedUserItem.user_info_uuid !== userInfoUuid.uuid) {
-        throw new CustomError(`Debited UserItem ${debitedUserItemId} does not belong to user ${userInfoUuid.uuid}.`, 409);
-      }
-      if (debitedUserItem.balance < totalAmountToDecrement) {
-        throw new CustomError(`Insufficient balance in UserItem ${debitedUserItemId}. Required: ${totalAmountToDecrement}, Available: ${debitedUserItem.balance}`, 403);
-      }
-      const debitedUserItemBalanceBefore = debitedUserItem.balance;
-      const debitedUserItemBalanceAfter = debitedUserItemBalanceBefore - totalAmountToDecrement;
+            // 2. Buscar UserItem "Correct" para o cashback
+            const correctUserItem = await tx.userItem.findFirst({
+                where: {
+                    user_info_uuid: userInfoUuid.uuid,
+                    item_name: 'Correct',
+                },
+                select: { uuid: true, balance: true },
+            });
+            if (!correctUserItem) {
+                throw new CustomError(
+                    `User ${userInfoUuid.uuid} does not have a 'Correct' UserItem to receive cashback.`,
+                    404
+                );
+            }
+            const correctUserItemId = correctUserItem.uuid;
+            const correctItemBalanceBeforeCashback = correctUserItem.balance;
+            const correctItemBalanceAfterCashback =
+                correctItemBalanceBeforeCashback + cashbackAmountToCreditUser;
 
-      // 2. Buscar UserItem "Correct" para o cashback
-      const correctUserItem = await tx.userItem.findFirst({
-        where: { user_info_uuid: userInfoUuid.uuid, item_name: 'Correct' },
-        select: { uuid: true, balance: true },
-      });
-      if (!correctUserItem) {
-        throw new CustomError(`User ${userInfoUuid.uuid} does not have a 'Correct' UserItem to receive cashback.`, 404);
-      }
-      const correctUserItemId = correctUserItem.uuid;
-      const correctItemBalanceBeforeCashback = correctUserItem.balance;
-      const correctItemBalanceAfterCashback = correctItemBalanceBeforeCashback + cashbackAmountToCreditUser;
+            // 3. Buscar BusinessAccount do Parceiro
+            const currentBusinessAccount = await tx.businessAccount.findFirst({
+                where: { business_info_uuid: favoredBusinessInfoId },
+                select: { uuid: true, balance: true },
+            });
+            if (!currentBusinessAccount) {
+                throw new CustomError(
+                    `BusinessAccount associated with BusinessInfo ${favoredBusinessInfoId} not found.`,
+                    404
+                );
+            }
+            const businessAccountId = currentBusinessAccount.uuid;
+            const businessBalanceBefore = currentBusinessAccount.balance;
+            const businessBalanceAfter =
+                businessBalanceBefore + netAmountToCreditBusiness;
 
-      // 3. Buscar BusinessAccount do Parceiro
-      const currentBusinessAccount = await tx.businessAccount.findFirst({
-        where: { business_info_uuid: favoredBusinessInfoId },
-        select: { uuid: true, balance: true },
-      });
-      if (!currentBusinessAccount) {
-        throw new CustomError(`BusinessAccount associated with BusinessInfo ${favoredBusinessInfoId} not found.`, 404);
-      }
-      const businessAccountId = currentBusinessAccount.uuid;
-      const businessBalanceBefore = currentBusinessAccount.balance;
-      const businessBalanceAfter = businessBalanceBefore + netAmountToCreditBusiness;
+            // 4. Buscar CorrectAccount da Plataforma
+            const currentCorrectAccount = await tx.correctAccount.findFirst({
+                select: { uuid: true, balance: true },
+            });
+            if (!currentCorrectAccount) {
+                throw new CustomError(
+                    `CorrectAccount not found. System configuration error.`,
+                    500
+                );
+            }
+            const correctAccountId = currentCorrectAccount.uuid;
+            const correctBalanceBefore = currentCorrectAccount.balance;
+            const correctBalanceAfter =
+                correctBalanceBefore + netAmountToCreditPlatform;
 
-      // 4. Buscar CorrectAccount da Plataforma
-      const currentCorrectAccount = await tx.correctAccount.findFirst({
-        select: { uuid: true, balance: true },
-      });
-      if (!currentCorrectAccount) {
-        throw new CustomError(`CorrectAccount not found. System configuration error.`, 500);
-      }
-      const correctAccountId = currentCorrectAccount.uuid;
-      const correctBalanceBefore = currentCorrectAccount.balance;
-      const correctBalanceAfter = correctBalanceBefore + netAmountToCreditPlatform;
+            // --- Executar Atualizações ---
 
-      // --- Executar Atualizações ---
+            // 5. Debitar UserItem DEBITADO
+            await tx.userItem.update({
+                where: { uuid: debitedUserItemId },
+                data: {
+                    balance: { decrement: totalAmountToDecrement },
+                    updated_at: newDateF(new Date()),
+                },
+            });
 
-      // 5. Debitar UserItem DEBITADO
-      await tx.userItem.update({
-        where: { uuid: debitedUserItemId },
-        data: { balance: { decrement: totalAmountToDecrement }, updated_at: newDateF(new Date()) },
-      });
+            // 6. Creditar BusinessAccount do Parceiro
+            await tx.businessAccount.update({
+                where: { uuid: businessAccountId },
+                data: {
+                    balance: { increment: netAmountToCreditBusiness },
+                    updated_at: newDateF(new Date()),
+                },
+            });
 
-      // 6. Creditar BusinessAccount do Parceiro
-      await tx.businessAccount.update({
-        where: { uuid: businessAccountId },
-        data: { balance: { increment: netAmountToCreditBusiness }, updated_at: newDateF(new Date()) },
-      });
+            // 7. Creditar CorrectAccount da Plataforma
+            await tx.correctAccount.update({
+                where: { uuid: correctAccountId },
+                data: {
+                    balance: { increment: netAmountToCreditPlatform },
+                    updated_at: newDateF(new Date()),
+                },
+            });
 
-      // 7. Creditar CorrectAccount da Plataforma
-      await tx.correctAccount.update({
-        where: { uuid: correctAccountId },
-        data: { balance: { increment: netAmountToCreditPlatform }, updated_at:newDateF(new Date()) },
-      });
+            // 8. Creditar CASHBACK no UserItem "Correct" do Usuário
+            await tx.userItem.update({
+                where: { uuid: correctUserItemId },
+                data: {
+                    balance: { increment: cashbackAmountToCreditUser },
+                    updated_at: newDateF(new Date()),
+                },
+            });
 
-      // 8. Creditar CASHBACK no UserItem "Correct" do Usuário
-      await tx.userItem.update({
-        where: { uuid: correctUserItemId },
-        data: { balance: { increment: cashbackAmountToCreditUser }, updated_at:newDateF(new Date()) },
-      });
+            // NOVO: 9. Atualizar o OfflineToken para CONSUMED e last_used_at/last_accessed_at
+            await tx.offlineToken.update({
+                where: { uuid: offlineTokenUuid },
+                data: {
+                    status: OfflineTokenStatus.CONSUMED,
+                    last_used_at: new Date(),
+                    last_accessed_at: new Date(),
+                    updated_at: new Date(),
+                },
+            });
+            // NOVO: 10. Criar registro no OfflineTokenHistory
+            await tx.offlineTokenHistory.create({
+                data: {
+                    original_token_uuid: offlineTokenUuid,
+                    token_code: offlineTokenCode,
+                    user_info_uuid: userInfoUuid.uuid,
+                    user_item_uuid: debitedUserItemId, // O UserItem associado ao uso do token
+                    event_type:
+                        OfflineTokenHistoryEventType.USED_IN_TRANSACTION, // Ou CONSUMED, dependendo da sua preferência
+                    event_description: `Token used for transaction ${transactionId}.`,
+                    related_transaction_uuid: transactionId,
+                    event_at: new Date(),
+                    snapshot_expires_at: offlineTokenEntity.expires_at, // Captura o estado no momento
+                    snapshot_status: OfflineTokenStatus.CONSUMED, // O status APÓS o uso
+                },
+            });
 
-      // NOVO: 9. Atualizar o OfflineToken para CONSUMED e last_used_at/last_accessed_at
-      await tx.offlineToken.update({
-        where: { uuid: offlineTokenUuid },
-        data: {
-          status: OfflineTokenStatus.CONSUMED,
-          last_used_at: new Date(),
-          last_accessed_at: new Date(),
-          updated_at: new Date(),
-        },
-      });
-      // NOVO: 10. Criar registro no OfflineTokenHistory
-      await tx.offlineTokenHistory.create({
-        data: {
-          original_token_uuid: offlineTokenUuid,
-          token_code: offlineTokenCode,
-          user_info_uuid: userInfoUuid.uuid,
-          user_item_uuid: debitedUserItemId, // O UserItem associado ao uso do token
-          event_type: OfflineTokenHistoryEventType.USED_IN_TRANSACTION, // Ou CONSUMED, dependendo da sua preferência
-          event_description: `Token used for transaction ${transactionId}.`,
-          related_transaction_uuid: transactionId,
-          event_at: new Date(),
-          snapshot_expires_at: offlineTokenEntity.expires_at, // Captura o estado no momento
-          snapshot_status: OfflineTokenStatus.CONSUMED, // O status APÓS o uso
-        },
-      });
+            // --- Criação dos Registros de Histórico das Contas ---
 
-      // --- Criação dos Registros de Histórico das Contas ---
+            // 11. Histórico GASTO UserItem DEBITADO
+            await tx.userItemHistory.create({
+                data: {
+                    user_item_uuid: debitedUserItemId,
+                    event_type: 'ITEM_SPENT', // Substitua pelo seu enum UserItemEventType.ITEM_SPENT
+                    amount: -totalAmountToDecrement,
+                    balance_before: debitedUserItemBalanceBefore,
+                    balance_after: debitedUserItemBalanceAfter,
+                    related_transaction_uuid: transactionId,
+                },
+            });
 
-      // 11. Histórico GASTO UserItem DEBITADO
-      await tx.userItemHistory.create({
-        data: {
-          user_item_uuid: debitedUserItemId,
-          event_type: "ITEM_SPENT", // Substitua pelo seu enum UserItemEventType.ITEM_SPENT
-          amount: -totalAmountToDecrement,
-          balance_before: debitedUserItemBalanceBefore,
-          balance_after: debitedUserItemBalanceAfter,
-          related_transaction_uuid: transactionId,
-        },
-      });
+            // 12. Histórico CASHBACK UserItem "Correct"
+            await tx.userItemHistory.create({
+                data: {
+                    user_item_uuid: correctUserItemId,
+                    event_type: 'CASHBACK_RECEIVED', // Substitua pelo seu enum UserItemEventType.CASHBACK_RECEIVED
+                    amount: cashbackAmountToCreditUser,
+                    balance_before: correctItemBalanceBeforeCashback,
+                    balance_after: correctItemBalanceAfterCashback,
+                    related_transaction_uuid: transactionId,
+                },
+            });
+            // 13. Histórico BusinessAccount do Parceiro
+            await tx.businessAccountHistory.create({
+                data: {
+                    business_account_uuid: businessAccountId,
+                    event_type: 'PAYMENT_RECEIVED', // Substitua pelo seu enum BusinessAccountEventType.PAYMENT_RECEIVED
+                    amount: netAmountToCreditBusiness,
+                    balance_before: businessBalanceBefore,
+                    balance_after: businessBalanceAfter,
+                    related_transaction_uuid: transactionId,
+                },
+            });
 
-      // 12. Histórico CASHBACK UserItem "Correct"
-      await tx.userItemHistory.create({
-        data: {
-          user_item_uuid: correctUserItemId,
-          event_type: "CASHBACK_RECEIVED", // Substitua pelo seu enum UserItemEventType.CASHBACK_RECEIVED
-          amount: cashbackAmountToCreditUser,
-          balance_before: correctItemBalanceBeforeCashback,
-          balance_after: correctItemBalanceAfterCashback,
-          related_transaction_uuid: transactionId,
-        },
-      });
-      // 13. Histórico BusinessAccount do Parceiro
-      await tx.businessAccountHistory.create({
-        data: {
-          business_account_uuid: businessAccountId,
-          event_type: "PAYMENT_RECEIVED", // Substitua pelo seu enum BusinessAccountEventType.PAYMENT_RECEIVED
-          amount: netAmountToCreditBusiness,
-          balance_before: businessBalanceBefore,
-          balance_after: businessBalanceAfter,
-          related_transaction_uuid: transactionId,
-        },
-      });
+            // 14. Histórico CorrectAccount da Plataforma
+            await tx.correctAccountHistory.create({
+                data: {
+                    correct_account_uuid: correctAccountId,
+                    event_type: 'PLATFORM_FEE_COLLECTED', // Substitua pelo seu enum CorrectAccountEventType.PLATFORM_FEE_COLLECTED
+                    amount: netAmountToCreditPlatform,
+                    balance_before: correctBalanceBefore,
+                    balance_after: correctBalanceAfter,
+                    related_transaction_uuid: transactionId,
+                },
+            });
 
-      // 14. Histórico CorrectAccount da Plataforma
-      await tx.correctAccountHistory.create({
-        data: {
-          correct_account_uuid: correctAccountId,
-          event_type: "PLATFORM_FEE_COLLECTED", // Substitua pelo seu enum CorrectAccountEventType.PLATFORM_FEE_COLLECTED
-          amount: netAmountToCreditPlatform,
-          balance_before: correctBalanceBefore,
-          balance_after: correctBalanceAfter,
-          related_transaction_uuid: transactionId,
-        },
-      });
+            // 15. Atualizar Status da Transação Original para "success"
+            await tx.transactions.update({
+                where: { uuid: transactionId },
+                data: {
+                    status: 'success', // Seu TransactionStatus.SUCCESS
+                    user_item_uuid: debitedUserItemId,
+                    paid_at: newDateF(new Date()),
+                    updated_at: newDateF(new Date()),
+                },
+            });
+            // 16. Retorno
+            return {
+                success: true,
+                finalDebitedUserItemBalance: debitedUserItemBalanceAfter,
+                user_cashback_amount: cashbackAmountToCreditUser,
+            };
+        });
 
-      // 15. Atualizar Status da Transação Original para "success"
-      await tx.transactions.update({
-        where: { uuid: transactionId },
-        data: {
-          status: 'success', // Seu TransactionStatus.SUCCESS
-          user_item_uuid: debitedUserItemId,
-          paid_at: newDateF(new Date()),
-          updated_at: newDateF(new Date()),
-        },
-      });
-      // 16. Retorno
-      return {
-        success: true,
-        finalDebitedUserItemBalance: debitedUserItemBalanceAfter,
-        user_cashback_amount: cashbackAmountToCreditUser,
-      };
-    });
-
-    return result;
-  }
+        return result;
+    }
 
     async processAppUserPixCreditPayment(
         transactionEntity: TransactionEntity, // <--- Recebe a TransactionEntity
-        amountReceivedInCents: number,
+        amountReceivedInCents: number
     ): Promise<ProcessAppUserPixCreditPaymentResult> {
         const transactionUuidString = transactionEntity.uuid.uuid;
-            // Re-buscar a transação para garantir que estamos trabalhando com os dados mais recentes
-            // ou se quiser otimizar, pode assumir que a transactionEntity está atualizada
-            // e apenas usar seu `uuid` para o `update` no final.
-            // Para maior segurança, vamos buscar novamente.
+        // Re-buscar a transação para garantir que estamos trabalhando com os dados mais recentes
+        // ou se quiser otimizar, pode assumir que a transactionEntity está atualizada
+        // e apenas usar seu `uuid` para o `update` no final.
+        // Para maior segurança, vamos buscar novamente.
         const result = await prismaClient.$transaction(async (tx) => {
             const dbTransaction = await tx.transactions.findUnique({
                 where: { uuid: transactionUuidString },
-                select: { uuid: true, user_item_uuid: true, net_price: true, status: true },
+                select: {
+                    uuid: true,
+                    user_item_uuid: true,
+                    net_price: true,
+                    status: true,
+                },
             });
 
-            if (!dbTransaction) { // Caso a transação tenha sido deletada entre a busca no usecase e aqui
-                 throw new CustomError(
+            if (!dbTransaction) {
+                // Caso a transação tenha sido deletada entre a busca no usecase e aqui
+                throw new CustomError(
                     `Transaction with UUID ${transactionUuidString} not found during PIX credit processing.`,
                     404
                 );
             }
             if (dbTransaction.status !== TransactionStatus.pending) {
-                 throw new CustomError(
+                throw new CustomError(
                     `Transaction ${transactionUuidString} is not in 'pending' status (${dbTransaction.status}). Cannot process AppUser PIX credit.`,
                     409
                 );
             }
-            
+
             if (dbTransaction.net_price !== amountReceivedInCents) {
-                 throw new CustomError(
+                throw new CustomError(
                     `Mismatched amount for transaction ${transactionUuidString}. Expected: ${dbTransaction.net_price}, Received: ${amountReceivedInCents}.`,
                     409
                 );
@@ -297,7 +421,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
 
             const creditedUserItem = await tx.userItem.findUnique({
                 where: { uuid: creditedUserItemUuid },
-                select: { uuid: true, balance: true }
+                select: { uuid: true, balance: true },
             });
 
             if (!creditedUserItem) {
@@ -308,7 +432,8 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
             }
 
             const creditedItemBalanceBefore = creditedUserItem.balance;
-            const creditedItemBalanceAfter = creditedItemBalanceBefore + amountReceivedInCents;
+            const creditedItemBalanceAfter =
+                creditedItemBalanceBefore + amountReceivedInCents;
 
             // --- Executar Atualizações Atômicas ---
             // 1. Creditar o saldo no UserItem do AppUser
@@ -319,7 +444,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
                     updated_at: newDateF(new Date()),
                 },
             });
-             // 2. Registrar no Histórico do UserItem do AppUser
+            // 2. Registrar no Histórico do UserItem do AppUser
             await tx.userItemHistory.create({
                 data: {
                     user_item_uuid: creditedUserItemUuid,
@@ -327,7 +452,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
                     amount: amountReceivedInCents,
                     balance_before: creditedItemBalanceBefore,
                     balance_after: creditedItemBalanceAfter,
-                    related_transaction_uuid: transactionUuidString
+                    related_transaction_uuid: transactionUuidString,
                 },
             });
 
@@ -346,18 +471,22 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
                 success: true,
                 finalCreditedUserItemBalance: creditedItemBalanceAfter,
             };
-        })
-        return result
+        });
+        return result;
     }
-        
-    async findByProviderTxId(providerTxId: string): Promise<TransactionEntity | null> {
-        const transactionPix = await prismaClient.transactions.findFirst({
-            where:{
-                provider_tx_id: providerTxId
-            },
-        })
 
-        if(!transactionPix){ return null}
+    async findByProviderTxId(
+        providerTxId: string
+    ): Promise<TransactionEntity | null> {
+        const transactionPix = await prismaClient.transactions.findFirst({
+            where: {
+                provider_tx_id: providerTxId,
+            },
+        });
+
+        if (!transactionPix) {
+            return null;
+        }
 
         const transactionProps: TransactionProps = {
             uuid: new Uuid(transactionPix.uuid),
@@ -387,6 +516,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
             paid_at: transactionPix.paid_at,
             provider_tx_id: transactionPix.provider_tx_id,
             pix_e2e_id: transactionPix.pix_e2e_id,
+            subscription_uuid: transactionPix.subscription_uuid ? new Uuid(transactionPix.subscription_uuid) : null,
             created_at: transactionPix.created_at,
             updated_at: transactionPix.updated_at,
         };
@@ -394,7 +524,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         // 3. Usa o método estático 'hydrate' para reconstruir a entidade completa.
         //    Isso garante que o objeto retornado seja uma instância de classe real.
         return TransactionEntity.hydrate(transactionProps);
-
     }
     async createPendingCashIn(
         userId: Uuid,
@@ -412,7 +541,7 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
                 partner_credit_amount: 0, // Não se aplica a cash-in
                 status: TransactionStatus.pending,
                 transaction_type: TransactionType.CASH_IN_PIX_USER,
-                created_at: newDateF(new Date()), 
+                created_at: newDateF(new Date()),
             },
         });
 
@@ -425,9 +554,10 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
             favored_user_uuid: transactionData.favored_user_uuid
                 ? new Uuid(transactionData.favored_user_uuid)
                 : null,
-            favored_business_info_uuid: transactionData.favored_business_info_uuid
-                ? new Uuid(transactionData.favored_business_info_uuid)
-                : null,
+            favored_business_info_uuid:
+                transactionData.favored_business_info_uuid
+                    ? new Uuid(transactionData.favored_business_info_uuid)
+                    : null,
             original_price: transactionData.original_price,
             discount_percentage: transactionData.discount_percentage,
             net_price: transactionData.net_price,
@@ -1154,7 +1284,8 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
             data: {
                 uuid: dataToSave.uuid,
                 favored_user_uuid: dataToSave.favored_user_uuid,
-                favored_business_info_uuid: dataToSave.favored_business_info_uuid,
+                favored_business_info_uuid:
+                    dataToSave.favored_business_info_uuid,
                 payer_business_info_uuid: dataToSave.payer_business_info_uuid,
                 original_price: dataToSave.original_price,
                 discount_percentage: dataToSave.discount_percentage,
@@ -1169,7 +1300,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
                 transaction_type: dataToSave.transaction_type,
                 favored_partner_user_uuid: dataToSave.favored_partner_user_uuid,
                 created_at: dataToSave.created_at,
-
             },
         });
         // CRUCIAL: Após criar, buscamos novamente para ter todos os dados
@@ -1211,7 +1341,6 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         return TransactionEntity.hydrate(transactionProps);
     }
 
-    
     public async processPaymentByBusiness(
         params: ProcessPaymentByBusinessParams
     ): Promise<ProcessPaymentByBusinessResult> {
@@ -1411,47 +1540,54 @@ export class TransactionOrderPrismaRepository implements ITransactionOrderReposi
         return TransactionEntity.hydrate(transactionProps);
     }
 
-   async create(entity: TransactionEntity): Promise<void> {
-    const dataToPersist = {
-      // IDs Básicos
-      uuid: entity.uuid.uuid,
-      created_at: entity.created_at,
-      updated_at: new Date().toISOString(), // Atualiza sempre que salvar
+    async create(entity: TransactionEntity): Promise<void> {
+        const dataToPersist = {
+            // IDs Básicos
+            uuid: entity.uuid.uuid,
+            created_at: entity.created_at,
+            updated_at: new Date().toISOString(), // Atualiza sempre que salvar
 
-      subscription_uuid: entity.subscription_uuid?.uuid ?? null,
-      
-      user_item_uuid: entity.user_item_uuid?.uuid ?? null,
-      favored_user_uuid: entity.favored_user_uuid?.uuid ?? null,
-      favored_business_info_uuid: entity.favored_business_info_uuid?.uuid ?? null,
-      payer_business_info_uuid: entity.payer_business_info_uuid?.uuid ?? null,
-      favored_partner_user_uuid: entity.favored_partner_user_uuid?.uuid ?? null,
-      original_price: Math.round(entity.original_price * 100),
-      net_price: Math.round(entity.net_price * 100),
-      fee_amount: Math.round(entity.fee_amount * 100),
-      cashback: Math.round(entity.cashback * 100),
-      platform_net_fee_amount: Math.round(entity.platform_net_fee_amount * 100),
-      partner_credit_amount: Math.round(entity.partner_credit_amount * 100),      
-      discount_percentage: Math.round(entity.discount_percentage * 10000),
-      fee_percentage: Math.round((entity.fee_percentage ?? 0) * 10000),
-      description: entity.description,
-      status: entity.status,
-      transaction_type: entity.transaction_type,
-      
-      // Dados do Provedor / Pix
-      provider_tx_id: entity.provider_tx_id,
-      pix_e2e_id: entity.pix_e2e_id,
-      paid_at: entity.paid_at ?? null,
-      
-      // Outros
-      used_offline_token_code: entity.used_offline_token_code ?? null,
-      // item_uuid: entity.item_uuid ?? null, // Se este campo existir no prisma schema
-    };
+            subscription_uuid: entity.subscription_uuid?.uuid ?? null,
 
-    // --- PERSISTÊNCIA ---
-    await prismaClient.transactions.create({
-      data: dataToPersist,
-    });
-  }
+            user_item_uuid: entity.user_item_uuid?.uuid ?? null,
+            favored_user_uuid: entity.favored_user_uuid?.uuid ?? null,
+            favored_business_info_uuid:
+                entity.favored_business_info_uuid?.uuid ?? null,
+            payer_business_info_uuid:
+                entity.payer_business_info_uuid?.uuid ?? null,
+            favored_partner_user_uuid:
+                entity.favored_partner_user_uuid?.uuid ?? null,
+            original_price: Math.round(entity.original_price * 100),
+            net_price: Math.round(entity.net_price * 100),
+            fee_amount: Math.round(entity.fee_amount * 100),
+            cashback: Math.round(entity.cashback * 100),
+            platform_net_fee_amount: Math.round(
+                entity.platform_net_fee_amount * 100
+            ),
+            partner_credit_amount: Math.round(
+                entity.partner_credit_amount * 100
+            ),
+            discount_percentage: Math.round(entity.discount_percentage * 10000),
+            fee_percentage: Math.round((entity.fee_percentage ?? 0) * 10000),
+            description: entity.description,
+            status: entity.status,
+            transaction_type: entity.transaction_type,
+
+            // Dados do Provedor / Pix
+            provider_tx_id: entity.provider_tx_id,
+            pix_e2e_id: entity.pix_e2e_id,
+            paid_at: entity.paid_at ?? null,
+
+            // Outros
+            used_offline_token_code: entity.used_offline_token_code ?? null,
+            // item_uuid: entity.item_uuid ?? null, // Se este campo existir no prisma schema
+        };
+
+        // --- PERSISTÊNCIA ---
+        await prismaClient.transactions.create({
+            data: dataToPersist,
+        });
+    }
     update(entity: TransactionEntity): Promise<void> {
         throw new CustomError('Method not implemented.');
     }

@@ -5,6 +5,59 @@ import { ISubscriptionRepository } from "../subscription.repository";
 import { prismaClient } from "../../../../../infra/databases/prisma.config";
 
 export class SubscriptionPrismaRepository implements ISubscriptionRepository {
+  async upsert(entity: SubscriptionEntity): Promise<void> {
+        // 1. Obtém os dados formatados da entidade via toJSON()
+        const data = entity.toJSON();
+
+        const now = new Date().toISOString();
+
+        // 2. Chamada do Prisma Upsert
+        await prismaClient.subscription.upsert({
+            where: {
+                uuid: data.uuid, // Chave de busca
+            },
+            create: {
+                uuid: data.uuid,
+                subscription_plan_uuid: data.subscription_plan_uuid,
+                // Chaves estrangeiras opcionais (podem ser null)
+                business_info_uuid: data.business_info_uuid,
+                user_info_uuid: data.user_info_uuid,
+                employer_item_details_uuid: data.employer_item_details_uuid,
+                user_item_uuid: data.user_item_uuid,
+
+                status: data.status,
+
+                // Datas importantes
+                start_date: data.start_date,
+                end_date: data.end_date,
+                next_billing_date: data.next_billing_date,
+
+                // Datas de Auditoria
+                created_at: data.created_at,
+                updated_at: now, // Primeira data de atualização
+            },
+            // --- SE FOR ATUALIZAR (Mapear tudo, EXCETO uuid e created_at) ---
+            update: {
+                // Chaves estrangeiras (plan_uuid geralmente não muda, mas os outros podem)
+                subscription_plan_uuid: data.subscription_plan_uuid,
+                business_info_uuid: data.business_info_uuid,
+                user_info_uuid: data.user_info_uuid,
+                employer_item_details_uuid: data.employer_item_details_uuid,
+                user_item_uuid: data.user_item_uuid,
+
+                status: data.status, // Status muda frequentemente
+
+                // Datas (podem ser recalculadas na ativação)
+                start_date: data.start_date,
+                end_date: data.end_date,
+                next_billing_date: data.next_billing_date,
+
+                // Datas de Auditoria
+                // created_at: NÃO ATUALIZAR
+                updated_at: now, // Força nova data de atualização
+            },
+        });
+    }
   findActiveByBusinessAndPlan(businessUuid: Uuid, planUuid: Uuid): Promise<SubscriptionEntity | null> {
       throw new Error("Method not implemented.");
   }

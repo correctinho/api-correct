@@ -102,7 +102,8 @@ export class SubscriptionEntity {
     get updated_at(): Date {
         return this._updated_at;
     }
-    // --- Métodos de Negócio ---
+    
+    
 
     // Chamado quando o webhook do Pix confirmar o pagamento
     public markAsPaidAndActivate(billingPeriod: BillingPeriod): void {
@@ -209,8 +210,7 @@ export class SubscriptionEntity {
             start_date: this._start_date,
             end_date: this._end_date,
             next_billing_date: this._next_billing_date,
-            employer_item_details_uuid:
-                this._employer_item_details_uuid?.uuid ?? null,
+            employer_item_details_uuid: this._employer_item_details_uuid?.uuid ?? null,
             user_item_uuid: this._user_item_uuid?.uuid ?? null,
             created_at: this._created_at,
             updated_at: this._updated_at,

@@ -6,4 +6,5 @@ export interface ISubscriptionRepository extends RepositoryInterface<Subscriptio
   // Útil para verificar se o usuário já não tem esse plano ativo antes de deixar comprar de novo
   findActiveByUserAndPlan(userUuid: Uuid, planUuid: Uuid): Promise<SubscriptionEntity | null>;
   findActiveByBusinessAndPlan(businessUuid: Uuid, planUuid: Uuid): Promise<SubscriptionEntity | null>
+  upsert(entity: SubscriptionEntity): Promise<void>;
 }

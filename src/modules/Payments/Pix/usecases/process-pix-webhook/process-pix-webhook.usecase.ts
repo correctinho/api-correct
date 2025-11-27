@@ -34,9 +34,9 @@ export class ProcessPixWebhookUsecase {
 
     public async execute(payload: SicrediPixWebhookPayload): Promise<void> {
         console.log('\n✅✅✅ WEBHOOK DO SICREDI RECEBIDO! ✅✅✅');
-        console.log('Payload recebido:', JSON.stringify(payload, null, 2));
+        // console.log('Payload recebido:', JSON.stringify(payload, null, 2));
 
-        //Resposta da API
+        //Resposta da API SICREDI
         //         "pix": [
         //     {
         //       "endToEndId": "E03042597202511241449436k9xOoGHb",
@@ -66,7 +66,6 @@ export class ProcessPixWebhookUsecase {
             const providerTxId = pixPayment.txid;
             if (!providerTxId) {
                 const errorMessage = 'ERRO: Item do webhook sem txid.';
-                console.error(errorMessage, pixPayment);
                 processingFailures.push(`[unknown_txid] ${errorMessage}`);
                 continue; // Passa para o próximo item do webhook, mas registra a falha
             }
@@ -181,7 +180,6 @@ export class ProcessPixWebhookUsecase {
                 `✅ SUCESSO: Crédito PIX para AppUser processado para a transação ${transaction.uuid.uuid}.`
             );
         } else {
-            console.log('Deu erro aqui 1');
             // Se o repositório retornar 'success: false' sem lançar um erro
             const errorMessage = `❌ FALHA: Repositório falhou ao processar crédito PIX para AppUser (tx: ${transaction.uuid.uuid}).`;
             console.error(errorMessage);
@@ -225,8 +223,7 @@ export class ProcessPixWebhookUsecase {
         const receivedAmountInCents = Math.round(
             parseFloat(pixPayment.valor) * 100
         );
-        const expectedAmountInCents = transaction.net_price; // Já está em centavos na entidade
-
+        const expectedAmountInCents = Math.round(transaction.net_price * 100); // Já está em centavos na entidade
         // Permite uma pequena margem de erro se necessário, mas para PIX exato, deve ser igual.
         if (receivedAmountInCents !== expectedAmountInCents) {
             const errorMessage = `ERRO DE VALOR para SUBSCRIPTION_PAYMENT (tx: ${transaction.uuid.uuid}). Esperado: ${expectedAmountInCents} centavos, Recebido: ${receivedAmountInCents} centavos.`;
@@ -235,7 +232,7 @@ export class ProcessPixWebhookUsecase {
             // ou para marcar como fraude.
             throw new CustomError(errorMessage, 400);
         }
-
+        console.log(transaction)
         // 2. Validar se a transação tem os vínculos necessários
         if (!transaction.subscription_uuid || !transaction.user_item_uuid) {
             const errorMessage = `ERRO: Transação de assinatura ${transaction.uuid.uuid} sem subscription_uuid ou user_item_uuid vinculado.`;
@@ -267,22 +264,19 @@ export class ProcessPixWebhookUsecase {
         // 4. Atualizar a Transação para SUCCESS
         const paidAtString = newDateF(new Date(pixPayment.horario));
         transaction.setPixPaymentDetails(pixPayment.endToEndId, paidAtString);
-        // Salva a transação atualizada. Use o método genérico 'create' (que faz upsert) ou um 'update' específico.
-        // Assumindo que seu repositório tem um método genérico 'save' ou 'update'.
-        // Se o ITransactionOrderRepository só tiver 'create', você precisará de um método 'update'.
-        // Vou assumir que existe um método genérico 'save(entity)' no repositório base.
-        await this.transactionRepository.create(transaction);
+
+        await this.transactionRepository.upsert(transaction);
         console.log(`Transação ${transaction.uuid.uuid} marcada como SUCCESS.`);
 
         // 5. Ativar a Assinatura
         subscription.markAsPaidAndActivate('MONTHLY')
-        await this.subscriptionRepository.create(subscription); // Repositório deve ter save/update
+        await this.subscriptionRepository.upsert(subscription); // Repositório deve ter save/update
         console.log(`Assinatura ${subscription.uuid.uuid} ATIVADA.`);
 
         // 6. Ativar o UserItem (Liberar o benefício)
         userItem.activateStatus(); // Método na entidade AppUserItemEntity
 
-        await this.userItemRepository.create(userItem); // Repositório deve ter save/update
+        await this.userItemRepository.upsert(userItem); // Repositório deve ter save/update
         console.log(
             `UserItem ${userItem.uuid.uuid} ATIVADO e liberado para uso.`
         );
@@ -291,6 +285,4 @@ export class ProcessPixWebhookUsecase {
             `✅ SUCESSO: Pagamento de assinatura processado e serviço liberado.`
         );
     }
-    // Futuramente, você pode adicionar mais métodos como:
-    // private async processCashInMerchant(transaction: TransactionEntity, pixPayment: SicrediPix): Promise<void> { ... }
 }

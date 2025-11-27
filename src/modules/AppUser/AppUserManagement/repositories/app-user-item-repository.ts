@@ -10,4 +10,6 @@ export interface IAppUserItemRepository extends RepositoryInterface<AppUserItemE
   findDebitUserItem(userInfoId: string): Promise<AppUserItemEntity | null>
   findUserItemsWithBenefitGroupsByEmployerAndUserInfoIds(employerUuid: string, userInfoUuids: string[]): Promise<AppUserItemEntity[]>
   updateBalanceAndHistory(userItemUuid: string, newBalanceInCents: number,previousBalanceInCents: number,transactionUuid: string | null, eventType: UserItemEventType): Promise<void>;
-  findSpecificUserItem(userInfoId: string, itemId: string, businessInfoId: string | null): Promise<AppUserItemEntity | null>;}
+  findSpecificUserItem(userInfoId: string, itemId: string, businessInfoId: string | null): Promise<AppUserItemEntity | null>;
+  upsert(entity: AppUserItemEntity): Promise<void>;
+}
