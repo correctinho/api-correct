@@ -41,8 +41,8 @@ export class CreateServiceRequestUsecase {
         if (!product) {
             throw new CustomError("Serviço não encontrado.", 404);
         }
-        // Validar se product.product_type === 'SERVICE'
-        if(product.product_type !== "SERVICE") throw new CustomError("O produto informado não é um serviço.", 400);
+        // Validar se product.product_type === 'BOOKABLE_SERVICE'
+        if(product.product_type !== "BOOKABLE_SERVICE") throw new CustomError("O produto informado não é um serviço.", 400);
 
         const businessUuid = product.business_info_uuid; 
 

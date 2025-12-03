@@ -14,6 +14,7 @@ export class N8nNotifierProvider implements INotifierProvider {
   }
 
   async notify(payload: INotifierPayload): Promise<void> {
+    console.log("Chamou o notifier N8n com payload:", payload);
     // Usamos o padrão "fire and forget" dentro do método para garantir que erros
     // de rede não propaguem para quem chamou (o UseCase).
     this.axiosClient.post(this.n8nUrl, payload)
