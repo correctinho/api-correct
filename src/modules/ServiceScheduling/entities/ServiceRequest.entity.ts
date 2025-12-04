@@ -67,6 +67,8 @@ export class ServiceRequestEntity {
     get status(): RequestStatus { return this._status; }
     get requestedWindows(): RequestedWindowProps[] { return this._requestedWindows; }
     get suggestedSlots(): SuggestedSlotProps[] { return this._suggestedSlots; }
+    get createdAt(): Date { return this._createdAt; }
+    get updatedAt(): Date { return this._updatedAt; }
 
     // --- Métodos de Negócio ---
 

@@ -27,7 +27,6 @@ export class CreateProductUsecase {
     const category = await this.categoryRepository.find(new Uuid(data.category_uuid));
     if (!category) throw new CustomError('Categoria não encontrada.', 404);
 
-    // O comando de criação agora é mais simples, sem dados de imagem.
     const productCreateCommand: ProductCreateCommand = {
       name: data.name,
       description: data.description,

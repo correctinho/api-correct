@@ -1,16 +1,39 @@
-import { CustomError } from "../../../../../errors/custom.error";
-import { ICompanyUserRepository } from "../../repositories/company-user.repository";
+import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
+import { CustomError } from '../../../../../errors/custom.error';
+import { IProductRepository } from '../../../../Ecommerce/Products/repositories/product.repository';
+import { IServiceRequestRepository } from '../../../../ServiceScheduling/repositories/IServiceRequestRepository';
+import { ICompanyUserRepository } from '../../repositories/company-user.repository';
 
-export class CompanyUserDetailsUsecase{
+export class CompanyUserDetailsUsecase {
     constructor(
-        private companyUserRepository: ICompanyUserRepository
-    ){}
+        private serviceRequestRepository: IServiceRequestRepository,
+        private productsRepository: IProductRepository
+    ) {}
 
-    async execute(id: string){
+    async execute(businessInfoUuid: string) {
+        //company use details was already found in the middleware
 
-        const getUserDetails = await this.companyUserRepository.findById(id)
-        if(!getUserDetails) throw new CustomError("User not found", 401)
+        //here we are going to verify other possible datas from the user
 
-        return getUserDetails
+        //get user service scheduling notifications
+
+        const [pendingRequestsCount, hasSchedulingFeature] = await Promise.all([
+            this.serviceRequestRepository.countPendingByBusiness(
+                new Uuid(businessInfoUuid)
+            ),
+            this.productsRepository.hasBookableServices(new Uuid(businessInfoUuid))
+            // Outros contadores futuros poderiam vir aqui
+        ]);
+
+        return {
+            dashboard_state: {
+                notifications: {
+                    pending_service_requests: pendingRequestsCount,
+                },
+                features: {
+                    has_scheduling: hasSchedulingFeature
+                }
+            },
+        };
     }
 }
