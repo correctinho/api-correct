@@ -5,4 +5,6 @@ import { ServiceRequestEntity } from "../entities/ServiceRequest.entity";
 export interface IServiceRequestRepository extends RepositoryInterface<ServiceRequestEntity> {
     findPendingByBusiness(businessUuid: Uuid): Promise<ServiceRequestEntity[]>
     countPendingByBusiness(businessUuid: Uuid): Promise<number>;
+    findByUser(userUuid: Uuid): Promise<ServiceRequestEntity[]>
+    findConfirmedByBusiness(businessUuid: Uuid): Promise<ServiceRequestEntity[]>;
 }

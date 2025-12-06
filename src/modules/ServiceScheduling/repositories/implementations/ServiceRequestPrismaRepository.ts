@@ -12,6 +12,51 @@ import { prismaClient } from '../../../../infra/databases/prisma.config';
 export class ServiceRequestPrismaRepository
     implements IServiceRequestRepository
 {
+    async findConfirmedByBusiness(businessUuid: Uuid): Promise<ServiceRequestEntity[]> {
+        const rawRequests = await prismaClient.serviceRequest.findMany({
+            where: {
+                business_info_uuid: businessUuid.uuid,
+                status: RequestStatus.CONFIRMED
+            },
+            include: {
+                RequestedWindows: true,
+                SuggestedSlots: true,
+
+                // Mantemos a inclusão necessária para a ordenação
+                ConfirmedAppointment: true
+            },
+            orderBy: {
+                // Ordenação pela data final na tabela relacionada
+                ConfirmedAppointment: {
+                    final_scheduled_date: 'asc'
+                }
+            }
+        });
+
+        // Agora o 'raw' terá todas as propriedades necessárias para o hydrate
+        return rawRequests.map(raw => this.hydrate(raw));
+    }
+    async findByUser(userUuid: Uuid): Promise<ServiceRequestEntity[]> {
+        const rawRequests = await prismaClient.serviceRequest.findMany({
+            where: {
+                // Filtra pelo ID do usuário
+                user_info_uuid: userUuid.uuid
+            },
+            include: {
+                // EAGER LOADING: Traz os filhos essenciais para o agregado
+                RequestedWindows: true,
+                SuggestedSlots: true,
+                BusinessInfo: true,
+                Product: true
+            },
+            orderBy: {
+                created_at: 'desc' // Ordena pelos mais recentes primeiro
+            }
+        });
+
+        // Mapeia os resultados crus para entidades de domínio usando o hydrate existente
+        return rawRequests.map(raw => this.hydrate(raw));
+    }
     async countPendingByBusiness(businessUuid: Uuid): Promise<number> {
         const count = await prismaClient.serviceRequest.count({
             where: {
