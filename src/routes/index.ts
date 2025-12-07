@@ -16,6 +16,7 @@ import { ecommerceRouter } from './Ecommerce/ecommerce.routes';
 import { accountsRouter } from './Accounts/accounts';
 import { sseRouter } from './SSERoute/sse.route';
 import { subscriptionRouter } from './Subscriptions/subscriptions.routes';
+import { serviceScheduling } from './ServiceScheduling/serviceScheduling,routes';
 
 const router = Router();
 
@@ -36,5 +37,6 @@ router.use(ecommerceRouter)
 router.use(accountsRouter)
 router.use(subscriptionRouter)
 router.use(sseRouter)
+router.use(serviceScheduling)
 
 export { router };

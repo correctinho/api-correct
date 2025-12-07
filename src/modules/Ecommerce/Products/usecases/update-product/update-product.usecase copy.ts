@@ -4,8 +4,6 @@ import { ProductHistoryEntity } from "../../entities/product-history.entity";
 import { ProductCreateCommand } from "../../entities/product.entity";
 import { IProductRepository } from "../../repositories/product.repository";
 import { InputUpdateProductDTO, OutputUpdateProductDTO } from "./dto/update-product.dto";
-// ADICIONADO: Import necessário para verificar o tipo do produto
-import { ProductType } from '@prisma/client';
 
 export class UpdateProductUsecase {
     constructor(
@@ -20,51 +18,26 @@ export class UpdateProductUsecase {
             throw new CustomError('Acesso negado.', 403);
         }
 
-        // --- INÍCIO DA LÓGICA DE FILTRAGEM POR TIPO ---
-        // Se o produto NÃO for físico, removemos os campos que não devem ser atualizados.
-        if (product.product_type !== ProductType.PHYSICAL) {
-            // Lista de campos que só fazem sentido para produtos físicos
-            // Usamos keyof ProductCreateCommand para garantir que os nomes estão certos
-            const fieldsToRemove: Array<keyof ProductCreateCommand> = ['weight', 'height', 'width', 'stock'];
-
-            fieldsToRemove.forEach(field => {
-                // Verifica se o campo veio no DTO de entrada
-                if (field in input.data) {
-                    // Remove o campo do objeto de entrada.
-                    // O cast para (any) é necessário aqui porque o TypeScript pode ser restritivo
-                    // ao deletar propriedades opcionais de um tipo mapeado.
-                    delete (input.data as any)[field];
-                }
-            });
-            // Agora, input.data está "limpo" de campos indesejados para serviços.
-        }
-        // --- FIM DA LÓGICA DE FILTRAGEM ---
-
-
         const historyEntries: ProductHistoryEntity[] = [];
 
         // 3. COMPARAÇÃO E CRIAÇÃO DE HISTÓRICO
-        // Iteramos sobre as chaves do objeto de entrada (que já foi filtrado acima)
+        // <<< CORREÇÃO DE TIPAGEM AQUI >>>
+        // Iteramos sobre as chaves do objeto de entrada de forma segura
         for (const key of Object.keys(input.data) as Array<keyof typeof input.data>) {
             // Comparamos o novo valor com o valor antigo (usando os getters para o formato correto)
-            // Adicionei uma verificação extra de segurança para null/undefined
-            const newValue = input.data[key];
-            const oldValue = product[key];
-
-            if (newValue !== undefined && oldValue !== newValue) {
+            if (input.data[key] !== undefined && product[key] !== input.data[key]) {
                 historyEntries.push(ProductHistoryEntity.create({
                     product_uuid: product.uuid,
                     changed_by_uuid: new Uuid(input.businessUserId),
                     field_changed: key,
-                    old_value: oldValue === null || oldValue === undefined ? 'N/A' : String(oldValue), // Tratamento melhor para nulos
-                    new_value: newValue === null || newValue === undefined ? 'N/A' : String(newValue), // Tratamento melhor para nulos
+                    old_value: String(product[key]), // Converte o valor antigo para string
+                    new_value: String(input.data[key]), // Converte o novo valor para string
                 }));
             }
         }
 
-        // Se nenhuma alteração foi detectada após a filtragem, retorna o produto atual.
+        // Se nenhuma alteração foi detectada, apenas retorna o produto como está.
         if (historyEntries.length === 0) {
-             // (Retorno do objeto product atual, sem alterações - código mantido igual ao original)
             return {
                 uuid: product.uuid.uuid,
                 name: product.name,
@@ -83,7 +56,6 @@ export class UpdateProductUsecase {
         }
 
         // 4. APLICA AS MUDANÇAS NA ENTIDADE
-        // O método update da entidade só receberá os campos filtrados
         product.update(input.data as Partial<ProductCreateCommand>, new Uuid(input.businessUserId));
 
         // 5. SALVA O PRODUTO E O HISTÓRICO ATOMICAMENTE

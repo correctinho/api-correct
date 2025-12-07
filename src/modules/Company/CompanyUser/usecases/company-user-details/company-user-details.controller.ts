@@ -1,38 +1,46 @@
-import { Request, Response } from "express";
-import { ICompanyUserRepository } from "../../repositories/company-user.repository";
+import { Request, Response } from 'express';
+import { ICompanyUserRepository } from '../../repositories/company-user.repository';
+import { IServiceRequestRepository } from '../../../../ServiceScheduling/repositories/IServiceRequestRepository';
+import { CompanyUserDetailsUsecase } from './company-user-details.usecase';
+import { IProductRepository } from '../../../../Ecommerce/Products/repositories/product.repository';
 
-export class CompanyUserDetailsController{
+export class CompanyUserDetailsController {
     constructor(
-        private companyUserRepository: ICompanyUserRepository
-    ){}
+        private serviceRequestRepository: IServiceRequestRepository,
+        private productsRepository: IProductRepository
+    ) {}
 
-    async handle(req: Request, res: Response){
-
-        try{
-
-            const companyUser = req.companyUser
+    async handle(req: Request, res: Response) {
+        try {
+            const companyUser = req.companyUser;
             const user = {
-              uuid: companyUser.companyUserId,
-              business_info_uuid: companyUser.businessInfoUuid,
-              is_admin: companyUser.isAdmin,
-              document: companyUser.document,
-              name: companyUser.name,
-              email: companyUser.email,
-              user_name: companyUser.userName,
-              function: companyUser.function,
-              permissions: companyUser.permissions,
-              status: companyUser.status,
-              created_at: companyUser.created_at,
-              updated_at: companyUser.updated_at
-            }
-            return res.json(user)
+                uuid: companyUser.companyUserId,
+                business_info_uuid: companyUser.businessInfoUuid,
+                is_admin: companyUser.isAdmin,
+                document: companyUser.document,
+                name: companyUser.name,
+                email: companyUser.email,
+                user_name: companyUser.userName,
+                function: companyUser.function,
+                permissions: companyUser.permissions,
+                status: companyUser.status,
+                created_at: companyUser.created_at,
+                updated_at: companyUser.updated_at,
+            };
+            const usecase = new CompanyUserDetailsUsecase(
+                this.serviceRequestRepository,
+                this.productsRepository
+            );
+            const additionalData = await usecase.execute(
+                companyUser.businessInfoUuid
+            );
 
-        }catch(err:any){
-            return res.status(err.statusCode).json({
-                error: err.message
-            })
+            return res.json({ ...user, ...additionalData });
+        } catch (err: any) {
+            const statusCode = err.statusCode || 500;
+            return res.status(statusCode).json({
+                error: err.message || 'Internal Server Error',
+            });
         }
-
-
     }
 }

@@ -5,6 +5,19 @@ import { ProductEntity, ProductProps } from '../../entities/product.entity';
 import { IProductRepository } from '../product.repository';
 
 export class ProductPrismaRepository implements IProductRepository {
+  async hasBookableServices(businessUuid: Uuid): Promise<boolean> {
+    // Conta quantos produtos do tipo BOOKABLE_SERVICE essa empresa tem.
+    const count = await prismaClient.products.count({
+        where: {
+            business_info_uuid: businessUuid.uuid,
+            product_type: 'BOOKABLE_SERVICE',
+            is_active: true
+        }
+    });
+
+    // Se a contagem for maior que 0, retorna true.
+    return count > 0;
+}
   async updateWithHistory(entity: ProductEntity, history: ProductHistoryEntity[]): Promise<void> {
     // 1. Preparamos os dados para a persistência usando o método .toJSON() de cada entidade.
     const productDataToSave = entity.toJSON();
