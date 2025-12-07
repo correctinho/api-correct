@@ -30,7 +30,6 @@ export class FindBusinessProductsController {
         )
         products = await usecase.execute(business_info_uuid);
       }
-
       return res.status(200).json(products);
 
     } catch (err: any) {

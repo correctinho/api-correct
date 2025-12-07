@@ -5,7 +5,6 @@ import { IProductRepository } from '../../repositories/product.repository';
 import { ICompanyUserRepository } from '../../../../Company/CompanyUser/repositories/company-user.repository';
 import { ICategoriesRepository } from '../../../Categories/repositories/categories.repository';
 import { InputCreateProductDTO, OutputCreateProductDTO } from './dto/create-product.dto';
-import { ProductType } from '@prisma/client';
 
 /**
  * Usecase responsável APENAS pela criação dos dados de um produto.
@@ -28,37 +27,25 @@ export class CreateProductUsecase {
     const category = await this.categoryRepository.find(new Uuid(data.category_uuid));
     if (!category) throw new CustomError('Categoria não encontrada.', 404);
 
-    // --- LÓGICA ADICIONADA ---
-    // Determina se é um produto físico para decidir se envia as dimensões.
-    // Se o tipo não for informado, a Entidade assume PHYSICAL por padrão, então tratamos como tal aqui também.
-    const isPhysicalProduct = !data.product_type || data.product_type === ProductType.PHYSICAL;
-
     const productCreateCommand: ProductCreateCommand = {
       name: data.name,
       description: data.description,
       created_by_uuid: new Uuid(data.business_user_uuid),
       ean_code: data.ean_code,
-      // Passamos o tipo recebido (ou undefined). A Entidade lida com o default para PHYSICAL.
-      product_type: data.product_type as ProductType,
+      product_type: data.product_type,
       brand: data.brand,
       category_uuid: category.uuid,
       business_info_uuid: businessUserDetails.business_info_uuid,
-      original_price: data.original_price,
+      original_price: data.original_price, // Espera-se que a conversão para centavos seja feita na entidade
       discount: data.discount,
-      // Passamos o estoque recebido. A Entidade ignora e seta 1 se for serviço.
       stock: data.stock,
       is_mega_promotion: data.is_mega_promotion,
       is_active: data.is_active,
-
-      // --- MUDANÇA AQUI ---
-      // Só passamos as dimensões se for um produto físico.
-      // Caso contrário, passamos undefined (ou null) para manter o comando limpo.
-      weight: isPhysicalProduct ? data.weight : undefined,
-      height: isPhysicalProduct ? data.height : undefined,
-      width: isPhysicalProduct ? data.width : undefined,
+      weight: data.weight,
+      height: data.height,
+      width: data.width,
     };
 
-    // A Entidade realiza todas as validações de negócio (estoque negativo, preços, etc)
     const productEntity = ProductEntity.create(productCreateCommand);
 
     // O produto é salvo com um array de images_url vazio.

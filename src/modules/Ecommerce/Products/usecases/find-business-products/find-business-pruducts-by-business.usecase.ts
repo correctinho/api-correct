@@ -28,13 +28,14 @@ export class FindOwnBusinessProductsUsecase {
         stock: product.stock,
         brand: product.brand,
         is_active: product.is_active, // Retornamos o status para o parceiro
-
+        created_at: product.created_at,
         // Retornamos todos os tamanhos de imagem para a tela de gerenciamento
         images_url: {
           thumbnail: product.image_urls.filter(image => image.endsWith('thumb.webp')),
           medium: product.image_urls.filter(image => image.endsWith('medium.webp')),
           large: product.image_urls.filter(image => image.endsWith('large.webp')),
         }
+        
       };
     });
   }
