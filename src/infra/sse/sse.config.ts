@@ -46,3 +46,21 @@ export const sseSendEvent = (transactionId: string, eventName: string, data: obj
         console.log(`🚀 Evento '${eventName}' enviado para a transação: ${transactionId}`);
     }
 };
+
+export const sseDisconnect = (transactionId: string) => {
+    const clientRes = clients.get(transactionId);
+
+    if (clientRes) {
+        console.log(`🔻 Encerrando conexão SSE pelo servidor para: ${transactionId}`);
+        // Envia um evento final opcional (boa prática)
+        clientRes.write(`event: connectionClosed\n`);
+        clientRes.write(`data: {"reason": "transaction_terminal_state"}\n\n`);
+
+        // O método .end() finaliza a resposta HTTP e fecha a conexão TCP subjacente.
+        clientRes.end();
+
+        // Removemos do mapa imediatamente. O 'req.on("close")' também dispararia,
+        // mas é mais seguro garantir a remoção aqui.
+        clients.delete(transactionId);
+    }
+};

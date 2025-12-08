@@ -465,6 +465,7 @@ calculateFee(): void {
       payer_business_info_uuid: this._payer_business_info_uuid ? this._payer_business_info_uuid.uuid : null,
       subscription_uuid: this._subscription_uuid ? this._subscription_uuid.uuid : null,
       created_at: this._created_at,
+      updated_at: this._updated_at
     };
   }
   // Adicione este método dentro da sua classe TransactionEntity

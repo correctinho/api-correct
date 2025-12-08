@@ -14,6 +14,7 @@ import { createMockPixChargeController } from "../../infra/providers/PixProvider
 import { activateTokenController } from "../../modules/Payments/OfflineTokens/usecases/activate-tokens-offline";
 import { processOfflineTokenController } from "../../modules/Payments/Transactions/useCases/process-pos-payment-by-offline-token";
 import { getTokensOffline } from "../../modules/Payments/OfflineTokens/usecases/get-tokens-offline";
+import { cancelPOSTransactionController } from "../../modules/Payments/Transactions/useCases/cancel-pos-transaction";
 
 const transactionsRouter = Router()
 
@@ -78,5 +79,14 @@ transactionsRouter.get("/app-user/offline-tokens", appUserIsAuth, async (request
 transactionsRouter.post("/app-user/transation/offline-token", companyIsAuth, async (request, response) => {
   await processOfflineTokenController.handle(request, response)
 })
+
+// Cancel POS Transaction
+transactionsRouter.patch(
+  '/transactions/:transaction_uuid/cancel',
+  companyIsAuth,
+  (request, response) => {
+    return cancelPOSTransactionController.handle(request, response);
+  }
+);
 
 export { transactionsRouter }

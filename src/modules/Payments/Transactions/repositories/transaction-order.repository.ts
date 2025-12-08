@@ -80,5 +80,6 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
     user_cashback_amount: number;
   }>;
   upsert(entity: TransactionEntity): Promise<void>;
+  cancelTransaction(transactionUuid: Uuid): Promise<void>;
 }
     
