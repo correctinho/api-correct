@@ -1588,8 +1588,17 @@ export class TransactionOrderPrismaRepository
             data: dataToPersist,
         });
     }
-    update(entity: TransactionEntity): Promise<void> {
+    async update(entity: TransactionEntity): Promise<void> {
         throw new CustomError('Method not implemented.');
+    }
+    async cancelTransaction(id: Uuid): Promise<void> {
+        await prismaClient.transaction.update({
+            where: { uuid: id.uuid },
+            data: {
+                status: 'canceled',
+                updated_at: new Date(),
+            },
+        })
     }
 
     findAll(): Promise<TransactionEntity[]> {
