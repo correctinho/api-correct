@@ -1592,11 +1592,11 @@ export class TransactionOrderPrismaRepository
         throw new CustomError('Method not implemented.');
     }
     async cancelTransaction(id: Uuid): Promise<void> {
-        await prismaClient.transaction.update({
+        await prismaClient.transactions.update({
             where: { uuid: id.uuid },
             data: {
-                status: 'canceled',
-                updated_at: new Date(),
+                status: 'cancelled',
+                updated_at: newDateF(new Date()),
             },
         })
     }
