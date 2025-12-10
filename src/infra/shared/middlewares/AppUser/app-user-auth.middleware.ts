@@ -33,7 +33,7 @@ export const appUserIsAuth = async (req: Request, res: Response, next: NextFunct
       transaction_pin: null,
       created_at: '',
       updated_at: '',
-      user_info_uuid: ''
+      user_info_uuid: '',
     }
 
     const appUserAuthRepository = new AppUserAuthPrismaRepository()

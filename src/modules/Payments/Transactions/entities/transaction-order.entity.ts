@@ -393,6 +393,7 @@ calculateFee(): void {
     const discountAmount = Math.round((this._original_price * this._discount_percentage) / 1000000);
 
     if (this._net_price !== this._original_price - discountAmount) {
+      
       throw new CustomError("Net price is not consistent with original price and discount percentage", 400);
     }
 

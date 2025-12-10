@@ -33,6 +33,7 @@ declare global {
         created_at: string,
         updated_at: string | null
         user_info_uuid: string | null
+        transaction_pin: string | null
       }
     }
   }

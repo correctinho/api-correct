@@ -31,6 +31,7 @@ export class FindAllUserItemsByAppUserUsecase {
         status: userItem.status,
         cancelling_request_at: userItem.cancelling_request_at,
         grace_period_end_date: userItem.grace_period_end_date,
+        item_category: userItem.item_category,
         created_at: userItem.created_at,
         updated_at: userItem.updated_at,
         

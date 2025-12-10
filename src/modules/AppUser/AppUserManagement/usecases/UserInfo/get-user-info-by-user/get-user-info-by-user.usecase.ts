@@ -12,7 +12,7 @@ export class GetUserInfoByUserUsecase {
     private activeTokenRepository: IOfflineTokenRepository
   ) { }
 
-  async execute(userdocument: string): Promise<OutputFindUserDTO> {
+  async execute(userdocument: string, transaction_pin: string | null): Promise<OutputFindUserDTO> {
     // Buscar informações do usuário pelo documento processado
     const userInfo = await this.appUsersRepository.findByDocumentUserInfo(userdocument);
     if (!userInfo) throw new CustomError("User info not found", 404);
@@ -50,7 +50,8 @@ export class GetUserInfoByUserUsecase {
         created_at: emp.created_at || null,
         updated_at: emp.updated_at || null
       })),
-      is_offline_enabled: activeToken
+      is_offline_enabled: activeToken,
+      transaction_pin: transaction_pin ? true : false
     };
   }
 

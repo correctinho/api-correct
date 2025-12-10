@@ -87,7 +87,7 @@ export class GenerateReceiptPdfUsecase {
      */
     private createReceiptHtml(data: any, qrCodeDataUrl: string): string {
     const formatCurrency = (amountInCents: number) => {
-      return (amountInCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      return (amountInCents).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
     return `

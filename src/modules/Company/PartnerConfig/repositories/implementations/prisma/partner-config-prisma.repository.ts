@@ -85,6 +85,7 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
         business_info_uuid: id
       }
     })
+    console.log("partner config found: ", config)
     if (!config) return null
     return {
       uuid: new Uuid(config.uuid),

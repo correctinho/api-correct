@@ -66,5 +66,6 @@ export interface OutputFindUserDTO {
     updated_at: string | null
   }[] | []
   is_offline_enabled?: boolean
+  transaction_pin?: boolean
 
 }
