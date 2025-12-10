@@ -28,7 +28,6 @@ export class GetTokensOfflineUsecase {
       // Usuário nunca ativou tokens.
       return { offlineTokens: [] };
     }
-
     // B. Limpeza (Deleção de tokens expirados ou consumidos)
     const tokensToDelete = allUserTokens.filter(token =>
       token.user_item_uuid.equals(activeItemUuid) &&
@@ -89,7 +88,6 @@ export class GetTokensOfflineUsecase {
         });
         newOfflineTokensEntities.push(newEntity);
       }
-
       newTokens = await this.offlineTokenRepository.createMany(newOfflineTokensEntities);
 
       // Registrar histórico de ativação (reabastecimento)

@@ -38,7 +38,6 @@ export class CreatePOSTransactionOrderUsecase {
     const transactionEntity = TransactionEntity.create(data)
 
     transactionEntity.setPartnerCashbackPercentage(partnerConfig.cashback_tax)
-
     // Calculate fee
     transactionEntity.calculateFeePercentage(partnerConfig.admin_tax, partnerConfig.marketing_tax)
     transactionEntity.calculateFee()

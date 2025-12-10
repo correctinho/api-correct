@@ -80,31 +80,79 @@ export class OfflineTokensPrismaRepository implements IOfflineTokenRepository {
             })
         );
     }
-    async createMany(
-        entities: OfflineTokenEntity[]
-    ): Promise<OfflineTokenEntity[]> {
-        const data = entities.map((entity) => entity.toJSON()); // Converte entidades para objetos planos
-        const createdPrismaTokens =
-            await prismaClient.offlineToken.createManyAndReturn({ data }); // Usar createManyAndReturn para obter os objetos criados
+    // async createMany(
+    //     entities: OfflineTokenEntity[]
+    // ): Promise<OfflineTokenEntity[]> {
+    //     const data = entities.map((entity) => entity.toJSON()); // Converte entidades para objetos planos
+    //     console.log({data})
+    //     const createdPrismaTokens =
+    //         await prismaClient.offlineToken.createManyAndReturn({ data }); 
 
-        // Mapeia os objetos do Prisma de volta para entidades
-        return createdPrismaTokens.map((prismaToken) =>
-            OfflineTokenEntity.hydrate({
-                uuid: new Uuid(prismaToken.uuid),
-                token_code: prismaToken.token_code,
-                user_info_uuid: new Uuid(prismaToken.user_info_uuid),
-                user_item_uuid: new Uuid(prismaToken.user_item_uuid),
-                status: prismaToken.status,
-                expires_at: prismaToken.expires_at,
-                activated_at: prismaToken.activated_at,
-                last_accessed_at: prismaToken.last_accessed_at,
-                last_used_at: prismaToken.last_used_at,
-                sequence_number: prismaToken.sequence_number,
-                created_at: prismaToken.created_at,
-                updated_at: prismaToken.updated_at,
-            })
-        );
-    }
+    //     // Mapeia os objetos do Prisma de volta para entidades
+    //     return createdPrismaTokens.map((prismaToken) =>
+    //         OfflineTokenEntity.hydrate({
+    //             uuid: new Uuid(prismaToken.uuid),
+    //             token_code: prismaToken.token_code,
+    //             user_info_uuid: new Uuid(prismaToken.user_info_uuid),
+    //             user_item_uuid: new Uuid(prismaToken.user_item_uuid),
+    //             status: prismaToken.status,
+    //             expires_at: prismaToken.expires_at,
+    //             activated_at: prismaToken.activated_at,
+    //             last_accessed_at: prismaToken.last_accessed_at,
+    //             last_used_at: prismaToken.last_used_at,
+    //             sequence_number: prismaToken.sequence_number,
+    //             created_at: prismaToken.created_at,
+    //             updated_at: prismaToken.updated_at,
+    //         })
+    //     );
+    // }
+    async createMany(
+    entities: OfflineTokenEntity[]
+): Promise<OfflineTokenEntity[]> {
+    // Mapeamento explícito campo por campo para o formato de entrada do Prisma
+    const prismaCreateInputData = entities.map((entity) => {
+        // Usamos toJSON() para obter os valores primitivos (strings para UUIDs, Dates, etc.)
+        const rawData = entity.toJSON();
+        return {
+            // Mapeando CAMPO POR CAMPO explicitamente:
+            uuid: rawData.uuid,
+            token_code: rawData.token_code,
+            user_info_uuid: rawData.user_info_uuid,
+            user_item_uuid: rawData.user_item_uuid,
+            status: rawData.status,
+            expires_at: rawData.expires_at,
+            activated_at: rawData.activated_at,
+            last_accessed_at: rawData.last_accessed_at,
+            last_used_at: rawData.last_used_at,
+            sequence_number: rawData.sequence_number,
+            created_at: rawData.created_at,
+            updated_at: rawData.updated_at,
+        };
+    });
+
+    // Passa o array de objetos mapeados explicitamente para o Prisma
+    const createdPrismaTokens = await prismaClient.offlineToken.createManyAndReturn({
+        data: prismaCreateInputData,
+    });
+
+    // Mapeia os objetos do Prisma de volta para entidades (Hidratação)
+    return createdPrismaTokens.map((prismaToken) =>
+        OfflineTokenEntity.hydrate({
+            uuid: new Uuid(prismaToken.uuid),
+            token_code: prismaToken.token_code,
+            user_info_uuid: new Uuid(prismaToken.user_info_uuid),
+            user_item_uuid: new Uuid(prismaToken.user_item_uuid),
+            status: prismaToken.status, // O Prisma já retorna o tipo correto do Enum aqui
+            expires_at: prismaToken.expires_at,
+            activated_at: prismaToken.activated_at,
+            last_accessed_at: prismaToken.last_accessed_at,
+            last_used_at: prismaToken.last_used_at,
+            sequence_number: prismaToken.sequence_number,
+            created_at: prismaToken.created_at,
+            updated_at: prismaToken.updated_at,
+        })
+    );
+}
     async findByTokenCode(
         tokenCode: string
     ): Promise<OfflineTokenEntity | null> {

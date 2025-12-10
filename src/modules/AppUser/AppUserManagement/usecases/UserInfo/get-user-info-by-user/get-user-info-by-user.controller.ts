@@ -13,9 +13,11 @@ export class GetUserInfoByUserController{
 
         try{
             const userDocument = req.appUser.document
+            const transactionPin = req.appUser.transaction_pin
+
             const usecase = new GetUserInfoByUserUsecase(this.appUsersRepository, this.activeTokenRepository)
 
-            const result = await usecase.execute(userDocument)
+            const result = await usecase.execute(userDocument, transactionPin)
             return res.json(result)
 
         }catch(err: any){

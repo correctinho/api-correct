@@ -18,7 +18,6 @@ export class  FindAllUserItemsByAppUserController {
       const usecase = new FindAllUserItemsByAppUserUsecase(this.appUserItemRepository)
 
       const result = await usecase.execute(userInfoUuid)
-
       return res.json(result)
     } catch (err: any) {
       return res.status(err.statusCode).json({
