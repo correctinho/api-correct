@@ -17,15 +17,11 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
     }
 
     async find(id: Uuid): Promise<AppUserAuthSignUpEntity | null> {
-        const user = await prismaClient.userAuth.findUnique({
-            where: {
-                uuid: id.uuid
-            }
-        })
-
+        const user = await prismaClient.userAuth.findUnique({ where: { uuid: id.uuid } })
         if (!user) return null
 
-        return {
+        // Cria o objeto de props
+        const props = {
             uuid: new Uuid(user.uuid),
             user_info_uuid: user.user_info_uuid ? new Uuid(user.user_info_uuid) : null,
             document: user.document,
@@ -34,8 +30,14 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
             transaction_pin: user.transaction_pin,
             is_active: user.is_active,
             created_at: user.created_at,
-            updated_at: user.updated_at
-        } as AppUserAuthSignUpEntity
+            updated_at: user.updated_at,
+            // Novos campos
+            is_email_verified: user.is_email_verified,
+            email_verification_token: user.email_verification_token,
+            email_verification_expires_at: user.email_verification_expires_at
+        };
+
+        return AppUserAuthSignUpEntity.hydrate(props);
     }
     findAll(): Promise<AppUserAuthSignUpEntity[]> {
         throw new Error("Method not implemented.");
@@ -43,12 +45,15 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
 
 
     async create(data: AppUserAuthSignUpEntity): Promise<void> {
-        const user = await prismaClient.userAuth.create({
+        await prismaClient.userAuth.create({
             data: {
                 uuid: data.uuid.uuid,
                 user_info_uuid: data.user_info_uuid ? data.user_info_uuid.uuid : null,
                 document: data.document,
                 email: data.email,
+                is_email_verified: data.is_email_verified,
+                email_verification_token: data.email_verification_token,
+                email_verification_expires_at: data.email_verification_expires_at,
                 password: data.password,
                 created_at: data.created_at
             }
@@ -65,6 +70,9 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
                 user_info_uuid: data.user_info_uuid.uuid,
                 document: data.document,
                 email: data.email,
+                email_verification_expires_at: data.email_verification_expires_at,
+                email_verification_token: data.email_verification_token,
+                is_email_verified: data.is_email_verified,
                 updated_at: newDateF(new Date())
             }
         })
@@ -72,15 +80,11 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
 
 
     async findByEmail(email: string): Promise<AppUserAuthSignUpEntity | null> {
-        const appUser = await prismaClient.userAuth.findUnique({
-            where: {
-                email: email
-            }
-        })
+        const appUser = await prismaClient.userAuth.findUnique({ where: { email: email } })
         if (!appUser) return null
 
-
-        return {
+        // Cria o objeto de props
+        const props = {
             uuid: new Uuid(appUser.uuid),
             user_info_uuid: appUser.user_info_uuid ? new Uuid(appUser.user_info_uuid) : null,
             document: appUser.document,
@@ -88,21 +92,21 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
             password: appUser.password,
             is_active: appUser.is_active,
             created_at: appUser.created_at,
-            updated_at: appUser.updated_at
-
-        } as AppUserAuthSignUpEntity
+            updated_at: appUser.updated_at,
+            // Novos campos
+            is_email_verified: appUser.is_email_verified,
+            email_verification_token: appUser.email_verification_token,
+            email_verification_expires_at: appUser.email_verification_expires_at
+        };
+        return AppUserAuthSignUpEntity.hydrate(props);
     }
 
     async findByDocument(document: string): Promise<AppUserAuthSignUpEntity | null> {
-        const appUser = await prismaClient.userAuth.findUnique({
-            where: {
-                document: document
-            }
-        })
-
+        const appUser = await prismaClient.userAuth.findUnique({ where: { document: document } })
         if (!appUser) return null
 
-        return {
+        // Cria o objeto de props (CORRIGIDO: Adicionados campos faltantes)
+        const props = {
             uuid: new Uuid(appUser.uuid),
             user_info_uuid: appUser.user_info_uuid ? new Uuid(appUser.user_info_uuid) : null,
             document: appUser.document,
@@ -110,9 +114,12 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
             password: appUser.password,
             is_active: appUser.is_active,
             created_at: appUser.created_at,
-            updated_at: appUser.updated_at
-
-        } as AppUserAuthSignUpEntity
+            updated_at: appUser.updated_at,
+            is_email_verified: appUser.is_email_verified,
+            email_verification_token: appUser.email_verification_token,
+            email_verification_expires_at: appUser.email_verification_expires_at
+        };
+        return AppUserAuthSignUpEntity.hydrate(props);
     }
 
 
