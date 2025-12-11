@@ -29,6 +29,11 @@ export class AuthenticateAppuserUsecase {
     const comparePasswordHash = await this.passwordCrypto.compare(password, appUser.password)
     if (!comparePasswordHash) throw new CustomError("Document/password is incorrect", 401)
 
+    //Verifica se o email já está validado
+    if (!appUser.is_email_verified) {
+        throw new CustomError("Email não confirmado.", 403);
+    }
+    
     //criar token através da api local
     const tokenGenerated = await this.token.create(appUser)
     return {
