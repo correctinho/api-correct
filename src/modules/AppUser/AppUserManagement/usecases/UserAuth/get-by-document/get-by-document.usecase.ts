@@ -144,7 +144,7 @@ export class GetByDocumentUsecase {
             }
     
             if (!getUserInfo.user_document_validation_uuid) {
-                status = false;
+                status =true;
                 userAuth = true;
                 userInfo = true;
                 address = true;
@@ -167,7 +167,7 @@ export class GetByDocumentUsecase {
                     getUserInfo.user_document_validation_uuid
                 );
             if (!userValidations) {
-                status = false;
+                status = true;
                 userAuth = true;
                 userInfo = true;
                 address = true;
@@ -185,14 +185,14 @@ export class GetByDocumentUsecase {
                 };
             }
             
-            if (
-                (userValidations.document_front_status !== 'approved' && userValidations.document_front_status !== "under_analysis") ||
-                (userValidations.document_back_status !== 'approved' && userValidations.document_back_status !== "under_analysis") ||
-                (userValidations.selfie_status !== 'approved' && userValidations.selfie_status !== "under_analysis") ||
-                (userValidations.document_selfie_status !== 'approved' && userValidations.document_selfie_status !== "under_analysis")
-            ) {
-                status = false;
-            }
+            // if (
+            //     (userValidations.document_front_status !== 'approved' && userValidations.document_front_status !== "under_analysis") ||
+            //     (userValidations.document_back_status !== 'approved' && userValidations.document_back_status !== "under_analysis") ||
+            //     (userValidations.selfie_status !== 'approved' && userValidations.selfie_status !== "under_analysis") ||
+            //     (userValidations.document_selfie_status !== 'approved' && userValidations.document_selfie_status !== "under_analysis")
+            // ) {
+            //     status = true;
+            // }
             return {
                 status: status,
                 UserAuth: userAuth,

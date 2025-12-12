@@ -6,4 +6,5 @@ export interface IAppUserAuthRepository extends RepositoryInterface<AppUserAuthS
     findByDocument(document: string): Promise<AppUserAuthSignUpEntity>
     findByEmail(email: string): Promise<AppUserAuthSignUpEntity>
     updateTransactionPin(userId: string, pinHash: string): Promise<void>
+    updatePassword(data: AppUserAuthSignUpEntity): Promise<void>;
 }

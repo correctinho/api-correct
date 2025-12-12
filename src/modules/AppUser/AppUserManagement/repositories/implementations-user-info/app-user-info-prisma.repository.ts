@@ -660,6 +660,11 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
             },
             include: {
                 Employee: true,
+                UserAuth:{
+                    select:{
+                        email: true
+                    }
+                }
             },
         });
 
@@ -674,7 +679,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
             full_name: user.full_name,
             display_name: user.display_name,
             gender: user.gender,
-            email: user.email,
+            email: user.UserAuth[0].email,
             date_of_birth: user.date_of_birth,
             phone: user.phone,
             status: user.status,
