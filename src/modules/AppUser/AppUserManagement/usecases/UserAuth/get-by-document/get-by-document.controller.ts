@@ -19,7 +19,6 @@ export class GetByDocumentController {
             const getByDocument = new GetByDocumentUsecase(this.appUserRepository, this.appUserInfoRepository, this.appUserValidationRepository)
             
             const user = await getByDocument.execute(document)
-           
             return res.json(user)
 
         } catch (err: any) {

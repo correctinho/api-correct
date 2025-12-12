@@ -18,6 +18,8 @@ export type AppUserAuthProps = {
     is_email_verified?: boolean;
     email_verification_token?: string | null;
     email_verification_expires_at?: string | Date | null;
+    password_reset_token?: string | null;
+    password_reset_expires_at?: string | Date | null
     created_at?: string;
     updated_at?: string;
 };
@@ -32,6 +34,8 @@ export class AppUserAuthSignUpEntity {
     private _is_email_verified: boolean;
     private _email_verification_token: string | null;
     private _email_verification_expires_at: Date | null;
+    private _password_reset_token: string | null;
+    private _password_reset_expires_at: Date | null;
     private _created_at?: string;
     private _updated_at?: string;
 
@@ -47,6 +51,8 @@ export class AppUserAuthSignUpEntity {
         this._updated_at = newDateF(new Date());
         this._is_email_verified = props.is_email_verified ?? false;
         this._email_verification_token = props.email_verification_token ?? null;
+        this._password_reset_token = props.password_reset_token ?? null;
+        this._password_reset_expires_at = this.parseDate(props.password_reset_expires_at);
 
         if (props.email_verification_expires_at) {
             this._email_verification_expires_at =
@@ -57,6 +63,11 @@ export class AppUserAuthSignUpEntity {
             this._email_verification_expires_at = null;
         }
         this.validate();
+    }
+
+    private parseDate(dateValue: string | Date | null | undefined): Date | null {
+        if (!dateValue) return null;
+        return typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
     }
 
     get is_email_verified(): boolean {
@@ -103,6 +114,8 @@ export class AppUserAuthSignUpEntity {
         return this._updated_at;
     }
 
+    get password_reset_token(): string | null { return this._password_reset_token; }
+    get password_reset_expires_at(): Date | null { return this._password_reset_expires_at; }
     private set password(password: string) {
         this._password = password;
     }
@@ -110,6 +123,24 @@ export class AppUserAuthSignUpEntity {
         this._document = document;
     }
 
+    public generatePasswordResetToken(): string {
+        // Usa o utilitário compartilhado com o tipo específico 'password_reset'
+        const token = generateActionToken(this._uuid.uuid, 'password_reset');
+
+        this._password_reset_token = token;
+
+        // Define a expiração para 1 hora a partir de agora
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 1);
+        this._password_reset_expires_at = expiresAt;
+
+        return token;
+    }
+
+    public clearPasswordResetToken(): void {
+        this._password_reset_token = null;
+        this._password_reset_expires_at = null;
+    }
     changeUserInfo(user_info_uuid: Uuid) {
         this._user_info_uuid = user_info_uuid;
         this.validate();

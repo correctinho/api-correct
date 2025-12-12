@@ -23,6 +23,8 @@ import { uploadImage } from "../../infra/shared/multer/multer-memory.config";
 import { createDocumentsE2ETestsController } from "../../modules/AppUser/AppUserManagement/usecases/DocumentsValidation/create-documents-validation/index-for-tests";
 import { verifyEmailController } from "../../modules/AppUser/AppUserManagement/usecases/UserAuth/verify-email";
 import { resendEmailVerificationController } from "../../modules/AppUser/AppUserManagement/usecases/UserAuth/resend-email-verification";
+import { sendForgotPassword } from "../../modules/AppUser/AppUserManagement/usecases/UserAuth/password-recovery/send-forgot-password-email";
+import { resetPasswordController } from "../../modules/AppUser/AppUserManagement/usecases/UserAuth/password-recovery/reset-password";
 
 const appUserRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -59,6 +61,16 @@ appUserRouter.post("/app-user/verify-email", async (request, response) => {
 appUserRouter.post("/app-user/resend-verification-email", async (request, response) => {
     await resendEmailVerificationController.handle(request, response)
 })
+
+//Reset Password - Send Forgot Password Mail
+appUserRouter.post("/app-user/forgot-password", async (request, response) => {
+    await sendForgotPassword.handle(request, response)
+})
+
+appUserRouter.post("/app-user/reset-password", async (request, response) => {
+    await resetPasswordController.handle(request, response)
+})
+
 //**********User Info*********** */
 
 //user Details by document - TESTED

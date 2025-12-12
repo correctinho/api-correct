@@ -38,7 +38,15 @@ export class ResendVerificationEmailUsecase {
                  throw new Error("Falha ao gerar novo token.");
              }
 
-             const frontendBaseUrl = 'https://megaapp.correct.com.br';
+             const frontendBaseUrl = process.env.FRONTEND_URL;
+
+            if (!frontendBaseUrl) {
+                // Log de erro crítico para o desenvolvedor (não vaza para o cliente)
+                console.error(
+                    'CRITICAL ERROR: FRONTEND_URL is not defined in .env'
+                );
+                return;
+            }
              const validationRoute = '/validar-email';
              const validationLink = `${frontendBaseUrl}${validationRoute}?token=${userEntity.email_verification_token}`;
 
