@@ -4,6 +4,7 @@ import {
     TransactionProps,
 } from '../../entities/transaction-order.entity';
 import {
+    ExecuteTeiTransferDTO,
     ITransactionOrderRepository,
     ProcessAppUserPixCreditPaymentResult,
     ProcessPaymentByBusinessParams,
@@ -1599,6 +1600,83 @@ export class TransactionOrderPrismaRepository
                 updated_at: newDateF(new Date()),
             },
         })
+    }
+
+    async executeTeiTransfer(data: ExecuteTeiTransferDTO): Promise<void> {
+        const { payerUserItemUuid, payeeUserItemUuid, amount, transactionData } = data;
+
+        await prismaClient.$transaction(async (tx) => {
+            // 1. LEITURA E TRAVA (Pagador)
+            const payerUserItem = await tx.userItem.findUnique({ where: { uuid: payerUserItemUuid } });
+            if (!payerUserItem) throw new CustomError("Conta do pagador não encontrada.", 404);
+
+            // VALIDAÇÃO DE SALDO DENTRO DA TRANSAÇÃO (Crucial para evitar race conditions)
+            if (payerUserItem.balance < amount) {
+                throw new CustomError("Saldo insuficiente.", 400);
+            }
+
+            const payerBalanceBefore = payerUserItem.balance;
+            const payerBalanceAfter = payerBalanceBefore - amount;
+
+            // 2. LEITURA (Recebedor)
+            const payeeUserItem = await tx.userItem.findUnique({ where: { uuid: payeeUserItemUuid } });
+            if (!payeeUserItem) throw new CustomError("Conta do recebedor não encontrada.", 404);
+
+            const payeeBalanceBefore = payeeUserItem.balance;
+            const payeeBalanceAfter = payeeBalanceBefore + amount;
+
+            // 3. ATUALIZAÇÃO DE SALDO (Escrita)
+            await tx.userItem.update({
+                where: { uuid: payerUserItemUuid },
+                data: { balance: payerBalanceAfter, updated_at: newDateF(new Date()) }
+            });
+
+            await tx.userItem.update({
+                where: { uuid: payeeUserItemUuid },
+                data: { balance: payeeBalanceAfter, updated_at: newDateF(new Date()) }
+            });
+
+            // 4. REGISTRO GLOBAL (Transactions)
+            const transaction = await tx.transactions.create({
+                data: {
+                    user_item_uuid: payerUserItemUuid,
+                    favored_user_uuid: transactionData.payeeUserInfoUuid,
+                    net_price: amount,
+                    original_price: amount,
+                    transaction_type: TransactionType.P2P_TRANSFER,
+                    status: TransactionStatus.success,
+                    description: transactionData.description || "Transferência TEI",
+                    created_at: newDateF(new Date()),
+                    // Campos zerados
+                    discount_percentage: 0, fee_percentage: 0, fee_amount: 0,
+                    platform_net_fee_amount: 0, partner_credit_amount: 0, cashback: 0,
+                }
+            });
+            const transactionUuid = transaction.uuid;
+
+            // 5 & 6. REGISTRO DETALHADO (UserItemHistory)
+            await tx.userItemHistory.create({
+                data: {
+                    user_item_uuid: payerUserItemUuid,
+                    event_type: UserItemEventType.TEI_SENT, 
+                    amount: -amount,
+                    balance_before: payerBalanceBefore,
+                    balance_after: payerBalanceAfter,
+                    related_transaction_uuid: transactionUuid,
+                }
+            });
+
+            await tx.userItemHistory.create({
+                data: {
+                    user_item_uuid: payeeUserItemUuid,
+                    event_type: UserItemEventType.TEI_RECEIVED, 
+                    amount: amount,
+                    balance_before: payeeBalanceBefore,
+                    balance_after: payeeBalanceAfter,
+                    related_transaction_uuid: transactionUuid,
+                }
+            });
+        });
     }
 
     findAll(): Promise<TransactionEntity[]> {

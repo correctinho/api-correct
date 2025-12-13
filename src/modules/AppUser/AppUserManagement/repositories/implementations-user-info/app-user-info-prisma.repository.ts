@@ -2,7 +2,7 @@ import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
 import { prismaClient } from '../../../../../infra/databases/prisma.config';
 import { newDateF } from '../../../../../utils/date';
 import { AppUserInfoEntity } from '../../entities/app-user-info.entity';
-import { IAppUserInfoRepository } from '../app-user-info.repository';
+import { IAppUserInfoRepository, RecipientLookupDTO } from '../app-user-info.repository';
 import { OutputGetEmployeesByBusinessDTO } from '../../usecases/UserInfo/get-users-by-business-admin/dto/get-user-by-business.dto';
 import { randomUUID } from 'crypto';
 import { OutputFindUserDTO } from '../../usecases/UserInfo/get-user-info-by-user/dto/get-user-by-user.dto';
@@ -884,29 +884,23 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
         });
     }
 
-    // async createOrUpdateUserInfoByEmployer(data: AppUserInfoEntity): Promise<void> {
-    //   await prismaClient.userInfo.upsert({
-    //     where: {
-    //       document: data.document
-    //     },
-    //     create: {
-    //       uuid: data.uuid.uuid,
-    //       document: data.document,
-    //       document2: data.document2,
-    //       document3: data.document3,
-    //       phone: data.phone,
-    //       full_name: data.full_name,
-    //       email: data.email,
-    //       gender: data.gender,
-    //       date_of_birth: data.date_of_birth,
-    //       marital_status: data.marital_status,
-    //       is_employee: data.is_employee,
-    //       created_at: data.created_at
-    //     },
-    //     update: {
-    //       is_employee: data.is_employee,
-    //       updated_at: newDateF(new Date())
-    //     }
-    //   });
-    // }
+    async findRecipientByDocument(document: string): Promise<RecipientLookupDTO | null> {
+
+        const user = await prismaClient.userInfo.findUnique({
+            where: {
+                document: document,
+            },
+            select: {
+                uuid: true,
+                full_name: true,
+            },
+        });
+
+        if (!user) return null;
+
+        return {
+            uuid: user.uuid,
+            full_name: user.full_name,
+        };
+    }
 }
