@@ -26,6 +26,17 @@ export type ProcessAppUserPixCreditPaymentResult = {
     success: boolean;
     finalCreditedUserItemBalance: number;
 };
+
+export interface ExecuteTeiTransferDTO {
+    payerUserItemUuid: string; // UUID do UserItem (saldo) do pagador
+    payeeUserItemUuid: string; // UUID do UserItem (saldo) do recebedor
+    amount: number;            // Valor em centavos
+    transactionData: {         // Dados para o histórico
+        payerUserInfoUuid: string;
+        payeeUserInfoUuid: string;
+        description?: string;
+    }
+}
 export interface ITransactionOrderRepository extends RepositoryInterface<TransactionEntity> {
     savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity>;
     processSplitPrePaidPayment(
@@ -81,5 +92,6 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
   }>;
   upsert(entity: TransactionEntity): Promise<void>;
   cancelTransaction(transactionUuid: Uuid): Promise<void>;
+  executeTeiTransfer(data: ExecuteTeiTransferDTO): Promise<void>;
 }
     

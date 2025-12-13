@@ -5,6 +5,12 @@ import { AppUserItemEntity } from "../entities/app-user-item.entity";
 import { OutputFindUserDTO } from "../usecases/UserInfo/get-user-info-by-user/dto/get-user-by-user.dto";
 import { OutputGetEmployeesByBusinessDTO } from "../usecases/UserInfo/get-users-by-business-admin/dto/get-user-by-business.dto";
 
+
+export interface RecipientLookupDTO {
+    uuid: string;
+    full_name: string;
+}
+
 export interface IAppUserInfoRepository extends RepositoryInterface<AppUserInfoEntity> {
   saveOrUpdateByCSV(userInfo: AppUserInfoEntity, employeeItem: AppUserItemEntity[]): Promise<void>
   findByDocumentUserInfo(document: string): Promise<OutputFindUserDTO | null>
@@ -20,4 +26,5 @@ export interface IAppUserInfoRepository extends RepositoryInterface<AppUserInfoE
   updateEmployee(data: AppUserInfoEntity, employee_uuid:string): Promise<any>
   findEmployee(user_info_uuid: string, business_info_uuid: string): Promise<any>
   updateEmployeeByCSV(userInfo: AppUserInfoEntity, employeeData: any, employeeItem: AppUserItemEntity[]): Promise<void>
+  findRecipientByDocument(document: string): Promise<RecipientLookupDTO | null>;
 }
