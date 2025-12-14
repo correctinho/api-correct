@@ -50,6 +50,8 @@
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.637.0",
     "@prisma/client": "^6.8.2",
+    "@sentry/node": "^10.30.0",
+    "@sentry/profiling-node": "^10.30.0",
     "@sparticuz/chromium": "^138.0.2",
     "@supabase/supabase-js": "^2.45.1",
     "@types/cors": "^2.8.16",
@@ -79,7 +81,7 @@
     "supabase": "^2.23.4",
     "swagger-ui-express": "^5.0.0",
     "validator": "^13.11.0",
-    "winston": "^3.11.0",
+    "winston": "^3.19.0",
     "zod": "^3.22.4"
   }
 }

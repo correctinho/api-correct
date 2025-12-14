@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import express, { Response, Request, NextFunction, Router } from 'express'
 import {router} from './routes'
 import cors from 'cors'
@@ -5,8 +6,11 @@ import swaggerUI from 'swagger-ui-express'
 import { join } from 'path';
 
 import swaggerDocument from '../swagger.json'
+import { errorMiddleware } from "./infra/shared/middlewares/error.middleware";
 
 const app = express()
+
+
 app.use(express.json({
   limit:'200mb'
 }))
@@ -22,5 +26,13 @@ app.get('/', (req: Request, res: Response) => {
 app.use('/images', express.static(join(process.cwd(), 'src/infra/databases/images')));
 
 app.use('/docs', swaggerUI.serve, swaggerUI.setup(swaggerDocument))
+
+app.get("/debug-sentry", function mainHandler(req, res) {
+  throw new Error("Meu primeiro erro capturado pelo Sentry!");
+});
+
+Sentry.setupExpressErrorHandler(app);
+
+app.use(errorMiddleware);
 
 export { app }
