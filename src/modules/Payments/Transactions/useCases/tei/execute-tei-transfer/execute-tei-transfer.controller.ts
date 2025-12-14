@@ -56,6 +56,7 @@ export class ExecuteTeiTransferController {
                 .status(200)
                 .json({ message: 'Transferência realizada com sucesso.' });
         } catch (error: any) {
+            console.log(error);
             // ... (tratamento de erro igual ao anterior)
             const statusCode = error.statusCode || 500;
             const message =
