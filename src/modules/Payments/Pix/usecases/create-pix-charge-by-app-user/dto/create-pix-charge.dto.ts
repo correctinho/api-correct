@@ -2,6 +2,7 @@
 export interface InputCreatePixChargeDTO {
     userId: string; // UUID do AppUser autenticado
     amountInReais: number; // Valor que o usuário deseja adicionar, ex: 50.50
+    userItemUuid: string;
 }
 
 // DTO de Saída: os dados que o usecase retornará para o controller

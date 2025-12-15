@@ -17,7 +17,6 @@ export class  FindAllUserItemsByEmployeryController {
       const usecase = new FindAllUserItemsByEmployerUsecase(this.appUserItemRepository, this.appUserInfoRepository)
 
       const result = await usecase.execute(userInfoUuid, businessInfoUuid)
-
       return res.json(result)
     } catch (err: any) {
       return res.status(err.statusCode || 500).json({
