@@ -27,6 +27,7 @@ export class FindAllUserItemsByAppUserUsecase {
         item_uuid: userItem.item_uuid.uuid,
         img_url: userItem.img_url ? userItem.img_url : null,
         item_name: userItem.item_name,
+        item_type: userItem.item_type,
         balance: userItem.balance,
         status: userItem.status,
         cancelling_request_at: userItem.cancelling_request_at,

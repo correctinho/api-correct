@@ -122,6 +122,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
             include: {
                 businesses: true,
                 Employee: true,
+                UserAuth: true,
             },
         });
         if (!user) return null;
@@ -142,7 +143,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
             gender: user.gender,
             date_of_birth: user.date_of_birth,
             phone: user.phone,
-            email: user.email,
+            email: user.UserAuth[0].email,
             status: user.status,
             recommendation_code: user.recommendation_code,
             is_authenticated: user.is_authenticated,
