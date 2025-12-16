@@ -17,6 +17,7 @@ import { getTokensOffline } from "../../modules/Payments/OfflineTokens/usecases/
 import { cancelPOSTransactionController } from "../../modules/Payments/Transactions/useCases/cancel-pos-transaction";
 import { getRecipientController } from "../../modules/Payments/Transactions/useCases/tei/get-recipient-by-cpf";
 import { executeTeiTransfer } from "../../modules/Payments/Transactions/useCases/tei/execute-tei-transfer";
+import { transferBetweenOwnCardsController } from "../../modules/Payments/Transactions/useCases/tei/transfer-between-own-cards";
 
 const transactionsRouter = Router()
 
@@ -100,4 +101,10 @@ transactionsRouter.get('/tei/recipient/:cpf', appUserIsAuth, async (request, res
 transactionsRouter.post('/tei/transfer', appUserIsAuth, async (request, response) => {
   await executeTeiTransfer.handle(request, response);
 });
+
+//Execute TEI Internal Transfer
+transactionsRouter.post('/tei/transfer/internal', appUserIsAuth, async (request, response) => {
+  await transferBetweenOwnCardsController.handle(request, response);
+});
+
 export { transactionsRouter }

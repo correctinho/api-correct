@@ -64,8 +64,9 @@ export class SubscriptionPrismaRepository implements ISubscriptionRepository {
   update(entity: SubscriptionEntity): Promise<void> {
       throw new Error("Method not implemented.");
   }
-  findAll(): Promise<SubscriptionEntity[]> {
-      throw new Error("Method not implemented.");
+  async findAll(): Promise<SubscriptionEntity[]> {
+      const raw = await prismaClient.subscription.findMany();
+      return raw.map((sub) => this.mapToDomain(sub));
   }
   
   async create(entity: SubscriptionEntity): Promise<void> {
