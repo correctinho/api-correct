@@ -516,6 +516,29 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         });
     }
 
+    async updateStatusBulk(uuids: Uuid[], newStatus: string): Promise<void> {
+        // 1. Defesa contra array vazio
+        if (uuids.length === 0) {
+            return;
+        }
+
+        // 2. Conversão de VO para string
+        const rawUuids = uuids.map(uuidVO => uuidVO.uuid);
+
+        // 3. Execução do updateMany
+        await prismaClient.userItem.updateMany({
+            where: {
+                uuid: {
+                    in: rawUuids
+                }
+            },
+            data: {
+                status: newStatus as UserItemStatus, // Cast para o Enum do Prisma correspondente (ex: 'blocked')
+                updated_at: newDateF(new Date())
+            }
+        });
+    }
+
     private mapToDomain(userItemData: any): AppUserItemEntity {
         const userItemProps: AppUserItemProps = {
             uuid: new Uuid(userItemData.uuid),

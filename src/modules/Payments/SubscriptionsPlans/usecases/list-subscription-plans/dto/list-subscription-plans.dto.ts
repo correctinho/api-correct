@@ -1,3 +1,7 @@
 import { SubscriptionPlanToJSONOutput } from "../../../entities/subscription-plan.entity";
 
-export type OutputListSubscriptionPlansDto = SubscriptionPlanToJSONOutput[];
+export type SubscriptionPlanWithStatus = SubscriptionPlanToJSONOutput & {
+    is_hired: boolean;
+};
+
+export type OutputListSubscriptionPlansDto = SubscriptionPlanWithStatus[];
