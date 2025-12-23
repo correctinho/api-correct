@@ -17,6 +17,7 @@ import { accountsRouter } from './Accounts/accounts';
 import { sseRouter } from './SSERoute/sse.route';
 import { subscriptionRouter } from './Subscriptions/subscriptions.routes';
 import { serviceScheduling } from './ServiceScheduling/serviceScheduling,routes';
+import { termsRouter } from './Terms/terms.routes';
 
 const router = Router();
 
@@ -38,5 +39,6 @@ router.use(accountsRouter)
 router.use(subscriptionRouter)
 router.use(sseRouter)
 router.use(serviceScheduling)
+router.use(termsRouter)
 
 export { router };

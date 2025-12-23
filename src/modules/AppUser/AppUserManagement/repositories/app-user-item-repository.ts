@@ -1,6 +1,7 @@
 import { UserItemEventType } from "@prisma/client";
 import RepositoryInterface from "../../../../@shared/domain/repository/repository-interface";
 import { AppUserItemEntity } from "../entities/app-user-item.entity";
+import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
 
 export interface IAppUserItemRepository extends RepositoryInterface<AppUserItemEntity>{
   findByItemUuidAndUserInfo(userInfoId: string, itemId: string):Promise<AppUserItemEntity | null>
@@ -12,4 +13,5 @@ export interface IAppUserItemRepository extends RepositoryInterface<AppUserItemE
   updateBalanceAndHistory(userItemUuid: string, newBalanceInCents: number,previousBalanceInCents: number,transactionUuid: string | null, eventType: UserItemEventType): Promise<void>;
   findSpecificUserItem(userInfoId: string, itemId: string, businessInfoId: string | null): Promise<AppUserItemEntity | null>;
   upsert(entity: AppUserItemEntity): Promise<void>;
+  updateStatusBulk(uuids: Uuid[], newStatus: string): Promise<void>;
 }

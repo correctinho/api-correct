@@ -7,18 +7,20 @@ import { IAppUserInfoRepository } from "../../../../AppUser/AppUserManagement/re
 import { IAppUserItemRepository } from "../../../../AppUser/AppUserManagement/repositories/app-user-item-repository";
 import { AppUserItemEntity } from "../../../../AppUser/AppUserManagement/entities/app-user-item.entity";
 import { IBenefitsRepository } from "../../../../benefits/repositories/benefit.repository";
-import { InputCreateUserSubscriptionDto, OutputCreateUserSubscriptionDto } from "./dto/create-user-subscription.dto";
+import { InputHireUserSubscriptionByPixDto, OutputHireUserSubscriptionByPixDto } from "./dto/create-user-subscription.dto";
 import { UserItemStatus } from "@prisma/client"; // Import do enum de status
 import { SubscriptionEntity } from "../../entities/subscription.entity";
 import { TransactionEntity } from "../../../Transactions/entities/transaction-order.entity";
 import { ITransactionOrderRepository } from "../../../Transactions/repositories/transaction-order.repository";
+import { ITermsOfServiceRepository } from "../../../../Terms/repositories/terms-of-service.repository";
+import { ITermsOfAcceptanceRepository } from "../../../../Terms/repositories/terms-of-acceptance.repository";
 
 // --- CONFIGURAÇÃO ---
 // IMPORTANTE: Substitua pela sua chave PIX real ou use process.env
 const COMPANY_PIX_KEY = process.env.SICREDI_PIX_KEY
 
 
-export class CreateUserSubscriptionUsecase {
+export class HireUserSubscriptionByPixUsecase {
   constructor(
     private subscriptionPlanRepository: ISubscriptionPlanRepository,
     private subscriptionRepository: ISubscriptionRepository,
@@ -26,12 +28,16 @@ export class CreateUserSubscriptionUsecase {
     private pixProvider: IPixProvider,
     private userItemRepository: IAppUserItemRepository,
     private benefitsRepository: IBenefitsRepository,
-    private transactionRepository: ITransactionOrderRepository // Injetar futuramente
+    private transactionRepository: ITransactionOrderRepository,
+    private termsRepository: ITermsOfServiceRepository,
+    private termAcceptanceRepository: ITermsOfAcceptanceRepository
   ) {}
 
-  async execute(input: InputCreateUserSubscriptionDto): Promise<OutputCreateUserSubscriptionDto> {
+  async execute(input: InputHireUserSubscriptionByPixDto): Promise<OutputHireUserSubscriptionByPixDto> {
     const userUuid = new Uuid(input.user_info_uuid);
     const planUuid = new Uuid(input.subscription_plan_uuid);
+
+    const acceptedTermsUuid = new Uuid(input.accepted_terms_version_uuid);
     // 1. Validar o Plano
     const plan = await this.subscriptionPlanRepository.find(planUuid);
     if (!plan || !plan.is_active) {
@@ -41,7 +47,7 @@ export class CreateUserSubscriptionUsecase {
         throw new CustomError("Este plano não está disponível para contratação direta.", 403);
     }
 
-    // 2. Verificar Duplicidade de Assinatura ATIVA
+    // 2. Verificar Duplicidade de Assinatura ATIVAS
     const existingActiveSub = await this.subscriptionRepository.findActiveByUserAndPlan(userUuid, planUuid);
     if (existingActiveSub) {
         throw new CustomError("Você já possui uma assinatura ativa para este plano.", 409);
@@ -50,6 +56,13 @@ export class CreateUserSubscriptionUsecase {
     const user = await this.userInfoRepository.find(userUuid);
     if (!user || !user.document) {
         throw new CustomError("Dados do usuário incompletos (CPF faltando).", 400);
+    }
+
+    console.log(`[HireSubPix] Validando versão dos termos aceitos: ${acceptedTermsUuid.uuid}...`);
+    const termsVersion = await this.termsRepository.find(acceptedTermsUuid);
+    
+    if (!termsVersion) {
+         throw new CustomError("Versão dos termos de uso não encontrada.", 400);
     }
     // =================================================================
     // 4. GESTÃO DO USER ITEM 
