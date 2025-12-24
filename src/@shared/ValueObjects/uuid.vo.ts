@@ -14,7 +14,7 @@ export class Uuid extends ValueObject {
   private validate() {
     const isValid = uuidValidate(this.uuid)
     if (!isValid) {
-      throw new CustomError("Invalid uuid")
+      throw new CustomError(`Invalid uuid ${this.uuid}`, 500)
     }
   }
 }

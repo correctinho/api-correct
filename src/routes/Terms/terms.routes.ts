@@ -4,8 +4,8 @@ import { getActiveTermsByTypeController } from "../../modules/Terms/usecase/get-
 const termsRouter = Router()
 
 //Get Active Terms
-termsRouter.get("/terms/active/:type"), async (request: any, response: any) => {
+termsRouter.get("/terms/active/:type", async (request: any, response: any) => {
     await getActiveTermsByTypeController.handle(request, response)
-}
+})
 
 export { termsRouter };

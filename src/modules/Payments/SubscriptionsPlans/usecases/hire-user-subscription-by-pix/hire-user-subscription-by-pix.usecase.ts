@@ -99,50 +99,47 @@ export class HireUserSubscriptionByPixUsecase {
     // 4. GESTÃO DO USER ITEM 
     // =================================================================
     const itemUuid = plan.item_uuid;
+    const planPriceInCents = Math.round(plan.price * 100)
 
     console.log(`[HireSubPix] Verificando UserItem...`);
-    let userItem = await this.userItemRepository.findSpecificUserItem(userUuid.uuid, itemUuid.uuid, null);
-    let isNewItem = false;
+    // 4.1. Busca item existente APENAS para pegar o UUID (Reciclagem)
+    const existingUserItem = await this.userItemRepository.findSpecificUserItem(
+        userUuid.uuid, 
+        itemUuid.uuid, 
+        null
+    );
+
+    const targetUserItemUuid = existingUserItem 
+        ? existingUserItem.uuid
+        : new Uuid();
     
-    if (!userItem) {
-        isNewItem = true;
-        const itemTechnical = await this.benefitsRepository.find(itemUuid);
-        if (!itemTechnical) throw new CustomError("Item técnico não encontrado.", 500);
+    // 4.2. Busca dados técnicos do benefício (Nome, Imagem, etc)
+    const itemTechnical = await this.benefitsRepository.find(itemUuid);
+    if (!itemTechnical) throw new CustomError("Item técnico não encontrado.", 500);
 
-        console.log(`[HireSubPix] Criando novo UserItem (bloqueado)...`);
-        userItem = AppUserItemEntity.create({
-            user_info_uuid: userUuid,
-            business_info_uuid: null, 
-            item_uuid: itemUuid,
-            item_name: itemTechnical.name,
-            item_category: (itemTechnical as any).item_category, 
-            item_type: (itemTechnical as any).item_type,
-            balance: 0.00,
-            status: UserItemStatusEnum.BLOCKED, // Status de Domínio
-            group_uuid: null,
-            group_name: 'Assinatura Individual',
-            group_value: plan.price,
-            group_is_default: false,
-            img_url: itemTechnical.img_url || null
-        });
-        userItem.blockUserItem(); // Garante bloqueio
-
-    } else {
-        console.log(`[HireSubPix] UserItem existente encontrado. Preparando.`);
-        if (userItem.status === UserItemStatusEnum.ACTIVE) {
-             console.warn(`[HireSubPix] UserItem ${userItem.uuid.uuid} estava ACTIVE indevidamente. Bloqueando.`);
-        }
-        userItem.blockUserItem();
-    }
-
-    // Salva o UserItem
-    if (isNewItem) {
-        await this.userItemRepository.upsert(userItem);
-    } else {
-        await this.userItemRepository.update(userItem);
-    }
-    console.log(`[HireSubPix] UserItem ${userItem.uuid.uuid} salvo.`);
-    const userItemUuidFinal = userItem.uuid;
+    // 4.3. Cria a Entidade (Sempre nova em memória, mas com ID potencialmente antigo)
+    // ATENÇÃO: Status BLOCKED pois aguarda pagamento PIX
+    const userItemEntity = AppUserItemEntity.create({
+        uuid: targetUserItemUuid, // Reutiliza ou Novo
+        user_info_uuid: userUuid,
+        business_info_uuid: null, 
+        item_uuid: itemUuid,
+        item_name: itemTechnical.name,
+        item_category: (itemTechnical as any).item_category, 
+        item_type: (itemTechnical as any).item_type,
+        
+        balance: 0, // Pix não adiciona saldo, é acesso ao serviço
+        status: UserItemStatusEnum.BLOCKED, // <--- TRAVA O ACESSO ATÉ O PIX CAIR
+        
+        group_uuid: null,
+        group_name: 'Assinatura Individual',
+        group_value: plan.price, 
+        group_is_default: false,
+        img_url: itemTechnical.img_url || null
+    });
+    // 4.4. Persistência Única (Upsert resolve se cria ou atualiza)
+    await this.userItemRepository.upsert(userItemEntity);
+    console.log(`[HireSubPix] UserItem ${userItemEntity.uuid} preparado (BLOCKED).`);
 
     // =================================================================
     // 5. GESTÃO DA ASSINATURA E FINANCEIRO
@@ -152,23 +149,25 @@ export class HireUserSubscriptionByPixUsecase {
         user_info_uuid: userUuid,
         subscription_plan_uuid: planUuid,
         plan_billing_period: plan.billing_period,
-        user_item_uuid: userItemUuidFinal
+        user_item_uuid: userItemEntity.uuid
     });
     
     // 5.2. Gerar o PIX
     const amountInReaisString = (plan.rawPriceInCents / 100).toFixed(2);
     console.log(`[HireSubPix] Gerando PIX de R$ ${amountInReaisString}...`);
+    const PIX_EXPIRATION_SECONDS = 86400
     const chargeData: PixChargeCreationData = {
         cpf: user.document.replace(/\D/g, ''),
         nome: user.full_name,
         valor: amountInReaisString,
         chave: COMPANY_PIX_KEY!, // Assegurando que existe
-        solicitacaoPagador: `Assinatura Correct: ${plan.name}`.substring(0, 140)
+        solicitacaoPagador: `Assinatura Correct: ${plan.name}`.substring(0, 140),
+        expiracaoSegundos: PIX_EXPIRATION_SECONDS
     };
 
+    
     const pixResult = await this.pixProvider.createImmediateCharge(chargeData);
     console.log('[HireSubPix] PIX gerado. TXID:', pixResult.txid);
-
     // =================================================================
     // 6. PERSISTÊNCIA (Assinatura e Transação)
     // =================================================================
@@ -179,7 +178,7 @@ export class HireUserSubscriptionByPixUsecase {
     const newTransaction = TransactionEntity.createForSubscriptionPixPayment({
         subscription_uuid: newSubscription.uuid,
         user_info_uuid: userUuid,
-        user_item_uuid: userItemUuidFinal,
+        user_item_uuid: userItemEntity.uuid,
         amountInCents: plan.rawPriceInCents,
         provider_tx_id: pixResult.txid
     });
@@ -188,7 +187,7 @@ export class HireUserSubscriptionByPixUsecase {
     console.log(`[HireSubPix] Transação ${newTransaction.uuid.uuid} salva.`);
 
     // =================================================================
-    // NOVO PASSO: REGISTRAR O ACEITE DOS TERMOS
+    // 7: REGISTRAR O ACEITE DOS TERMOS
     // =================================================================
     console.log('[HireSubPix] Registrando aceite dos termos...');
     // Cria a entidade de aceite, vinculando-a à transação recém-criada.
@@ -208,10 +207,10 @@ export class HireUserSubscriptionByPixUsecase {
     // 8. Retornar os dados para o App
     return {
         subscription_uuid: newSubscription.uuid.uuid,
-        user_item_uuid: userItemUuidFinal.uuid,
+        user_item_uuid: userItemEntity.uuid.uuid,
         status: newSubscription.status, // 'PENDING_PAYMENT'
         pix_qr_code: pixResult.pixCopiaECola,
-        pix_expiration: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        pix_expiration: pixResult.expirationDate,
         amount_in_cents: plan.rawPriceInCents
     };
   }

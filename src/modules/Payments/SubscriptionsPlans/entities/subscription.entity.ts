@@ -104,7 +104,12 @@ export class SubscriptionEntity {
     }
     
     
-
+    activateSubscription(startDate: Date, endDate: Date): void {
+        // Podemos adicionar validações aqui se necessário (ex: não ativar se já estiver cancelada)
+        this._status = SubscriptionStatus.ACTIVE;
+        this._start_date = startDate;
+        this._end_date = endDate;
+    }
     // Chamado quando o webhook do Pix confirmar o pagamento
     public markAsPaidAndActivate(billingPeriod: BillingPeriod): void {
         const now = new Date();

@@ -36,7 +36,7 @@ describe("Unity test Authenticate app user usecase", () => {
 
         const authUsecase = new AuthenticateAppuserUsecase(appUserMockRepository, passwordRepository, tokenRepository)
         
-        await expect(authUsecase.execute({ document, password})).rejects.toThrow("Document/password is incorrect")
+        await expect(authUsecase.execute({ document, password})).rejects.toThrow("CPF ou senha incorretos")
     })
 
     it("Should throw and error if password is missing", async () => {
@@ -49,7 +49,7 @@ describe("Unity test Authenticate app user usecase", () => {
 
         const authUsecase = new AuthenticateAppuserUsecase(appUserMockRepository, passwordRepository, tokenRepository)
         
-        await expect(authUsecase.execute({ document, password})).rejects.toThrow("Document/password is incorrect")
+        await expect(authUsecase.execute({ document, password})).rejects.toThrow("CPF ou senha incorretos")
     })
 
     
@@ -64,7 +64,7 @@ describe("Unity test Authenticate app user usecase", () => {
 
         const authUsecase = new AuthenticateAppuserUsecase(appUserMockRepository, passwordRepository, tokenRepository)
         
-        await expect(authUsecase.execute({ document, password})).rejects.toThrow("Document/password is incorrect")
+        await expect(authUsecase.execute({ document, password})).rejects.toThrow("CPF ou senha incorretos")
     })
 
     it("Should throw and error if password is incorrect", async () => {
@@ -86,7 +86,7 @@ describe("Unity test Authenticate app user usecase", () => {
 
         const authUsecase = new AuthenticateAppuserUsecase(appUserMockRepository, passwordRepository, tokenRepository)
         
-        await expect(authUsecase.execute({ document, password})).rejects.toThrow("Document/password is incorrect")
+        await expect(authUsecase.execute({ document, password})).rejects.toThrow("CPF ou senha incorretos")
     })
 
     it("Should login user", async () => {

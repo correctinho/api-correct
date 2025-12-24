@@ -38,6 +38,7 @@ export type AppUserItemProps = {
  * Valores monetários (`balance`) vêm no formato amigável (Reais).
  */
 export type AppUserItemCreateCommand = {
+    uuid?: Uuid
     user_info_uuid: Uuid;
     business_info_uuid: Uuid | null;
     item_uuid: Uuid;
@@ -279,6 +280,7 @@ export class AppUserItemEntity {
     // --- MÉTODOS DE FÁBRICA ---
     public static create(command: AppUserItemCreateCommand): AppUserItemEntity {
         const props: AppUserItemProps = {
+            uuid: command.uuid ? command.uuid : new Uuid(),
             ...command,
             balance: Math.round(command.balance * 100),
             group_value: Math.round(command.group_value * 100),

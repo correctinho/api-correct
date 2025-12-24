@@ -1,9 +1,11 @@
+import { SubscriptionStatus } from "@prisma/client";
 import RepositoryInterface from "../../../../@shared/domain/repository/repository-interface";
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
 import { AppUserItemEntity } from "../../../AppUser/AppUserManagement/entities/app-user-item.entity";
 import { TermAcceptanceEntity } from "../../../Terms/entities/term-acceptance.entity";
 import { TransactionEntity } from "../../Transactions/entities/transaction-order.entity";
 import { SubscriptionEntity } from "../entities/subscription.entity";
+import { UserItemStatusEnum } from "../../../AppUser/AppUserManagement/enums/user-item-status.enum";
 
 export interface ISubscriptionRepository extends RepositoryInterface<SubscriptionEntity> {
   // Útil para verificar se o usuário já não tem esse plano ativo antes de deixar comprar de novo
@@ -14,12 +16,21 @@ export interface ISubscriptionRepository extends RepositoryInterface<Subscriptio
   findActiveByUser(userUuid: Uuid): Promise<SubscriptionEntity[]>;
   findExpiredActiveSubscriptions(referenceDate: Date): Promise<SubscriptionEntity[]>;
   updateStatusBulk(uuids: Uuid[], newStatus: string): Promise<void>;
-  processHireTransaction(
-        subscription: SubscriptionEntity,
-        userItemToUpsert: AppUserItemEntity,
-        transactionRecord: TransactionEntity,
-        termAcceptance: TermAcceptanceEntity,
+  executeCheckoutWithBalance(
+        subscriptionEntity: SubscriptionEntity,
+        targetUserItemEntity: AppUserItemEntity,
+        transactionEntity: TransactionEntity,
+        termAcceptanceEntity: TermAcceptanceEntity,
         hubAccountUuid: Uuid,
-        priceInCents: number
+        priceInCents: number,
+        adminUserItemUuid: string
     ): Promise<void>;
+  cancelSubscriptionAndItem(
+          subscriptionUuid: string,
+          userItemUuid: string,
+          newSubStatus: SubscriptionStatus,
+          newItemStatus: UserItemStatusEnum, // Use o Enum que seu Prisma espera
+          reason: string,
+          date: Date
+      ): Promise<void>
 }

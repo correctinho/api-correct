@@ -113,8 +113,10 @@ export class SicrediPixProvider implements IPixProvider {
     ): Promise<PixChargeCreationResult> {
         const token = await this.getAccessToken();
 
+        const expirationSeconds = chargeData.expiracaoSegundos || 3600;
+
         const requestBody = {
-            calendario: { expiracao: 3600 },
+            calendario: { expiracao: expirationSeconds },
             devedor: {
                 cpf: chargeData.cpf,
                 nome: chargeData.nome,
@@ -134,10 +136,18 @@ export class SicrediPixProvider implements IPixProvider {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
+            const bankCreatedAt = new Date(response.data.calendario.criacao); // Ex: 14:56:40
+            const bankExpirationSeconds = response.data.calendario.expiracao; // Ex: 3600
+            
+            // Soma os segundos à data de criação
+            const realExpirationDate = new Date(
+                bankCreatedAt.getTime() + (bankExpirationSeconds * 1000)
+            );
             // Retornamos os dados no formato do DTO genérico da interface
             return {
                 txid: response.data.txid,
                 pixCopiaECola: response.data.pixCopiaECola,
+                expirationDate: realExpirationDate
             };
         } catch (error: any) {
             console.error(
