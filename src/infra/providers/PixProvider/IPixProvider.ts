@@ -5,12 +5,14 @@ export interface PixChargeCreationData {
     valor: string; // Valor em formato string, ex: "10.50"
     chave: string; // A chave PIX que receberá o valor
     solicitacaoPagador?: string;
+    expiracaoSegundos?: number
 }
 
 // DTO genérico para a resposta da criação de uma cobrança
 export interface PixChargeCreationResult {
     txid: string;
     pixCopiaECola: string;
+    expirationDate?: Date;
     // ... qualquer outro campo comum que seja retornado por provedores PIX
 }
 

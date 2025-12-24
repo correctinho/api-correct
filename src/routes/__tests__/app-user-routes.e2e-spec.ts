@@ -454,7 +454,7 @@ describe('E2E App User tests', () => {
                 });
                 expect(result.statusCode).toBe(400);
                 expect(result.body.error).toBe(
-                    'Document/password is incorrect'
+                    'CPF ou senha incorretos'
                 );
             });
 
@@ -466,7 +466,7 @@ describe('E2E App User tests', () => {
 
                 expect(result.statusCode).toBe(400);
                 expect(result.body.error).toBe(
-                    'Document/password is incorrect'
+                    'CPF ou senha incorretos'
                 );
             });
 
@@ -477,7 +477,7 @@ describe('E2E App User tests', () => {
                 });
                 expect(result.statusCode).toBe(401);
                 expect(result.body.error).toBe(
-                    'Document/password is incorrect'
+                    'CPF ou senha incorretos'
                 );
             });
 
@@ -488,7 +488,7 @@ describe('E2E App User tests', () => {
                 });
                 expect(result.statusCode).toBe(401);
                 expect(result.body.error).toBe(
-                    'Document/password is incorrect'
+                    'CPF ou senha incorretos'
                 );
             });
 

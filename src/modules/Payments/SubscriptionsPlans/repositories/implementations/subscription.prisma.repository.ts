@@ -42,7 +42,7 @@ export class SubscriptionPrismaRepository implements ISubscriptionRepository {
 
                 // Datas de Auditoria
                 created_at: data.created_at,
-                updated_at: newDateF(new Date()), // Primeira data de atualização
+                updated_at: data.updated_at, // Primeira data de atualização
             },
             // --- SE FOR ATUALIZAR (Mapear tudo, EXCETO uuid e created_at) ---
             update: {
@@ -62,7 +62,7 @@ export class SubscriptionPrismaRepository implements ISubscriptionRepository {
 
                 // Datas de Auditoria
                 // created_at: NÃO ATUALIZAR
-                updated_at: newDateF(new Date()), // Força nova data de atualização
+                updated_at:  data.updated_at, // Força nova data de atualização
             },
         });
     }
@@ -514,6 +514,57 @@ export class SubscriptionPrismaRepository implements ISubscriptionRepository {
 
         console.log('[CheckoutBalance] Transação atômica finalizada com sucesso!');
     }
+
+    async cancelSubscriptionAndItem(
+        subscriptionUuid: string,
+        userItemUuid: string,
+        newSubStatus: SubscriptionStatus,
+        newItemStatus: UserItemStatusEnum, // Use o Enum que seu Prisma espera
+        reason: string,
+        date: Date
+    ): Promise<void> {
+    await prismaClient.$transaction(async (tx) => {
+        
+        // A) Desativar a Assinatura
+        await tx.subscription.update({
+            where: { uuid: subscriptionUuid },
+            data: {
+                status: newSubStatus,
+                updated_at: date
+
+            }
+        });
+
+        // B) Desativar o Benefício (UserItem)
+        // Isso impede o uso imediato e (dependendo do status) esconde do app
+        await tx.userItem.update({
+            where: { uuid: userItemUuid },
+            data: {
+                status: newItemStatus as any, // Cast para o Enum do Prisma
+                updated_at: newDateF(date),
+                cancelled_at: newDateF(date),
+                cancel_reason: reason,
+                // Se for BLOQUEIO, usaria:
+                // blocked_at: date,
+                // block_reason: reason
+            }
+        });
+
+        // C) Opcional: Gerar Histórico no UserItemHistory
+        // É boa prática registrar que o item mudou de status
+        await tx.userItemHistory.create({
+            data: {
+                user_item_uuid: userItemUuid,
+                event_type: 'OTHER', // Ou crie um enum STATUS_CHANGE
+                amount: 0,
+                balance_before: 0, // Buscar se necessário, mas para cancelamento de acesso não afeta saldo monetário direto se não houver estorno
+                balance_after: 0,
+                created_at: date,
+                // description: `Status alterado para ${newItemStatus}: ${reason}`
+            }
+        });
+    });
+}
     // Helper privado para hidratar a entidade (Mapper inline)
     private mapToDomain(raw: any): SubscriptionEntity {
         return SubscriptionEntity.hydrate({

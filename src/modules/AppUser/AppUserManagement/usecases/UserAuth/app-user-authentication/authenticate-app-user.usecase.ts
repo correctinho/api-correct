@@ -19,15 +19,15 @@ export class AuthenticateAppuserUsecase {
   ) { }
 
   async execute({ document, password }: AuthenticateAppuserRequest) {
-    if (!document || !password) throw new CustomError("Document/password is incorrect", 400)
+    if (!document || !password) throw new CustomError("CPF ou senha incorretos", 400)
 
     const documentNumber = this.processDocument(document)
     const appUser = await this.appUserRepository.findByDocument(documentNumber)
 
-    if (!appUser) throw new CustomError("Document/password is incorrect", 401)
+    if (!appUser) throw new CustomError("CPF ou senha incorretos", 401)
 
     const comparePasswordHash = await this.passwordCrypto.compare(password, appUser.password)
-    if (!comparePasswordHash) throw new CustomError("Document/password is incorrect", 401)
+    if (!comparePasswordHash) throw new CustomError("CPF ou senha incorretos", 401)
 
     //Verifica se o email já está validado
     if (!appUser.is_email_verified) {
