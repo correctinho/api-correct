@@ -8,6 +8,7 @@ import {
 import { OutputFindAllAppUserItemsDTO } from '../../usecases/UserItem/find-all-by-employer/dto/find-user-item.dto';
 import { IAppUserItemRepository } from '../app-user-item-repository';
 import { newDateF } from '../../../../../utils/date';
+import { CustomError } from '../../../../../errors/custom.error';
 
 export class AppUserItemPrismaRepository implements IAppUserItemRepository {
     async upsert(entity: AppUserItemEntity): Promise<void> {
@@ -240,9 +241,14 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
     async findDebitUserItem(
         userInfoId: string
     ): Promise<AppUserItemEntity | null> {
+        const correctItemUuidStr = process.env.CORRECT_ITEM_UUID;
+        if (!correctItemUuidStr) {
+            // Isso é um erro grave de configuração do servidor, deve explodir.
+            throw new CustomError("CRITICAL: Environment variable CORRECT_ITEM_UUID is not set.", 500);
+        }
         const userItemData = await prismaClient.userItem.findFirst({
             where: {
-                item_name: 'Correct',
+                item_uuid: correctItemUuidStr,
                 user_info_uuid: userInfoId,
             },
             include: {

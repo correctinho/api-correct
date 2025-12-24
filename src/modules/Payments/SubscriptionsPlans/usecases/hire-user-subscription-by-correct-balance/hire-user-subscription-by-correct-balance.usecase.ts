@@ -1,213 +1,185 @@
-// import { addMonths, addYears } from 'date-fns';
-// import { PrismaClient, UserItemStatus, SubscriptionStatus, TransactionType, TransactionStatus, TermsType } from "@prisma/client";
+import { addMonths, addYears } from 'date-fns';
+import { SubscriptionStatus, TransactionStatus, TransactionType } from "@prisma/client";
 
-// import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
-// import { CustomError } from "../../../../../errors/custom.error";
+import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
+import { CustomError } from "../../../../../errors/custom.error";
 
-// // Repositórios para leituras
-// import { ISubscriptionPlanRepository } from "../../repositories/subscription-plan.repository";
-// import { IAppUserItemRepository } from "../../../../AppUser/AppUserManagement/repositories/app-user-item-repository";
-// import { IBenefitsRepository } from "../../../../benefits/repositories/benefit.repository";
-// // Assumindo que você criará este repositório simples para ler os termos
+// Interfaces de Repositórios
+import { ISubscriptionPlanRepository } from "../../repositories/subscription-plan.repository";
+import { IAppUserItemRepository } from "../../../../AppUser/AppUserManagement/repositories/app-user-item-repository";
+import { IBenefitsRepository } from "../../../../benefits/repositories/benefit.repository";
+import { ITermsOfServiceRepository } from "../../../../Terms/repositories/terms-of-service.repository";
+import { ISubscriptionRepository } from "../../repositories/subscription.repository"; // A interface atualizada
 
-// // NOVOS NOMES DOS IMPORTS DOS DTOs
-// import { 
-//     InputHireUserSubscriptionByCorrectBalanceDTO, 
-//     OutputHireUserSubscriptionByCorrectBalanceDTO 
-// } from "./dto/hire-user-subscription-by-correct-balance.dto";
+// DTOs
+import {
+    InputHireUserSubscriptionByCorrectBalanceDTO,
+    OutputHireUserSubscriptionByCorrectBalanceDTO
+} from "./dto/hire-user-subscription-by-correct-balance.dto";
 
-// // NOVO NOME DA CLASSE
-// export class HireUserSubscriptionByCorrectBalanceUsecase {
-//     constructor(
-//         // Injetamos o cliente Prisma bruto para poder abrir transações
-//         private readonly prisma: PrismaClient,
-//         // Repositórios para validações de leitura
-//         private readonly planRepository: ISubscriptionPlanRepository,
-//         private readonly userItemRepository: IAppUserItemRepository,
-//         private readonly benefitsRepository: IBenefitsRepository,
-//         private readonly termsRepository: ITermsOfServiceRepository
-//     ) {}
+import { AppUserItemEntity } from '../../../../AppUser/AppUserManagement/entities/app-user-item.entity';
+import { SubscriptionEntity } from '../../entities/subscription.entity';
+import { TransactionEntity } from '../../../Transactions/entities/transaction-order.entity';
+import { TermAcceptanceEntity } from '../../../../Terms/entities/term-acceptance.entity';
+import { TermsTypeEnum } from '../../../../Terms/entities/enums/terms-type.enum';
+import { UserItemStatusEnum } from '../../../../AppUser/AppUserManagement/enums/user-item-status.enum';
 
-//     // NOVA ASSINATURA DO MÉTODO EXECUTE
-//     async execute(input: InputHireUserSubscriptionByCorrectBalanceDTO): Promise<OutputHireUserSubscriptionByCorrectBalanceDTO> {
-//         const userUuidVO = new Uuid(input.userId);
-//         const planUuidVO = new Uuid(input.subscriptionPlanUuid);
-//         const termsUuidVO = new Uuid(input.acceptedTermsVersionUuid);
-
-//         // ==================================================================
-//         // 1. VALIDAÇÕES INICIAIS (Leituras fora da transação)
-//         // ==================================================================
-
-//         // 1.1. Validar o Plano
-//         const plan = await this.planRepository.find(planUuidVO);
-//         if (!plan || !plan.is_active) throw new CustomError("Plano não encontrado ou inativo.", 404);
-//         if (plan.payer_type !== 'USER') throw new CustomError("Plano inválido para contratação direta.", 403);
-
-//         // 1.2. Validar Duplicidade
-//         // (Lembre-se de implementar findActiveByUserAndPlan no repositório se necessário)
-//         // const existingActiveSub = await this.subscriptionRepository.findActiveByUserAndPlan(userUuidVO, planUuidVO);
-//         // if (existingActiveSub) throw new CustomError("Você já possui uma assinatura ativa deste plano.", 409);
-
-//         // 1.3. Validar os Termos de Uso Aceitos
-//         const termsVersion = await this.termsRepository.findById(termsUuidVO.uuid);
-//         if (!termsVersion) throw new CustomError("Versão dos termos não encontrada.", 400);
-//         if (!termsVersion.is_active || termsVersion.type !== TermsType.B2C_APP_USER_EULA) {
-//              throw new CustomError("Os termos aceitos não são os vigentes. Por favor, leia e aceite novamente.", 409);
-//         }
-
-//         // 1.4. Buscar a Conta Correct (Hub) e Validar Saldo
-//         const hubAccountEntity = await this.userItemRepository.findHubAccountByUser(userUuidVO.uuid);
-
-//         if (!hubAccountEntity) throw new CustomError("Conta principal (Correct) não encontrada.", 404);
+export class HireUserSubscriptionByCorrectBalanceUsecase {
+    constructor(
+        private readonly planRepository: ISubscriptionPlanRepository,
+        private readonly userItemRepository: IAppUserItemRepository,
+        private readonly benefitsRepository: IBenefitsRepository,
+        private readonly termsRepository: ITermsOfServiceRepository,
+        private readonly subscriptionRepository: ISubscriptionRepository,
         
-//         // Validação de saldo (valores em centavos)
-//         if (hubAccountEntity.balance < plan.price) {
-//              throw new CustomError("Saldo insuficiente na conta Correct.", 402);
-//         }
+    ) { }
 
-//         // 1.5. Buscar dados do Item Técnico (o benefício sendo vendido)
-//         const itemTechnicalUuidVO = new Uuid(plan.item_uuid);
-//         const itemTechnical = await this.benefitsRepository.find(itemTechnicalUuidVO);
-//         if (!itemTechnical) throw new CustomError("Item técnico do plano não encontrado.", 500);
+    async execute(input: InputHireUserSubscriptionByCorrectBalanceDTO): Promise<OutputHireUserSubscriptionByCorrectBalanceDTO> {
+        const userUuidVO = new Uuid(input.userId);
+        const planUuidVO = new Uuid(input.subscriptionPlanUuid);
+        const termsUuidVO = new Uuid(input.acceptedTermsVersionUuid);
+        const adminWalletUuid = process.env.CORRECT_ADMIN_WALLET_UUID;
 
-//         // ==================================================================
-//         // 2. PREPARAÇÃO DE DADOS
-//         // ==================================================================
+        if (!adminWalletUuid) {
+            // Isso protege seu sistema de rodar com configuração faltando
+            throw new CustomError("Erro Crítico: Carteira Admin (CORRECT_ADMIN_WALLET_UUID) não configurada no ambiente.", 500);
+}
 
-//         // 2.1. Calcular Datas de Vigência
-//         const startDate = new Date();
-//         let endDate: Date;
-//         if (plan.billing_period === 'MONTHLY') {
-//             endDate = addMonths(startDate, 1);
-//         } else if (plan.billing_period === 'YEARLY') {
-//             endDate = addYears(startDate, 1);
-//         } else {
-//              endDate = addYears(startDate, 100); // Vitalício/One-time
-//         }
+        // ==================================================================
+        // 1. VALIDAÇÕES INICIAIS (Leituras)
+        // ==================================================================
 
-//         // 2.2. Verificar UserItem existente
-//         const existingUserItemEntity = await this.userItemRepository.findSpecificUserItem(userUuidVO.uuid, itemTechnicalUuidVO.uuid, null);
-//         const targetUserItemUuid = existingUserItemEntity ? existingUserItemEntity.uuid.uuid : new Uuid().uuid;
+        // 1.1. Validar o Plano
+        const plan = await this.planRepository.find(planUuidVO);
+        if (!plan || !plan.is_active) throw new CustomError("Plano não encontrado ou inativo.", 404);
+        if (plan.payer_type !== 'USER') throw new CustomError("Plano inválido para contratação direta.", 403);
 
-//         // UUIDs para os novos registros
-//         const newSubscriptionUuid = new Uuid().uuid;
-//         const newTransactionUuid = new Uuid().uuid;
-//         const newAcceptanceUuid = new Uuid().uuid;
+        const planPriceInCents = Math.round(plan.price * 100);
+        // 1.2. Validar Duplicidade de Assinatura Ativa
+        const existingActiveSub = await this.subscriptionRepository.findActiveByUserAndPlan(userUuidVO, planUuidVO);
+        if (existingActiveSub) {
+            throw new CustomError("Você já possui uma assinatura ativa para este plano.", 409);
+        }
 
-//         // ==================================================================
-//         // 3. TRANSAÇÃO ATÔMICA
-//         // ==================================================================
-        
-//         // Logs atualizados com o novo prefixo [HireSubCorrectBalance]
-//         await this.prisma.$transaction(async (tx) => {
-//             console.log(`[HireSubCorrectBalance] Iniciando transação para user ${input.userId}, plano ${plan.name}, valor ${plan.price}`);
+        // 1.3. Validar os Termos de Uso Aceitos
+        const termsVersion = await this.termsRepository.find(termsUuidVO);
+        if (!termsVersion) throw new CustomError("Versão dos termos não encontrada.", 400);
+        // Verifica se está ativo e se é do tipo B2C correto
+        if (!termsVersion.is_active || termsVersion.type !== TermsTypeEnum.B2C_APP_USER_EULA) {
+            throw new CustomError("Os termos aceitos não são os vigentes ou são inválidos. Por favor, atualize e aceite novamente.", 409);
+        }
 
-//             // A) DÉBITO: Subtrair saldo da conta Hub
-//             const debitResult = await tx.userItem.updateMany({
-//                 where: {
-//                     uuid: hubAccountEntity.uuid.uuid,
-//                     balance: { gte: plan.price } // Concorrência otimista
-//                 },
-//                 data: {
-//                     balance: { decrement: plan.price },
-//                     updated_at: new Date()
-//                 }
-//             });
+        // 1.4. Buscar a Conta Correct (Hub) e Validar Saldo
+        const hubAccountEntity = await this.userItemRepository.findDebitUserItem(userUuidVO.uuid);
+        if (!hubAccountEntity) throw new CustomError("Conta principal (Saldo Correct) não encontrada para este usuário.", 404);
+        const userBalanceInCents = Math.round(hubAccountEntity.balance * 100);
 
-//             if (debitResult.count === 0) {
-//                 throw new CustomError("Saldo insuficiente (concorrência detectada). Tente novamente.", 409);
-//             }
-//             console.log('[HireSubCorrectBalance] Débito realizado com sucesso.');
+        if (userBalanceInCents < planPriceInCents) {
+            throw new CustomError(
+                `Saldo insuficiente. Necessário: R$ ${plan.price.toFixed(2)}, Disponível: R$ ${hubAccountEntity.balance.toFixed(2)}`, 
+                402
+            );
+        }
+
+        // 1.5. Buscar dados técnicos do benefício sendo comprado
+        const itemTechnicalUuidVO = plan.item_uuid;
+        const itemTechnical = await this.benefitsRepository.find(itemTechnicalUuidVO);
+        if (!itemTechnical) throw new CustomError("Erro interno: Item técnico do plano não encontrado.", 500);
 
 
-//             // B) PROVISIONAMENTO: Criar ou Atualizar o UserItem do benefício
-//             const userItemData = {
-//                 user_info_uuid: input.userId,
-//                 item_uuid: plan.item_uuid,
-//                 item_name: itemTechnical.name,
-//                 item_category: (itemTechnical as any).item_category,
-//                 item_type: (itemTechnical as any).item_type,
-//                 status: UserItemStatus.active, // <-- ATIVO IMEDIATAMENTE
-//                 updated_at: new Date()
-//             };
+        // ==================================================================
+        // 2. PREPARAÇÃO DAS ENTIDADES (Em memória)
+        // ==================================================================
+        console.log('[HireSubBalance] Validações OK. Preparando entidades para transação...');
 
-//             if (existingUserItemEntity) {
-//                 await tx.userItem.update({
-//                     where: { uuid: targetUserItemUuid },
-//                     data: userItemData
-//                 });
-//             } else {
-//                 await tx.userItem.create({
-//                     data: {
-//                         uuid: targetUserItemUuid,
-//                         ...userItemData,
-//                         balance: 0,
-//                         business_info_uuid: null,
-//                         created_at: new Date()
-//                     }
-//                 });
-//             }
-//             console.log('[HireSubCorrectBalance] UserItem provisionado/ativado.');
+        const startDate = new Date();
+        let endDate: Date;
+        // Cálculo da data de fim baseado na periodicidade do plano
+        switch (plan.billing_period) {
+            case 'MONTHLY': endDate = addMonths(startDate, 1); break;
+            case 'YEARLY': endDate = addYears(startDate, 1); break;
+            // Caso default para one-time/lifetime
+            default: endDate = addYears(startDate, 100); break;
+        }
 
+        // 2.1. Preparar o UserItem (Benefício)
+        // Verifica se o usuário já teve esse item antes para reutilizar o UUID
+        const existingUserItem = await this.userItemRepository.findSpecificUserItem(userUuidVO.uuid, itemTechnicalUuidVO.uuid, null);
+        const targetUserItemUuid = existingUserItem ? existingUserItem.uuid : new Uuid();
 
-//             // C) ASSINATURA: Criar o registro ativo com datas de fim
-//             await tx.subscription.create({
-//                 data: {
-//                     uuid: newSubscriptionUuid,
-//                     subscription_plan_uuid: plan.uuid.uuid,
-//                     user_info_uuid: input.userId,
-//                     user_item_uuid: targetUserItemUuid,
-//                     status: SubscriptionStatus.ACTIVE, // <-- ATIVA IMEDIATAMENTE
-//                     start_date: startDate,
-//                     end_date: endDate, // <-- DATA DE EXPIRAÇÃO CRUCIAL
-//                     created_at: new Date(),
-//                     updated_at: new Date()
-//                 }
-//             });
-//             console.log('[HireSubCorrectBalance] Assinatura criada como ACTIVE.');
+        // Cria a entidade do item já como ACTIVE, pois o pagamento é imediato
+        const targetUserItemEntity = AppUserItemEntity.create({
+            uuid: targetUserItemUuid, // Reutiliza ou novo
+            user_info_uuid: userUuidVO,
+            business_info_uuid: null, // B2C
+            item_uuid: itemTechnicalUuidVO,
+            item_name: itemTechnical.name,
+            item_category: (itemTechnical as any).item_category,
+            item_type: (itemTechnical as any).item_type,
+            balance: 0,
+            status: UserItemStatusEnum.ACTIVE, // <--- ATIVO IMEDIATAMENTE
+            group_uuid: null,
+            group_name: 'Assinatura Individual',
+            group_value: plan.price,
+            group_is_default: false,
+            img_url: itemTechnical.img_url || null
+        });
 
-
-//             // D) TRANSAÇÃO FINANCEIRA: Registrar o histórico
-//             await tx.transactions.create({
-//                 data: {
-//                     uuid: newTransactionUuid,
-//                     user_item_uuid: hubAccountEntity.uuid.uuid,
-//                     subscription_uuid: newSubscriptionUuid,
-//                     amount: plan.price,
-//                     transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
-//                     status: TransactionStatus.success, // <-- SUCESSO IMEDIATO
-//                     description: `Contratação: ${plan.name}`,
-//                     created_at: new Date(),
-//                     updated_at: new Date()
-//                 }
-//             });
-//             console.log('[HireSubCorrectBalance] Histórico financeiro registrado.');
+        // 2.2. Preparar a Assinatura (ACTIVE)
+        const subscriptionEntity = SubscriptionEntity.createForUserRequest({
+            user_info_uuid: userUuidVO,
+            subscription_plan_uuid: planUuidVO,
+            plan_billing_period: plan.billing_period,
+            user_item_uuid: targetUserItemEntity.uuid
+        });
+        // Forçamos a ativação imediata e definimos as datas calculadas
+        subscriptionEntity.activateSubscription(startDate, endDate);
 
 
-//             // E) TERMOS DE USO: Registrar o aceite
-//             await tx.termAcceptance.create({
-//                 data: {
-//                     uuid: newAcceptanceUuid,
-//                     app_user_info_uuid: input.userId,
-//                     company_user_uuid: null,
-//                     terms_uuid: input.acceptedTermsVersionUuid,
-//                     transaction_uuid: newTransactionUuid,
-//                     accepted_at: new Date(),
-//                 }
-//             });
-//             console.log('[HireSubCorrectBalance] Aceite dos termos registrado.');
+        // 2.3. Preparar a Transação Financeira (SUCCESS)
+        const transactionEntity = TransactionEntity.createCompletedSubscriptionPayment({
+            subscription_uuid: subscriptionEntity.uuid,
+            user_info_uuid: userUuidVO,
+            hub_account_item_uuid: hubAccountEntity.uuid, // Origem do dinheiro
+            amountInCents: planPriceInCents,
+            description: `Assinatura: ${plan.name}`
+        });
 
-//         }); // Fim da transação
+        // 2.4. Preparar o Aceite dos Termos (Vinculado à transação)
+        const termAcceptanceEntity = TermAcceptanceEntity.createForAppUser({
+            userUuid: userUuidVO,
+            termsUuid: termsUuidVO,
+            transactionUuid: transactionEntity.uuid, // VÍNCULO CRUCIAL
+            ipAddress: input.ip_address,
+            userAgent: input.user_agent
+        });
 
-//         console.log('[HireSubCorrectBalance] Transação completa com sucesso!');
+        // ==================================================================
+        // 3. EXECUÇÃO TRANSAÇÃO ATÔMICA (Delegada ao Repositório)
+        // ==================================================================
+        console.log('[HireSubBalance] Chamando repositório para execução atômica...');
 
-//         // 4. Retornar DTO de Sucesso
-//         return {
-//             subscriptionUuid: newSubscriptionUuid,
-//             status: SubscriptionStatus.ACTIVE,
-//             startDate: startDate,
-//             endDate: endDate,
-//             itemName: itemTechnical.name
-//         };
-//     }
-// }
+        await this.subscriptionRepository.executeCheckoutWithBalance(
+            subscriptionEntity,
+            targetUserItemEntity,
+            transactionEntity,
+            termAcceptanceEntity,
+            hubAccountEntity.uuid, 
+            planPriceInCents,
+            adminWalletUuid
+        );
+
+        console.log('[HireSubBalance] Contratação finalizada com sucesso.');
+
+        // ==================================================================
+        // 4. RETORNO
+        // ==================================================================
+        return {
+            subscriptionUuid: subscriptionEntity.uuid.uuid,
+            status: SubscriptionStatus.ACTIVE,
+            startDate: startDate,
+            endDate: endDate,
+            itemName: itemTechnical.name
+        };
+    }
+}

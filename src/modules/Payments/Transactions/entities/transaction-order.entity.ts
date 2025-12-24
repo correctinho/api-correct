@@ -293,7 +293,45 @@ export class TransactionEntity {
   }
 
 // TransactionEntity.ts - Revisão FINAL com regra de arredondamento de 0.x para 1 centavo
+static createCompletedSubscriptionPayment(props: {
+        subscription_uuid: Uuid;
+        user_info_uuid: Uuid;
+        hub_account_item_uuid: Uuid; // O item de onde saiu o dinheiro (Saldo Correct)
+        amountInCents: number;
+        description: string;
+    }): TransactionEntity {
+        // Lógica financeira básica para venda direta B2C (sem descontos/taxas complexas por enquanto)
+        const original_price = props.amountInCents;
+        const net_price = props.amountInCents;
+        // Importante: Em vendas B2C diretas, não há geração de crédito para parceiro
+        const partner_credit_amount = 0;
 
+        return new TransactionEntity({
+            user_item_uuid: props.hub_account_item_uuid,
+            subscription_uuid: props.subscription_uuid,
+
+            // Dados Financeiros Obrigatórios pelo Schema
+            original_price: original_price,
+            net_price: net_price,
+            partner_credit_amount: partner_credit_amount,
+            // Valores zerados por padrão para venda simples
+            discount_percentage: 0,
+            fee_percentage: 0,
+            fee_amount: 0,
+            platform_net_fee_amount: 0,
+            cashback: 0,
+
+            transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
+            // CRÍTICO: Nasce como SUCESSO imediatamente
+            status: TransactionStatus.success,
+            description: props.description,
+
+            created_at: newDateF(new Date()),
+            // Não há ID externo neste fluxo interno
+            provider_tx_id: null,
+            pix_e2e_id: null
+        });
+    }
 calculateFee(): void {
     if (this._net_price === undefined || this._fee_percentage === undefined) {
         throw new CustomError("Net price and fee percentage must be set before calculating the fee", 400);

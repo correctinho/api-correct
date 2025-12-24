@@ -14,12 +14,13 @@ export interface ISubscriptionRepository extends RepositoryInterface<Subscriptio
   findActiveByUser(userUuid: Uuid): Promise<SubscriptionEntity[]>;
   findExpiredActiveSubscriptions(referenceDate: Date): Promise<SubscriptionEntity[]>;
   updateStatusBulk(uuids: Uuid[], newStatus: string): Promise<void>;
-  processHireTransaction(
-        subscription: SubscriptionEntity,
-        userItemToUpsert: AppUserItemEntity,
-        transactionRecord: TransactionEntity,
-        termAcceptance: TermAcceptanceEntity,
+  executeCheckoutWithBalance(
+        subscriptionEntity: SubscriptionEntity,
+        targetUserItemEntity: AppUserItemEntity,
+        transactionEntity: TransactionEntity,
+        termAcceptanceEntity: TermAcceptanceEntity,
         hubAccountUuid: Uuid,
-        priceInCents: number
+        priceInCents: number,
+        adminUserItemUuid: string
     ): Promise<void>;
 }
