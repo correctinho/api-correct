@@ -16,7 +16,6 @@ export class FindAllUserItemsByEmployerUsecase {
     // Check if app user exists
     const userInfo = await this.appuserInfoRepository.find(new Uuid(user_info_uuid));
     if (!userInfo) throw new CustomError("User not found", 404);
-
     //check if employer is allowed to make this request
     if (!userInfo.business_info_uuids.some(uuid => uuid === business_info_uuid)) throw new CustomError("Unauthorized access", 403);
     const userItems = await this.appUserItemRepository.findAllUserItemsByEmployer(userInfo.uuid.uuid, business_info_uuid);
@@ -25,9 +24,9 @@ export class FindAllUserItemsByEmployerUsecase {
       const itemBusinessUuidString = userItem.business_info_uuid?.uuid; // Acesso seguro ao UUID da empresa do item
 
       return userItem.status !== "inactive" &&
-             itemBusinessUuidString === business_info_uuid && // Comparação segura
-             userItem.item_name !== "Correct";
-  });
+        itemBusinessUuidString === business_info_uuid && // Comparação segura
+        userItem.item_name !== "Correct";
+    });
     if (userItems.length === 0) return [];
     return filteredItems.map((userItem: AppUserItemEntity) => {
       return {
