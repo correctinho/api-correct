@@ -27,6 +27,7 @@ export class CreateCompanyUserByAdminController {
       return res.status(201).json(companyUser)
 
     } catch (err: any) {
+      console.log(err)
       return res.status(err.statusCode).json({
         error: err.message
       })
