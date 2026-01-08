@@ -9,4 +9,9 @@ export interface IBusinessItemDetailsRepository extends RepositoryInterface<Busi
   findAllEmployerItems(businessInfoId: string):Promise<OutputFindEmployerItemDetailsDTO[] | []>
   findByIdWithItems(id: Uuid):Promise<OutputFindEmployerItemDetailsDTO | null>
   createOrUpdateItemAndGroup(itemEntity: BusinessItemsDetailsEntity, groupEntity: BenefitGroupsEntity): Promise<any>
+  getMetrics(businessInfoUuid: string, itemUuid: string): Promise<{ 
+        total_lives: number; 
+        estimated_cost: number 
+    }>;
+  
 }

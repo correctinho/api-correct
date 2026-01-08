@@ -19,6 +19,7 @@ import { subscriptionRouter } from './Subscriptions/subscriptions.routes';
 import { serviceScheduling } from './ServiceScheduling/serviceScheduling,routes';
 import { termsRouter } from './Terms/terms.routes';
 import { gameRouter } from './Games/game.routes';
+import { dashboardRouter } from './Dashboard/dashboard.routes';
 
 const router = Router();
 
@@ -42,4 +43,5 @@ router.use(sseRouter)
 router.use(serviceScheduling)
 router.use(termsRouter)
 router.use(gameRouter)
+router.use(dashboardRouter)
 export { router };

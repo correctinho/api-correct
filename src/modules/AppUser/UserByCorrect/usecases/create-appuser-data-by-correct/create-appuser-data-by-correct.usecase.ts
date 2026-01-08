@@ -260,7 +260,7 @@ export class CreateAppUserByCorrectUsecaseTest {
                 item_uuid: new Uuid(employerItem.item_uuid),
                 item_name: employerItem.Item.name,
                 item_category: employerItem.Item.item_category as ItemCategory,
-                balance: defaultGroup.value / 100,
+                balance: 0,
                 group_uuid: defaultGroup.uuid,
                 group_name: defaultGroup.group_name,
                 group_value: defaultGroup.value / 100,

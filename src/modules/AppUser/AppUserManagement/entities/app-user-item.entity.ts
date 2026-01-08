@@ -82,6 +82,9 @@ export class AppUserItemEntity {
     private _created_at: string;
     private _updated_at: string;
 
+    public UserInfo?: { full_name: string; document: string; email?: string | null };
+    public BenefitGroups?: { uuid: string; group_name: string; value: number };
+
     private constructor(props: AppUserItemProps) {
         this._uuid = props.uuid ?? new Uuid();
         this._user_info_uuid = props.user_info_uuid;
@@ -269,7 +272,7 @@ export class AppUserItemEntity {
         if (!this._user_info_uuid) throw new CustomError("User Info id is required", 400);
         if (!this._item_uuid) throw new CustomError("Item id is required", 400);
         if (this._balance < 0) throw new CustomError("Balance cannot be negative", 400);
-        if(this.item_type === "gratuito" && this._balance > this._group_value) throw new CustomError("Balance cannot be higher than group value setup", 400);
+        //if(this.item_type === "gratuito" && this._balance > this._group_value) throw new CustomError("Balance cannot be higher than group value setup", 400);
         if (typeof this._balance !== 'number' || isNaN(this._balance)) throw new CustomError("Balance must be a valid number", 400);
         if (!Object.values(UserItemStatus).includes(this._status)) throw new CustomError("Invalid status", 400);
         // if (this._item_category === 'pos_pago' && this._employee_salary !== undefined && this._balance > (this._employee_salary * 0.4)) {

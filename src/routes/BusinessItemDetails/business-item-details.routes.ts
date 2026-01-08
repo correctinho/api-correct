@@ -7,6 +7,10 @@ import { createEmployerItemDetails } from "../../modules/Company/BusinessItemsDe
 import { setEmployerCyclesController } from "../../modules/Company/BusinessItemsDetails/usecases/CorrectAdmin/updateEmployerCyclesByCorrect";
 import { findAllEmployerItemDetailsBusinessAdmin } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessAdmin/findAllByBusinessAdmin";
 import { findEmployerItemDetailsByBusiness } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessAdmin/findItemDetailsByBusinessAdmin";
+import { listCollaboratorsByBenefitController } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/list-collaborators-by-benefit";
+import { listBusinessOrdersByBusinessController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessItemsCreditRelease/list-business-orders/index-by-business";
+import { listBusinessOrdersByCorrectAdminController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessItemsCreditRelease/list-business-orders/index-by-correct-admin";
+import { approveRechargeOrder } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessItemsCreditRelease/approve-recharge-order";
 
 export const businessItemDetailsRouter = Router()
 
@@ -31,6 +35,16 @@ businessItemDetailsRouter.get("/business/item/details/correct/:business_info_uui
   await findAllEmployerItemDetails.handle(request, response)
 })
 
+//List business orders by correct admin
+// businessItemDetailsRouter.get(
+//     "/business/orders/:businessInfoUuid/:item_uuid", 
+//     correctIsAuth, 
+//     async (request, response) => {
+//         await listBusinessOrdersByCorrectAdminController.handle(request, response)
+//     }
+// )
+
+
 
 /*****BUSINESS ENDPOINTS****** */
 
@@ -43,3 +57,30 @@ businessItemDetailsRouter.get("/business/item/details", companyIsAuth, async (re
 businessItemDetailsRouter.get("/business/item/details/:id/employer", companyIsAuth, async (request, response) => {
   await findEmployerItemDetailsByBusiness.handle(request, response)
 })
+
+// LISTAR COLABORADORES DO BENEFÍCIO (Para a aba "Colaboradores")
+// GET /business/item/details/:id/collaborators?page=1&limit=10&status=inactive
+businessItemDetailsRouter.get(
+    "/business/item/details/:id/collaborators", 
+    companyIsAuth, 
+    async (request, response) => {
+        await listCollaboratorsByBenefitController.handle(request, response)
+    }
+)
+//List business orders by business admin
+businessItemDetailsRouter.get(
+    "/business/orders/list/:item_uuid", 
+     companyIsAuth,
+    async (request, response) => {
+        await listBusinessOrdersByBusinessController.handle(request, response)
+    }
+)
+
+//Approve recharge order endpoint
+businessItemDetailsRouter.post(
+    "/business/recharge-orders/approve", 
+    correctIsAuth, 
+    async (request, response) => {
+        await approveRechargeOrder.handle(request, response)
+    }
+)

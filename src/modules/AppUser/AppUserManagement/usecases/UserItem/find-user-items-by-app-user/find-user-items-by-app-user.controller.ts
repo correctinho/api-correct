@@ -20,7 +20,6 @@ export class  FindAllUserItemsByAppUserController {
       const result = await usecase.execute(userInfoUuid)
       return res.json(result)
     } catch (err: any) {
-      console.log({err})
       return res.status(err.statusCode).json({
         error: err.message
       })

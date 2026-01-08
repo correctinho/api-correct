@@ -17,7 +17,6 @@ export class FindEmployerItemDetailsController {
       const usecase = new FindEmployerItemDetailsUsecase(this.itemDetailsRepository, this.itemsRepository)
 
       const result = await usecase.execute(id, businessInfoUuid)
-
       return res.json(result)
     }catch(err: any){
       return res.status(err.statusCode).json({
