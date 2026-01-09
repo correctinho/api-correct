@@ -26,6 +26,7 @@ export class UpdateUserbyAdminController {
       return res.json(updateUser)
 
     } catch (err: any) {
+      console.log({err})
       return res.status(err.statusCode).json({
         error: err.message
       })
