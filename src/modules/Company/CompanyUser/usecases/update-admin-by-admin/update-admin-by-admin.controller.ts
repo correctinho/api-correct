@@ -3,47 +3,36 @@ import { ICompanyUserRepository } from "../../repositories/company-user.reposito
 import { UpdateAdminByAdminUsecase } from "./update-admin-by-admin.usecase";
 import { IPasswordCrypto } from "../../../../../crypto/password.crypto";
 import { InputUpdateBusinessAdminByAdminDTO } from "./dto/update-admin-by-admin.dto";
-import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
-import { Permissions, Status } from "@prisma/client";
-import { CompanyUserEntity, CompanyUserProps } from "../../entities/company-user.entity";
 
 export class UpdateAdminByAdminController {
   constructor(
     private companyUserRepository: ICompanyUserRepository,
     private passwordCrypto: IPasswordCrypto,
-
   ) { }
 
   async handle(req: Request, res: Response) {
-
     try {
-      const data: InputUpdateBusinessAdminByAdminDTO = req.body
+      const data: InputUpdateBusinessAdminByAdminDTO = req.body;
+      
+      // Pegamos apenas o ID do usuário autenticado que está no Request
+      const authUserId = req.companyUser.companyUserId;
 
-      let currentData: CompanyUserProps = {
-        uuid: new Uuid(req.companyUser.companyUserId),
-        business_info_uuid: new Uuid(req.companyUser.businessInfoUuid),
-        is_admin: req.companyUser.isAdmin,
-        document: req.companyUser.document,
-        email: req.companyUser.email,
-        name: req.companyUser.name,
-        user_name: req.companyUser.userName,
-        password: req.companyUser.password,
-        function: req.companyUser.function,
-        permissions: req.companyUser.permissions as Permissions[],
-        status: req.companyUser.status as Status
-      }
+      const updateUserUsecase = new UpdateAdminByAdminUsecase(
+          this.companyUserRepository, 
+          this.passwordCrypto
+      );
 
+      // Passamos ID + Dados
+      const result = await updateUserUsecase.execute(authUserId, data);
 
-      const updateUserUsecase = new UpdateAdminByAdminUsecase(this.companyUserRepository, this.passwordCrypto)
-
-      const updateUser = await updateUserUsecase.execute(data, currentData)
-
-      return res.json(updateUser)
+      return res.json(result);
 
     } catch (err: any) {
-      return res.status(err.statusCode).json({
+      // Garante que o status code seja respeitado ou retorna 400 por padrão
+      const statusCode = err.statusCode || 400;
+      return res.status(statusCode).json({
         error: err.message
-      })
+      });
     }
   }
 }
