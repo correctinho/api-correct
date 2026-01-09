@@ -8,6 +8,9 @@ import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-a
 import { findAllUserItemsByUser } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/find-user-items-by-app-user";
 import { activateUserItemByEmployer } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/activate-user-item-by-employer";
 import { getAppUserItemHistoryController } from "../../modules/Payments/Accounts/usecases/account-histories/app-user";
+import { activateUserItemsBatchController } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/activate-user-items-batch";
+import { previewRechargeOrderController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessItemsCreditRelease/preview-recharge-order";
+import { createRechargeOrderController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessItemsCreditRelease/create-recharge-order";
 
 export const appUserItemRouter = Router()
 
@@ -33,11 +36,30 @@ appUserItemRouter.patch("/user-item/activate", companyIsAuth, async (request, re
   await activateUserItemByEmployer.handle(request, response)
 })
 
+//ativate user items batch by employer
+appUserItemRouter.patch("/user-item/activate/batch", companyIsAuth, async (request, response) => {
+  await activateUserItemsBatchController.handle(request, response)
+})
+
 //block or cancel user item by employer - TESTED
 appUserItemRouter.patch("/user-item/employer", companyIsAuth, async (request, response) => {
   await blockOrCancelUserItemByEmployer.handle(request, response)
 })
 
+//preview recharge order
+appUserItemRouter.get("/user-item/employer/preview-recharge/:item_uuid", companyIsAuth, async (request, response) => {
+  await previewRechargeOrderController.handle(request, response)
+})
+
+//create recharge order 
+appUserItemRouter.post("/user-item/employer/recharge-order", companyIsAuth, async (request, response) => {
+  await createRechargeOrderController.handle(request, response)
+})
+
+//Busca usuários com itens específicos --- IGNORE ---
+// appUserItemRouter.post("/business/item/details/:id/collaborators", companyIsAuth, async (request, response) => {
+//   await findUsersWithSpecificItemsByEmployerController.handle(request, response)
+// })
 
 //*****APP USER ENDPOINTS****** */
 

@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express"
 import { CompanyAdminJWToken } from "../../crypto/token/CompanyAdmin/jwt.token"
 import { CompanyUserPrismaRepository } from "../../../../modules/Company/CompanyUser/repositories/implementations/company-user.prisma.repository"
 import { EnsureValidCompanyUserController } from "./ensure-valid-company-auth.controller.middleware"
-import { api } from "../../../axios/axios.config"
 import { OutputCompanyUserDTO } from "./ensure-valid-company-admin.usecase.middlware"
 
 export const companyIsAuth = async (req: Request, res: Response, next: NextFunction) => {

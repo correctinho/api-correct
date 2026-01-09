@@ -11,7 +11,7 @@ import { EmployeeStatus } from '@prisma/client';
 
 export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
     async findByEmailUserInfo(email: string): Promise<OutputFindUserDTO | null> {
-       const user = await prismaClient.userInfo.findUnique({
+        const user = await prismaClient.userInfo.findUnique({
             where: {
                 email: email,
             },
@@ -143,7 +143,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
             gender: user.gender,
             date_of_birth: user.date_of_birth,
             phone: user.phone,
-            email: user.UserAuth[0].email,
+            email: user.UserAuth ? user.UserAuth[0]?.email : null,
             status: user.status,
             recommendation_code: user.recommendation_code,
             is_authenticated: user.is_authenticated,
@@ -305,7 +305,14 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
                 );
                 const userItemOperations = employeeItem.map((item) =>
                     tx.userItem.upsert({
-                        where: { uuid: item.uuid.uuid },
+                        where: {
+                            // <--- CORREÇÃO AQUI: Busca pela combinação única, não pelo ID aleatório
+                            user_info_uuid_business_info_uuid_item_uuid: {
+                                user_info_uuid: userInfoUuid,
+                                business_info_uuid: item.business_info_uuid.uuid,
+                                item_uuid: item.item_uuid.uuid,
+                            },
+                        },
                         create: {
                             // Dados para criar item do array
                             uuid: item.uuid.uuid,
@@ -424,7 +431,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
                         business_info_uuid: item.business_info_uuid.uuid,
                         item_uuid: item.item_uuid.uuid,
                         item_name: item.item_name,
-                        balance: item.balance,
+                        //balance: item.balance,
                         group_uuid: item.group_uuid.uuid,
                         status: item.status,
                         blocked_at: item.blocked_at,
@@ -482,75 +489,83 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
     }
 
     async updateEmployeeByCSV(
-        data: AppUserInfoEntity,
-        employeeData: any,
-        employeeItem: AppUserItemEntity[]
-    ): Promise<void> {
-        await prismaClient.$transaction([
-            prismaClient.userInfo.update({
+    data: AppUserInfoEntity, // Novos dados (Entity)
+    employeeData: any,       // Dados antigos do banco (POJO)
+    employeeItem: AppUserItemEntity[]
+): Promise<void> {
+    await prismaClient.$transaction([
+        // 1. Atualiza UserInfo
+        prismaClient.userInfo.update({
+            where: {
+                document: data.document,
+            },
+            data: {
+                is_employee: data.is_employee,
+                updated_at: data.updated_at,
+            },
+        }),
+
+        // 2. Atualiza Employee (CORRIGIDO)
+        prismaClient.employee.update({
+            where: {
+                uuid: employeeData.uuid, // Usa o UUID do registro existente (String)
+            },
+            data: {
+                user_info_uuid: data.uuid.uuid, 
+                business_info_uuid: data.business_info_uuid.uuid,
+                company_internal_code: data.internal_company_code,
+                salary: data.salary,
+                job_title: data.function, // Mapeia function -> job_title
+                company_owner: data.company_owner,
+                dependents_quantity: data.dependents_quantity,
+                updated_at: data.updated_at,
+            },
+        }),
+
+        // 3. Upsert dos UserItems (COM A CORREÇÃO DA CHAVE COMPOSTA)
+        ...employeeItem.map((item) =>
+            prismaClient.userItem.upsert({
                 where: {
-                    document: data.document,
-                },
-                data: {
-                    is_employee: data.is_employee,
-                    updated_at: data.updated_at,
-                },
-            }),
-            prismaClient.employee.update({
-                where: {
-                    uuid: employeeData.uuid,
-                },
-                data: {
-                    user_info_uuid: employeeData.uuid.uuid,
-                    business_info_uuid: employeeData.business_info_uuid.uuid,
-                    company_internal_code: employeeData.internal_company_code,
-                    salary: employeeData.salary,
-                    job_title: employeeData.function,
-                    company_owner: employeeData.company_owner,
-                    dependents_quantity: employeeData.dependents_quantity,
-                    updated_at: employeeData.updated_at,
-                },
-            }),
-            ...employeeItem.map((item) =>
-                prismaClient.userItem.upsert({
-                    where: {
-                        uuid: item.uuid.uuid,
-                    },
-                    create: {
-                        uuid: item.uuid.uuid,
+                    // CORREÇÃO: Busca pela chave composta, não pelo UUID aleatório
+                    user_info_uuid_business_info_uuid_item_uuid: {
                         user_info_uuid: item.user_info_uuid.uuid,
                         business_info_uuid: item.business_info_uuid.uuid,
                         item_uuid: item.item_uuid.uuid,
-                        item_name: item.item_name,
-                        balance: item.balance,
-                        group_uuid: item.group_uuid.uuid,
-                        status: item.status,
-                        blocked_at: item.blocked_at,
-                        cancelled_at: item.cancelled_at,
-                        block_reason: item.block_reason,
-                        cancel_reason: item.cancel_reason,
-                        grace_period_end_date: item.grace_period_end_date,
-                        created_at: item.created_at,
                     },
-                    update: {
-                        user_info_uuid: item.user_info_uuid.uuid,
-                        business_info_uuid: item.business_info_uuid.uuid,
-                        item_uuid: item.item_uuid.uuid,
-                        item_name: item.item_name,
-                        balance: item.balance,
-                        group_uuid: item.group_uuid.uuid,
-                        status: item.status,
-                        blocked_at: item.blocked_at,
-                        cancelled_at: item.cancelled_at,
-                        block_reason: item.block_reason,
-                        cancel_reason: item.cancel_reason,
-                        grace_period_end_date: item.grace_period_end_date,
-                        updated_at: item.updated_at,
-                    },
-                })
-            ),
-        ]);
-    }
+                },
+                create: {
+                    uuid: item.uuid.uuid,
+                    user_info_uuid: item.user_info_uuid.uuid,
+                    business_info_uuid: item.business_info_uuid.uuid,
+                    item_uuid: item.item_uuid.uuid,
+                    item_name: item.item_name,
+                    balance: item.balance,
+                    group_uuid: item.group_uuid.uuid,
+                    status: item.status,
+                    blocked_at: item.blocked_at,
+                    cancelled_at: item.cancelled_at,
+                    block_reason: item.block_reason,
+                    cancel_reason: item.cancel_reason,
+                    grace_period_end_date: item.grace_period_end_date,
+                    created_at: item.created_at,
+                },
+                update: {
+                    // Atualiza os dados se o item já existir
+                    item_name: item.item_name,
+                    //balance: item.balance,
+                    group_uuid: item.group_uuid.uuid,
+                    status: item.status,
+                    blocked_at: item.blocked_at,
+                    cancelled_at: item.cancelled_at,
+                    block_reason: item.block_reason,
+                    cancel_reason: item.cancel_reason,
+                    grace_period_end_date: item.grace_period_end_date,
+                    updated_at: item.updated_at,
+                },
+            })
+        ),
+    ]);
+}
     async createUserInfoandUpdateUserAuthByCSV(
         data: AppUserInfoEntity,
         employeeItemEntity: AppUserItemEntity[]
@@ -626,7 +641,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
                         business_info_uuid: item.business_info_uuid.uuid,
                         item_uuid: item.item_uuid.uuid,
                         item_name: item.item_name,
-                        balance: item.balance,
+                        //balance: item.balance,
                         group_uuid: item.group_uuid.uuid,
                         status: item.status,
                         blocked_at: item.blocked_at,
@@ -661,8 +676,8 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
             },
             include: {
                 Employee: true,
-                UserAuth:{
-                    select:{
+                UserAuth: {
+                    select: {
                         email: true
                     }
                 }
@@ -670,7 +685,6 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
         });
 
         if (!user) return null;
-
         return {
             uuid: user.uuid,
             address_uuid: user.address_uuid,
@@ -680,7 +694,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
             full_name: user.full_name,
             display_name: user.display_name,
             gender: user.gender,
-            email: user.UserAuth[0].email,
+            email: user.UserAuth ? user.UserAuth[0]?.email : null,
             date_of_birth: user.date_of_birth,
             phone: user.phone,
             status: user.status,
@@ -752,7 +766,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
                             business_info_uuid: item.business_info_uuid.uuid,
                             item_uuid: item.item_uuid.uuid,
                             item_name: item.item_name,
-                            balance: item.balance,
+                            //balance: item.balance,
                             group_uuid: item.group_uuid.uuid,
                             status: item.status,
                             blocked_at: item.blocked_at,

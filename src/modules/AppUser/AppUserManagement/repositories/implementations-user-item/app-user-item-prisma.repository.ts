@@ -6,7 +6,7 @@ import {
     AppUserItemProps,
 } from '../../entities/app-user-item.entity';
 import { OutputFindAllAppUserItemsDTO } from '../../usecases/UserItem/find-all-by-employer/dto/find-user-item.dto';
-import { IAppUserItemRepository } from '../app-user-item-repository';
+import { AppUserItemWithDetails, IAppUserItemRepository, InputListCollaboratorsRepoDTO } from '../app-user-item-repository';
 import { newDateF } from '../../../../../utils/date';
 import { CustomError } from '../../../../../errors/custom.error';
 
@@ -52,11 +52,11 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
                 group_uuid: data.group_uuid ? data.group_uuid : null,
 
                 item_name: data.item_name,
-                
+
 
                 // Valores (podem mudar)
                 balance: data.balance,
-                
+
                 status: data.status,
 
                 // Datas e Motivos (podem mudar)
@@ -187,7 +187,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
             },
             include: {
                 Item: true,
-                Business: true, // Incluímos o BusinessInfo completo
+                Business: true,
                 BenefitGroups: true,
             },
         });
@@ -545,6 +545,266 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         });
     }
 
+    async activateManyByBusinessAndItem(
+        business_info_uuid: string,
+        item_uuid: string,
+        user_uuids: string[]
+    ): Promise<void> {
+        await prismaClient.userItem.updateMany({
+            where: {
+                business_info_uuid: business_info_uuid,
+                item_uuid: item_uuid,
+                user_info_uuid: {
+                    in: user_uuids
+                },
+                status: 'inactive' // Só ativa quem está inativo (segurança)
+            },
+            data: {
+                status: 'active',
+                updated_at: newDateF(new Date())
+            }
+        });
+    }
+
+    async findAllByItemAndBusinessPaginated(
+        params: InputListCollaboratorsRepoDTO
+    ): Promise<{ items: AppUserItemWithDetails[]; total: number }> {
+
+        const skip = (params.page - 1) * params.limit;
+
+        // 1. Monta o filtro dinâmico
+        const whereClause: any = {
+            business_info_uuid: params.business_info_uuid,
+            item_uuid: params.item_uuid,
+        };
+
+        if (params.status && params.status !== 'all') {
+            whereClause.status = params.status;
+        }
+
+        // 2. Executa a Transação
+        const [total, prismaItems] = await prismaClient.$transaction([
+
+            prismaClient.userItem.count({
+                where: whereClause
+            }),
+
+            prismaClient.userItem.findMany({
+                where: whereClause,
+                skip: skip,
+                take: params.limit,
+                orderBy: {
+                    UserInfo: {
+                        full_name: 'asc'
+                    }
+                },
+                include: {
+                    // CORREÇÃO DO ERRO: Adicionado 'Item: true'
+                    // Sem isso, o mapToDomain falha ao tentar ler item_category
+                    Item: true,
+
+                    UserInfo: {
+                        select: {
+                            full_name: true,
+                            document: true
+                        }
+                    },
+                    BenefitGroups: {
+                        select: {
+                            group_name: true
+                        }
+                    }
+                }
+            })
+        ]);
+
+        // 3. Mapeamento Campo a Campo (Sem spread operator)
+        const items = prismaItems.map((item) => {
+            const entity = this.mapToDomain(item);
+
+            // Retornamos um objeto explícito combinando a Entidade + Detalhes
+            // Usamos 'as unknown as' para satisfazer o TypeScript pois estamos 
+            // retornando um objeto literal que imita a classe + props extras
+            return {
+                uuid: entity.uuid,
+                user_info_uuid: entity.user_info_uuid,
+                business_info_uuid: entity.business_info_uuid,
+                item_uuid: entity.item_uuid,
+                item_name: entity.item_name,
+                item_category: entity.item_category,
+                balance: entity.balance,
+                status: entity.status,
+                group_uuid: entity.group_uuid,
+
+                // Campos Opcionais da Entidade
+                group_name: entity.group_name,
+                group_value: entity.group_value,
+                group_is_default: entity.group_is_default,
+                img_url: entity.img_url,
+
+                // Datas e Motivos
+                blocked_at: entity.blocked_at,
+                block_reason: entity.block_reason,
+                cancelled_at: entity.cancelled_at,
+                cancel_reason: entity.cancel_reason,
+                cancelling_request_at: entity.cancelling_request_at,
+                grace_period_end_date: entity.grace_period_end_date,
+                created_at: entity.created_at,
+                updated_at: entity.updated_at,
+
+                // --- CAMPOS EXTRAS (JOIN) ---
+                UserInfo: item.UserInfo,
+                BenefitGroups: item.BenefitGroups
+
+            } as AppUserItemWithDetails;
+        });
+
+        return { items, total };
+    }
+
+    async findAllActiveByBusinessAndItem(
+        businessInfoUuid: string,
+        itemUuid: string
+    ): Promise<AppUserItemEntity[]> {
+        const models = await prismaClient.userItem.findMany({
+            where: {
+                business_info_uuid: businessInfoUuid,
+                item_uuid: itemUuid,
+                status: 'active' // REGRA: Apenas colaboradores ativos aparecem na recarga
+            },
+            include: {
+                UserInfo: true,      // Necessário para exibir Nome e CPF na tabela
+                BenefitGroups: true,  // CRUCIAL: Necessário para pegar o 'value' (valor padrão do grupo)
+                Item: true           // Necessário para pegar detalhes do item, se precisar
+            },
+            orderBy: {
+                UserInfo: {
+                    full_name: 'asc' // Já traz ordenado alfabeticamente para o RH
+                }
+            }
+        });
+
+        // No arquivo do repositório
+        return models.map((model) => {
+            // 1. Cria a entidade básica usando o método existente
+            const entity = AppUserItemEntity.hydrate({
+                uuid: new Uuid(model.uuid),
+                user_info_uuid: new Uuid(model.user_info_uuid),
+                item_uuid: new Uuid(model.item_uuid),
+                business_info_uuid: model.business_info_uuid ? new Uuid(model.business_info_uuid) : null,
+
+                // Passa os valores JÁ EM CENTAVOS (hydrate não multiplica por 100)
+                balance: model.balance,
+                group_value: model.BenefitGroups?.value || 0, // Se não tiver grupo, zero
+
+                status: model.status,
+                item_name: model.item_name,
+                item_category: model.Item?.item_category || 'pre_pago', // Fallback seguro
+                item_type: model.Item?.item_type || 'programa',         // Fallback seguro
+
+                // ... preencha o resto das props obrigatórias ...
+                group_uuid: model.group_uuid ? new Uuid(model.group_uuid) : null,
+                group_name: model.BenefitGroups?.group_name || '',
+
+                created_at: model.created_at ? model.created_at : undefined, // Verifique se é Date ou String no seu banco
+                updated_at: model.updated_at ? model.updated_at : undefined
+            });
+
+            // 2. Injeta os dados extras que buscamos no include
+            if (model.UserInfo) {
+                entity.UserInfo = {
+                    full_name: model.UserInfo.full_name,
+                    document: model.UserInfo.document,
+                    email: model.UserInfo.email
+                };
+            }
+
+            if (model.BenefitGroups) {
+                entity.BenefitGroups = {
+                    uuid: model.BenefitGroups.uuid,
+                    group_name: model.BenefitGroups.group_name,
+                    value: model.BenefitGroups.value
+                };
+            }
+
+            return entity;
+        });
+    }
+
+    async findManyByUuids(uuids: string[]): Promise<AppUserItemEntity[]> {
+        const models = await prismaClient.userItem.findMany({
+            where: {
+                uuid: { in: uuids }
+            },
+            include: {
+                UserInfo: true,      // Traz nome e doc (Vital para o Snapshot)
+                BenefitGroups: true, // Traz nome do grupo e valor original
+                Item: true           // Traz categoria e tipo
+            }
+        });
+
+        return models.map((model) => {
+            // 1. Hidrata a entidade com todos os campos obrigatórios e opcionais
+            const entity = AppUserItemEntity.hydrate({
+                uuid: new Uuid(model.uuid),
+                user_info_uuid: new Uuid(model.user_info_uuid),
+                item_uuid: new Uuid(model.item_uuid),
+                business_info_uuid: model.business_info_uuid ? new Uuid(model.business_info_uuid) : null,
+
+                // Valores Financeiros (Mantém em centavos, conforme o banco)
+                balance: model.balance,
+                group_value: model.BenefitGroups?.value, 
+                //employee_salary: model. || undefined,
+
+                // Status e Identificação
+                status: model.status,
+                item_name: model.item_name,
+                fantasy_name: null, // O include não trouxe BusinessInfo, então nulo
+
+                // Dados do Item (Vindos da relação)
+                item_category: model.Item?.item_category || 'pre_pago',
+                item_type: model.Item?.item_type || 'programa',
+                img_url: model.Item?.img_url || null,
+
+                // Dados do Grupo
+                group_uuid: model.group_uuid ? new Uuid(model.group_uuid) : null,
+                group_name: model.BenefitGroups?.group_name,
+                group_is_default: model.BenefitGroups?.is_default,
+
+                // Campos de Controle e Bloqueio
+                blocked_at: model.blocked_at,
+                cancelled_at: model.cancelled_at,
+                cancelling_request_at: model.cancelling_request_at,
+                block_reason: model.block_reason,
+                cancel_reason: model.cancel_reason,
+                grace_period_end_date: model.grace_period_end_date,
+
+                // Datas (Convertendo de Date do Prisma para String da Entity)
+                created_at: model.created_at ? model.created_at : undefined,
+                updated_at: model.updated_at ? model.updated_at : undefined,
+            });
+
+            // 2. Injeta os dados do Usuário na propriedade pública (Vital para o Snapshot)
+            if (model.UserInfo) {
+                entity.UserInfo = {
+                    full_name: model.UserInfo.full_name,
+                    document: model.UserInfo.document,
+                    email: model.UserInfo.email
+                };
+            }
+
+            // 3. Injeta os dados do Grupo na propriedade pública
+            if (model.BenefitGroups) {
+                entity.BenefitGroups = {
+                    uuid: model.BenefitGroups.uuid,
+                    group_name: model.BenefitGroups.group_name,
+                    value: model.BenefitGroups.value
+                };
+            }
+
+            return entity;
+        });
+    }
     private mapToDomain(userItemData: any): AppUserItemEntity {
         const userItemProps: AppUserItemProps = {
             uuid: new Uuid(userItemData.uuid),

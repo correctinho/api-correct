@@ -23,4 +23,7 @@ export type OutputBlockOrCancelUserItemByEmployer = {
   grace_period_end_date?: string | null
   created_at?: string | null
   updated_at?: string | null
+  
+  // NOVO CAMPO: Mensagem explicativa para o RH
+  system_message?: string | null 
 }

@@ -62,7 +62,7 @@ export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetails
           }
         },
         BenefitGroups: {
-          select:{
+          select: {
             uuid: true,
             group_name: true,
             is_default: true,
@@ -83,7 +83,7 @@ export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetails
     const benefitGroupEntity = groupEntity.toJSON()
     const [employerItem, group] = await prismaClient.$transaction([
       prismaClient.employerItemDetails.upsert({
-        where:{
+        where: {
           uuid: dataItemEntity.uuid
         },
         create: {
@@ -95,7 +95,7 @@ export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetails
           is_active: dataItemEntity.is_active,
           created_at: dataItemEntity.created_at
         },
-        update:{
+        update: {
           cycle_end_day: dataItemEntity.cycle_end_day,
           cycle_start_day: dataItemEntity.cycle_start_day,
           is_active: dataItemEntity.is_active,
@@ -103,7 +103,7 @@ export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetails
         }
       }),
       prismaClient.benefitGroups.upsert({
-        where:{
+        where: {
           uuid: benefitGroupEntity.uuid
         },
         create: {
@@ -115,7 +115,7 @@ export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetails
           is_default: benefitGroupEntity.is_default,
           created_at: benefitGroupEntity.created_at
         },
-        update:{
+        update: {
           group_name: benefitGroupEntity.group_name,
           value: benefitGroupEntity.value,
           business_info_uuid: benefitGroupEntity.business_info_uuid,
@@ -190,6 +190,7 @@ export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetails
       business_info_uuid: new Uuid(result.business_info_uuid),
       cycle_start_day: result.cycle_start_day,
       cycle_end_day: result.cycle_end_day,
+      is_active: result.is_active,
       created_at: result.created_at,
       updated_at: result.updated_at
     } as BusinessItemsDetailsEntity
@@ -220,4 +221,32 @@ export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetails
 
   }
 
+  async getMetrics(businessInfoUuid: string, itemUuid: string): Promise<{ total_lives: number; estimated_cost: number }> {
+    // Busca todos os itens de usuário ATIVOS para este benefício
+    const activeUserItems = await prismaClient.userItem.findMany({
+      where: {
+        business_info_uuid: businessInfoUuid,
+        item_uuid: itemUuid,
+        status: 'active' // Só contamos quem está ativo
+      },
+      include: {
+        BenefitGroups: true // Precisamos do grupo para saber o valor
+      }
+    });
+
+    const total_lives = activeUserItems.length;
+
+    // Soma os valores dos grupos (se o grupo for nulo, soma 0)
+    // O valor no banco está em CENTAVOS, mantemos em centavos aqui
+    const estimated_cost = activeUserItems.reduce((acc, curr) => {
+      return acc + (curr.BenefitGroups?.value || 0);
+    }, 0);
+
+    return {
+      total_lives,
+      estimated_cost
+    };
+  }
+
+  
 }

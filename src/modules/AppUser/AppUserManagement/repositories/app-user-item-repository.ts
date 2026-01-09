@@ -3,6 +3,24 @@ import RepositoryInterface from "../../../../@shared/domain/repository/repositor
 import { AppUserItemEntity } from "../entities/app-user-item.entity";
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
 
+export type InputListCollaboratorsRepoDTO = {
+    business_info_uuid: string;
+    item_uuid: string;
+    page: number;
+    limit: number;
+    status?: string; // opcional
+}
+
+export type AppUserItemWithDetails = AppUserItemEntity & {
+    UserInfo?: {
+        full_name: string;
+        document: string;
+    };
+    BenefitGroups?: {
+        group_name: string;
+    };
+}
+
 export interface IAppUserItemRepository extends RepositoryInterface<AppUserItemEntity>{
   findByItemUuidAndUserInfo(userInfoId: string, itemId: string):Promise<AppUserItemEntity | null>
   findAllUserItems(userInfoId: string): Promise<AppUserItemEntity[] | []>
@@ -14,4 +32,17 @@ export interface IAppUserItemRepository extends RepositoryInterface<AppUserItemE
   findSpecificUserItem(userInfoId: string, itemId: string, businessInfoId: string | null): Promise<AppUserItemEntity | null>;
   upsert(entity: AppUserItemEntity): Promise<void>;
   updateStatusBulk(uuids: Uuid[], newStatus: string): Promise<void>;
+  activateManyByBusinessAndItem(
+    business_info_uuid: string,
+    item_uuid: string,
+    user_uuids: string[]
+): Promise<void>
+  findAllByItemAndBusinessPaginated(
+        params: InputListCollaboratorsRepoDTO
+    ): Promise<{ items: AppUserItemWithDetails[]; total: number }>;
+findAllActiveByBusinessAndItem(
+        businessInfoUuid: string, 
+        itemUuid: string
+    ): Promise<AppUserItemEntity[]>;
+findManyByUuids(uuids: string[]): Promise<AppUserItemEntity[]>
 }

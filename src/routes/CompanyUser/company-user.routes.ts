@@ -13,6 +13,8 @@ import { updateUserController } from "../../modules/Company/CompanyUser/usecases
 import { updateAdminController } from "../../modules/Company/CompanyUser/usecases/update-user-by-admin";
 import { getBusinessAccountController } from "../../modules/Payments/Accounts/usecases/Business/get-business-account-by-admin";
 import { getBusinessAccountHistoryController } from "../../modules/Payments/Accounts/usecases/account-histories/business-user";
+import { sendCompanyPasswordController } from "../../modules/Company/CompanyUser/usecases/password-recovery/send-forget-password-email";
+import { resetCompanyUserPasswordController } from "../../modules/Company/CompanyUser/usecases/password-recovery/reset-company-user-password";
 
 
 export const companyUserRouter = Router()
@@ -79,3 +81,8 @@ companyUserRouter.get('/business/admin/account', companyIsAuth, async (request, 
 companyUserRouter.get('/business/account/history', companyIsAuth, async (request, response) => {
   await getBusinessAccountHistoryController.handle(request, response)
 })
+
+companyUserRouter.post('/business/auth/forgot-password', (req, res) => sendCompanyPasswordController.handle(req, res));
+
+// POST: Trocar Senha
+companyUserRouter.post('/business/auth/reset-password', (req, res) => resetCompanyUserPasswordController.handle(req, res));

@@ -17,7 +17,6 @@ groupsRouter.put("/business-admin/group", companyIsAuth, async (request, respons
   await updateBenefitGroupController.handle(request, response)
 })
 
-
 groupsRouter.get("/business-admin/groups", companyIsAuth, async (request, response) => {
   await getAllBenefitGroupsController.handle(request, response)
 })
