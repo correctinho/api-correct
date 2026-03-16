@@ -24,7 +24,7 @@ export class UpdateAdminByAdminController {
 
       // Passamos ID + Dados
       const result = await updateUserUsecase.execute(authUserId, data);
-
+      console.log({result})
       return res.json(result);
 
     } catch (err: any) {

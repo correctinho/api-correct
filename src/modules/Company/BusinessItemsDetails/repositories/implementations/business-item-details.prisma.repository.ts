@@ -7,6 +7,21 @@ import { IBusinessItemDetailsRepository } from "../business-item-details.reposit
 import { randomUUID } from 'crypto'
 
 export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetailsRepository {
+  async findItemUuidByUuid(uuid: string): Promise<string | null> {
+    const result = await prismaClient.employerItemDetails.findUnique({
+      where: {
+        uuid: uuid
+      },
+      select: {
+        item_uuid: true
+      }
+    });
+
+    if (!result) return null;
+
+    return result.item_uuid;
+  }
+
   async findByIdWithItems(id: Uuid): Promise<OutputFindEmployerItemDetailsDTO | null> {
     const result = await prismaClient.employerItemDetails.findUnique({
       where: {

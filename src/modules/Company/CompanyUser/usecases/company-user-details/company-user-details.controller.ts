@@ -34,7 +34,6 @@ export class CompanyUserDetailsController {
             const additionalData = await usecase.execute(
                 companyUser.businessInfoUuid
             );
-
             return res.json({ ...user, ...additionalData });
         } catch (err: any) {
             const statusCode = err.statusCode || 500;

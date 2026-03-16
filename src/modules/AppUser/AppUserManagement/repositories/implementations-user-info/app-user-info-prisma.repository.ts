@@ -2,7 +2,7 @@ import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
 import { prismaClient } from '../../../../../infra/databases/prisma.config';
 import { newDateF } from '../../../../../utils/date';
 import { AppUserInfoEntity } from '../../entities/app-user-info.entity';
-import { IAppUserInfoRepository, RecipientLookupDTO } from '../app-user-info.repository';
+import { IAppUserInfoRepository, OutputGetSimpleEmployeesDTO, RecipientLookupDTO } from '../app-user-info.repository';
 import { OutputGetEmployeesByBusinessDTO } from '../../usecases/UserInfo/get-users-by-business-admin/dto/get-user-by-business.dto';
 import { randomUUID } from 'crypto';
 import { OutputFindUserDTO } from '../../usecases/UserInfo/get-user-info-by-user/dto/get-user-by-user.dto';
@@ -489,83 +489,83 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
     }
 
     async updateEmployeeByCSV(
-    data: AppUserInfoEntity, // Novos dados (Entity)
-    employeeData: any,       // Dados antigos do banco (POJO)
-    employeeItem: AppUserItemEntity[]
-): Promise<void> {
-    await prismaClient.$transaction([
-        // 1. Atualiza UserInfo
-        prismaClient.userInfo.update({
-            where: {
-                document: data.document,
-            },
-            data: {
-                is_employee: data.is_employee,
-                updated_at: data.updated_at,
-            },
-        }),
-
-        // 2. Atualiza Employee (CORRIGIDO)
-        prismaClient.employee.update({
-            where: {
-                uuid: employeeData.uuid, // Usa o UUID do registro existente (String)
-            },
-            data: {
-                user_info_uuid: data.uuid.uuid, 
-                business_info_uuid: data.business_info_uuid.uuid,
-                company_internal_code: data.internal_company_code,
-                salary: data.salary,
-                job_title: data.function, // Mapeia function -> job_title
-                company_owner: data.company_owner,
-                dependents_quantity: data.dependents_quantity,
-                updated_at: data.updated_at,
-            },
-        }),
-
-        // 3. Upsert dos UserItems (COM A CORREÇÃO DA CHAVE COMPOSTA)
-        ...employeeItem.map((item) =>
-            prismaClient.userItem.upsert({
+        data: AppUserInfoEntity, // Novos dados (Entity)
+        employeeData: any,       // Dados antigos do banco (POJO)
+        employeeItem: AppUserItemEntity[]
+    ): Promise<void> {
+        await prismaClient.$transaction([
+            // 1. Atualiza UserInfo
+            prismaClient.userInfo.update({
                 where: {
-                    // CORREÇÃO: Busca pela chave composta, não pelo UUID aleatório
-                    user_info_uuid_business_info_uuid_item_uuid: {
+                    document: data.document,
+                },
+                data: {
+                    is_employee: data.is_employee,
+                    updated_at: data.updated_at,
+                },
+            }),
+
+            // 2. Atualiza Employee (CORRIGIDO)
+            prismaClient.employee.update({
+                where: {
+                    uuid: employeeData.uuid, // Usa o UUID do registro existente (String)
+                },
+                data: {
+                    user_info_uuid: data.uuid.uuid,
+                    business_info_uuid: data.business_info_uuid.uuid,
+                    company_internal_code: data.internal_company_code,
+                    salary: data.salary,
+                    job_title: data.function, // Mapeia function -> job_title
+                    company_owner: data.company_owner,
+                    dependents_quantity: data.dependents_quantity,
+                    updated_at: data.updated_at,
+                },
+            }),
+
+            // 3. Upsert dos UserItems (COM A CORREÇÃO DA CHAVE COMPOSTA)
+            ...employeeItem.map((item) =>
+                prismaClient.userItem.upsert({
+                    where: {
+                        // CORREÇÃO: Busca pela chave composta, não pelo UUID aleatório
+                        user_info_uuid_business_info_uuid_item_uuid: {
+                            user_info_uuid: item.user_info_uuid.uuid,
+                            business_info_uuid: item.business_info_uuid.uuid,
+                            item_uuid: item.item_uuid.uuid,
+                        },
+                    },
+                    create: {
+                        uuid: item.uuid.uuid,
                         user_info_uuid: item.user_info_uuid.uuid,
                         business_info_uuid: item.business_info_uuid.uuid,
                         item_uuid: item.item_uuid.uuid,
+                        item_name: item.item_name,
+                        balance: item.balance,
+                        group_uuid: item.group_uuid.uuid,
+                        status: item.status,
+                        blocked_at: item.blocked_at,
+                        cancelled_at: item.cancelled_at,
+                        block_reason: item.block_reason,
+                        cancel_reason: item.cancel_reason,
+                        grace_period_end_date: item.grace_period_end_date,
+                        created_at: item.created_at,
                     },
-                },
-                create: {
-                    uuid: item.uuid.uuid,
-                    user_info_uuid: item.user_info_uuid.uuid,
-                    business_info_uuid: item.business_info_uuid.uuid,
-                    item_uuid: item.item_uuid.uuid,
-                    item_name: item.item_name,
-                    balance: item.balance,
-                    group_uuid: item.group_uuid.uuid,
-                    status: item.status,
-                    blocked_at: item.blocked_at,
-                    cancelled_at: item.cancelled_at,
-                    block_reason: item.block_reason,
-                    cancel_reason: item.cancel_reason,
-                    grace_period_end_date: item.grace_period_end_date,
-                    created_at: item.created_at,
-                },
-                update: {
-                    // Atualiza os dados se o item já existir
-                    item_name: item.item_name,
-                    //balance: item.balance,
-                    group_uuid: item.group_uuid.uuid,
-                    status: item.status,
-                    blocked_at: item.blocked_at,
-                    cancelled_at: item.cancelled_at,
-                    block_reason: item.block_reason,
-                    cancel_reason: item.cancel_reason,
-                    grace_period_end_date: item.grace_period_end_date,
-                    updated_at: item.updated_at,
-                },
-            })
-        ),
-    ]);
-}
+                    update: {
+                        // Atualiza os dados se o item já existir
+                        item_name: item.item_name,
+                        //balance: item.balance,
+                        group_uuid: item.group_uuid.uuid,
+                        status: item.status,
+                        blocked_at: item.blocked_at,
+                        cancelled_at: item.cancelled_at,
+                        block_reason: item.block_reason,
+                        cancel_reason: item.cancel_reason,
+                        grace_period_end_date: item.grace_period_end_date,
+                        updated_at: item.updated_at,
+                    },
+                })
+            ),
+        ]);
+    }
     async createUserInfoandUpdateUserAuthByCSV(
         data: AppUserInfoEntity,
         employeeItemEntity: AppUserItemEntity[]
@@ -918,4 +918,33 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
             full_name: user.full_name,
         };
     }
+    async findSimpleListByBusiness(business_info_uuid: string): Promise<OutputGetSimpleEmployeesDTO[]> {
+    const employees = await prismaClient.employee.findMany({
+        where: {
+            business_info_uuid: business_info_uuid,
+            status: 'active' 
+        },
+        select: {
+            uuid: true,
+            job_title: true,
+            UserInfo: {
+                select: {
+                    full_name: true,
+                    UserItem: {
+                        where: {
+                            status: 'active' 
+                        },
+                        select: {
+                            uuid: true,
+                            item_uuid: true,   // Importante para saber de qual benefício é
+                            group_uuid: true   // Importante para saber o grupo atual
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    return employees as unknown as OutputGetSimpleEmployeesDTO[]; 
+}
 }

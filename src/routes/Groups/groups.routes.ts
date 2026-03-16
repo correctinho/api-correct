@@ -4,6 +4,7 @@ import { createBenefitGroupController } from "../../modules/Company/BenefitGroup
 import { getAllBenefitGroupsController } from "../../modules/Company/BenefitGroups/usecases/get-all-by-employer";
 import { getOneBenefitGroupsController } from "../../modules/Company/BenefitGroups/usecases/get-one-by-employer";
 import { updateBenefitGroupController } from "../../modules/Company/BenefitGroups/usecases/update-by-employer";
+import { syncGroupMembersController } from "../../modules/Company/BenefitGroups/usecases/sync-group-members";
 
 const groupsRouter = Router()
 
@@ -24,4 +25,10 @@ groupsRouter.get("/business-admin/groups", companyIsAuth, async (request, respon
 groupsRouter.get("/business-admin/group", companyIsAuth, async (request, response) => {
   await getOneBenefitGroupsController.handle(request, response)
 })
+
+groupsRouter.post(
+  "/benefit-groups/sync-members",
+  companyIsAuth,
+  (req, res) => syncGroupMembersController.handle(req, res)
+);
 export { groupsRouter }

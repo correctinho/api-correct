@@ -6,4 +6,5 @@ export interface IBenefitGroupsRepository extends RepositoryInterface<BenefitGro
   findAllByBusiness(business_info_uuid: string):Promise<BenefitGroupsEntity[] | []>
   createReturn(data: BenefitGroupsEntity): Promise<BenefitGroupsEntity>
   findByNameAndDefault(group_name: string, is_default: boolean, business_info_uuid: string): Promise<BenefitGroupsEntity | null>
+  syncMembers(business_info_uuid: string, group_uuid: string, item_uuid: string, employee_uuids: string[]): Promise<void>;
 }

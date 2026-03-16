@@ -13,5 +13,5 @@ export interface IBusinessItemDetailsRepository extends RepositoryInterface<Busi
         total_lives: number; 
         estimated_cost: number 
     }>;
-  
+  findItemUuidByUuid(uuid: string): Promise<string | null>;
 }

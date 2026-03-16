@@ -17,7 +17,7 @@ export class AuthenticateCompanyAdminController{
     async handle(req: Request, res: Response){
         try{
             const { business_document, user_name, password, email} = req.body
-
+            console.log({business_document, user_name, password, email})
             const authCompanyUserUsecase = new AuthenticateCompanyUserUsecase(
                 this.companyUserRepository,
                 this.companyDataRepository,
@@ -26,7 +26,6 @@ export class AuthenticateCompanyAdminController{
             )
 
             const companyUser = await authCompanyUserUsecase.execute({business_document, user_name, password, email})
-
             return res.json(companyUser)
 
         }catch(err: any){
