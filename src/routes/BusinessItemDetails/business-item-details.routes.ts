@@ -8,9 +8,10 @@ import { setEmployerCyclesController } from "../../modules/Company/BusinessItems
 import { findAllEmployerItemDetailsBusinessAdmin } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessAdmin/findAllByBusinessAdmin";
 import { findEmployerItemDetailsByBusiness } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessAdmin/findItemDetailsByBusinessAdmin";
 import { listCollaboratorsByBenefitController } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/list-collaborators-by-benefit";
-import { listBusinessOrdersByBusinessController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessItemsCreditRelease/list-business-orders/index-by-business";
-import { listBusinessOrdersByCorrectAdminController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessItemsCreditRelease/list-business-orders/index-by-correct-admin";
-import { approveRechargeOrder } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessItemsCreditRelease/approve-recharge-order";
+import { listBusinessOrdersByBusinessController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPrePaidItemsManagement/list-business-orders/index-by-business";
+import { listBusinessOrdersByCorrectAdminController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPrePaidItemsManagement/list-business-orders/index-by-correct-admin";
+import { approveRechargeOrder } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPrePaidItemsManagement/approve-recharge-order";
+import { getPostPaidConsumptionController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPostPaidItemsManagement/get-postpaid-consumption";
 
 export const businessItemDetailsRouter = Router()
 
@@ -37,8 +38,8 @@ businessItemDetailsRouter.get("/business/item/details/correct/:business_info_uui
 
 //List business orders by correct admin
 // businessItemDetailsRouter.get(
-//     "/business/orders/:businessInfoUuid/:item_uuid", 
-//     correctIsAuth, 
+//     "/business/orders/:businessInfoUuid/:item_uuid",
+//     correctIsAuth,
 //     async (request, response) => {
 //         await listBusinessOrdersByCorrectAdminController.handle(request, response)
 //     }
@@ -61,15 +62,15 @@ businessItemDetailsRouter.get("/business/item/details/:id/employer", companyIsAu
 // LISTAR COLABORADORES DO BENEFÍCIO (Para a aba "Colaboradores")
 // GET /business/item/details/:id/collaborators?page=1&limit=10&status=inactive
 businessItemDetailsRouter.get(
-    "/business/item/details/:id/collaborators", 
-    companyIsAuth, 
+    "/business/item/details/:id/collaborators",
+    companyIsAuth,
     async (request, response) => {
         await listCollaboratorsByBenefitController.handle(request, response)
     }
 )
 //List business orders by business admin
 businessItemDetailsRouter.get(
-    "/business/orders/list/:item_uuid", 
+    "/business/orders/list/:item_uuid",
      companyIsAuth,
     async (request, response) => {
         await listBusinessOrdersByBusinessController.handle(request, response)
@@ -78,9 +79,14 @@ businessItemDetailsRouter.get(
 
 //Approve recharge order endpoint
 businessItemDetailsRouter.post(
-    "/business/recharge-orders/approve", 
-    correctIsAuth, 
+    "/business/recharge-orders/approve",
+    correctIsAuth,
     async (request, response) => {
         await approveRechargeOrder.handle(request, response)
     }
 )
+
+//get post paid consumption
+businessItemDetailsRouter.get("/business/item/details/:employer_item_details_uuid/consumption", companyIsAuth, async (request, response) => {
+    await getPostPaidConsumptionController.handle(request, response);
+})
