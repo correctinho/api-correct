@@ -47,6 +47,22 @@ export type ApprovedTransactionWithUserOutput = {
     } | null;
   } | null;
 };
+
+export type BenefitGroupSnapshot = {
+  uuid: string;
+  value: number; // Limite configurado para o grupo
+};
+
+export type ActiveUserItemSnapshot = {
+  uuid: string;
+  balance: number; // Saldo atual do usuário antes da virada
+};
+
+export type RolloverTransactionData = {
+  userItemUuid: string;
+  oldBalance: number;
+  newBalance: number;
+};
 export interface ITransactionOrderRepository extends RepositoryInterface<TransactionEntity> {
   savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity>;
   processSplitPrePaidPayment(
@@ -109,4 +125,15 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
     startDate: string, // Alterado para string devido ao seu DB
     endDate: string    // Alterado para string devido ao seu DB
   ): Promise<ApprovedTransactionWithUserOutput[]>;
+  findGroupsByEmployerItemDetails(
+    employerItemDetailsUuid: string
+  ): Promise<BenefitGroupSnapshot[]>;
+
+  findActiveUserItemsByGroup(
+    groupUuid: string
+  ): Promise<ActiveUserItemSnapshot[]>;
+
+  executeRolloverTransaction(
+    updates: RolloverTransactionData[]
+  ): Promise<number>; // Retorna o total de colaboradores atualizados
 }

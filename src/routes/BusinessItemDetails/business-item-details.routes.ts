@@ -12,6 +12,8 @@ import { listBusinessOrdersByBusinessController } from "../../modules/Company/Bu
 import { listBusinessOrdersByCorrectAdminController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPrePaidItemsManagement/list-business-orders/index-by-correct-admin";
 import { approveRechargeOrder } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPrePaidItemsManagement/approve-recharge-order";
 import { getPostPaidConsumptionController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPostPaidItemsManagement/get-postpaid-consumption";
+import { ensureApiKey } from "../../infra/shared/middlewares/ensureApiKey";
+import { postpaidRolloverController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPostPaidItemsManagement/postpaid-rollover";
 
 export const businessItemDetailsRouter = Router()
 
@@ -89,4 +91,9 @@ businessItemDetailsRouter.post(
 //get post paid consumption
 businessItemDetailsRouter.get("/business/item/details/:employer_item_details_uuid/consumption", companyIsAuth, async (request, response) => {
     await getPostPaidConsumptionController.handle(request, response);
+})
+
+//Renew post paid limit for employee user item
+businessItemDetailsRouter.post("/internal/webhooks/postpaid-rollover", ensureApiKey, async (request, response) => {
+  await postpaidRolloverController.handle(request, response)
 })

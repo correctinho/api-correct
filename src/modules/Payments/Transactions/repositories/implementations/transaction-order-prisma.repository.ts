@@ -4,12 +4,15 @@ import {
   TransactionProps,
 } from '../../entities/transaction-order.entity';
 import {
+  ActiveUserItemSnapshot,
   ApprovedTransactionWithUserOutput,
+  BenefitGroupSnapshot,
   ExecuteTeiTransferDTO,
   ITransactionOrderRepository,
   ProcessAppUserPixCreditPaymentResult,
   ProcessPaymentByBusinessParams,
   ProcessPaymentByBusinessResult,
+  RolloverTransactionData,
 } from '../transaction-order.repository';
 import {
   BusinessAccountEventType,
@@ -1679,7 +1682,7 @@ export class TransactionOrderPrismaRepository
     });
   }
 
- async findApprovedByItemAndPeriod(
+  async findApprovedByItemAndPeriod(
     businessInfoUuid: string,
     itemUuid: string,
     startDate: string,
@@ -1718,7 +1721,79 @@ export class TransactionOrderPrismaRepository
     return transactions;
   }
 
+
   findAll(): Promise<TransactionEntity[]> {
     throw new CustomError('Method not implemented.');
+  }
+
+  async findGroupsByEmployerItemDetails(
+    employerItemDetailsUuid: string
+  ): Promise<BenefitGroupSnapshot[]> {
+    const groups = await prismaClient.benefitGroups.findMany({
+      where: {
+        employer_item_details_uuid: employerItemDetailsUuid,
+      },
+      select: {
+        uuid: true,
+        value: true, // O valor integral do limite configurado para este grupo
+      },
+    });
+
+    return groups;
+  }
+
+  async findActiveUserItemsByGroup(
+    groupUuid: string
+  ): Promise<ActiveUserItemSnapshot[]> {
+    const userItems = await prismaClient.userItem.findMany({
+      where: {
+        group_uuid: groupUuid,
+        status: 'active', // Garante que não vamos dar limite para quem foi bloqueado/cancelado
+      },
+      select: {
+        uuid: true,
+        balance: true, // O saldo atual no momento da virada
+      },
+    });
+
+    return userItems;
+  }
+
+  async executeRolloverTransaction(
+    updates: RolloverTransactionData[]
+  ): Promise<number> {
+    if (updates.length === 0) return 0;
+
+    // Preparamos um array com todas as operações (UPDATE no saldo e INSERT no histórico)
+    const prismaOperations = updates.flatMap((update) => {
+      // Calcula o quanto de limite estamos devolvendo para o histórico ficar transparente
+      const amountDiff = update.newBalance - update.oldBalance;
+
+      // 1. Ação de atualizar o saldo da carteira do usuário
+      const updateUserItem = prismaClient.userItem.update({
+        where: { uuid: update.userItemUuid },
+        data: { balance: update.newBalance },
+      });
+
+      // 2. Ação de registrar a movimentação no extrato do usuário
+      const createHistory = prismaClient.userItemHistory.create({
+        data: {
+          user_item_uuid: update.userItemUuid,
+          event_type: 'LIMIT_RENEWED',
+          amount: amountDiff,
+          balance_before: update.oldBalance,
+          balance_after: update.newBalance,
+        },
+      });
+
+      // Retorna as duas Promises para o array achatado (flatMap)
+      return [updateUserItem, createHistory];
+    });
+
+    // O $transaction garante o "Tudo ou Nada". Se qualquer update falhar, ele faz Rollback de tudo.
+    await prismaClient.$transaction(prismaOperations);
+
+    // Retorna a quantidade de carteiras que foram atualizadas com sucesso
+    return updates.length;
   }
 }
