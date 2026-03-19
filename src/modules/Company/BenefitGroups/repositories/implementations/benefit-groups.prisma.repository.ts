@@ -190,4 +190,67 @@ export class BenefitGroupsPrismaRepository implements IBenefitGroupsRepository {
     async findAll(): Promise<BenefitGroupsEntity[]> {
         throw new Error('Method not implemented.');
     }
+
+    async syncMembers(business_info_uuid: string, group_uuid: string, item_uuid: string, employee_uuids: string[]): Promise<void> {
+    
+    // 1. Pegar os user_info_uuids baseados nos employee_uuids enviados
+    const employees = await prismaClient.employee.findMany({
+      where: {
+        uuid: { in: employee_uuids },
+        business_info_uuid: business_info_uuid
+      },
+      select: { user_info_uuid: true }
+    });
+
+    const userInfoUuids = employees.map(e => e.user_info_uuid);
+
+    // 2. Buscar o nome do Item (Produto) caso precisemos criar um UserItem do zero
+    const itemInfo = await prismaClient.item.findUnique({
+      where: { uuid: item_uuid },
+      select: { name: true }
+    });
+
+    // 3. Iniciar Transação (Tudo ou Nada)
+    await prismaClient.$transaction(async (prisma) => {
+      
+      // A. REMOVER: Quem está atualmente neste grupo, mas não foi enviado na lista nova
+      await prisma.userItem.updateMany({
+        where: {
+          business_info_uuid: business_info_uuid,
+          item_uuid: item_uuid,
+          group_uuid: group_uuid,
+          user_info_uuid: { notIn: userInfoUuids } // Ficou de fora da lista
+        },
+        data: {
+          group_uuid: null // Retira do grupo
+        }
+      });
+
+      // B. ADICIONAR / MOVER / CRIAR: Para cada funcionário na lista nova
+      for (const userId of userInfoUuids) {
+        await prisma.userItem.upsert({
+          where: {
+            user_info_uuid_business_info_uuid_item_uuid: {
+              user_info_uuid: userId,
+              business_info_uuid: business_info_uuid,
+              item_uuid: item_uuid
+            }
+          },
+          update: {
+            group_uuid: group_uuid // Se já tem o benefício, só move para este grupo
+          },
+          create: {
+            // Se NÃO tem o benefício, cria a carteira zerada vinculada ao grupo
+            user_info_uuid: userId,
+            business_info_uuid: business_info_uuid,
+            item_uuid: item_uuid,
+            item_name: itemInfo?.name || "Benefício",
+            balance: 0,
+            group_uuid: group_uuid,
+            status: 'active'
+          }
+        });
+      }
+    });
+  }
 }

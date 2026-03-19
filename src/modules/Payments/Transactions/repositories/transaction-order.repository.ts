@@ -10,78 +10,104 @@ import { IOfflineTokenRepository } from '../../OfflineTokens/repositories/offlin
 import { TransactionEntity } from '../entities/transaction-order.entity';
 
 export type ProcessPaymentByBusinessParams = {
-    transaction: TransactionEntity;
-    payerAccount: BusinessAccountEntity;
-    payerCredits: PartnerCreditEntity[];
-    sellerBusinessInfoId: string;
+  transaction: TransactionEntity;
+  payerAccount: BusinessAccountEntity;
+  payerCredits: PartnerCreditEntity[];
+  sellerBusinessInfoId: string;
 };
 
 export type ProcessPaymentByBusinessResult = {
-    amountPaidFromCredits: number;
-    amountPaidFromLiquidBalance: number;
-    payerFinalLiquidBalance: number;
+  amountPaidFromCredits: number;
+  amountPaidFromLiquidBalance: number;
+  payerFinalLiquidBalance: number;
 };
 
 export type ProcessAppUserPixCreditPaymentResult = {
-    success: boolean;
-    finalCreditedUserItemBalance: number;
+  success: boolean;
+  finalCreditedUserItemBalance: number;
 };
 
 export interface ExecuteTeiTransferDTO {
-    payerUserItemUuid: string; // UUID do UserItem (saldo) do pagador
-    payeeUserItemUuid: string; // UUID do UserItem (saldo) do recebedor
-    amount: number;            // Valor em centavos
-    transactionData: {         // Dados para o histórico
-        payerUserInfoUuid: string;
-        payeeUserInfoUuid: string;
-        description?: string;
-    }
+  payerUserItemUuid: string; // UUID do UserItem (saldo) do pagador
+  payeeUserItemUuid: string; // UUID do UserItem (saldo) do recebedor
+  amount: number;            // Valor em centavos
+  transactionData: {         // Dados para o histórico
+    payerUserInfoUuid: string;
+    payeeUserInfoUuid: string;
+    description?: string;
+  }
 }
+
+export type ApprovedTransactionWithUserOutput = {
+  net_price: number;
+  UserItem?: {
+    UserInfo?: {
+      full_name: string;
+      document: string;
+    } | null;
+  } | null;
+};
+
+export type BenefitGroupSnapshot = {
+  uuid: string;
+  value: number; // Limite configurado para o grupo
+};
+
+export type ActiveUserItemSnapshot = {
+  uuid: string;
+  balance: number; // Saldo atual do usuário antes da virada
+};
+
+export type RolloverTransactionData = {
+  userItemUuid: string;
+  oldBalance: number;
+  newBalance: number;
+};
 export interface ITransactionOrderRepository extends RepositoryInterface<TransactionEntity> {
-    savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity>;
-    processSplitPrePaidPayment(
-        transactionEntity: TransactionEntity,
-        splitOutput: CalculateSplitPrePaidOutput,
-        userInfoUuid: Uuid
-    ): Promise<{
-        success: boolean;
-        finalDebitedUserItemBalance: number;
-        user_cashback_amount: number;
-    }>;
-    findCorrectAccount(): Promise<any>;
-    findBusinessAccountByBusinessInfoId(id: string): Promise<any>;
-    generateTransactionReceiptDetails(transactionId: string): Promise<any>;
-    processSplitPrePaidPaymentTest(
-        transactionEntity: TransactionEntity,
-        userInfoUuid: Uuid
-    ): Promise<{
-        success: boolean;
-        finalDebitedUserItemBalance: number;
-        user_cashback_amount: number;
-    }>;
-    processSplitPostPaidPayment(
-        transactionEntity: TransactionEntity,
-        userInfoUuid: Uuid // <<< Parâmetro adicionado
-    ): Promise<{
-        success: boolean;
-        finalDebitedUserItemBalance: number;
-        user_cashback_amount: number;
-    }>;
-    processPaymentByBusiness(
-        params: ProcessPaymentByBusinessParams
-    ): Promise<ProcessPaymentByBusinessResult>;
-    createPendingCashIn(
-        userId: Uuid,
-        userItem: Uuid,
-        amountInCents: number
-    ): Promise<TransactionEntity>;
-    updateTxId(transactionId: Uuid, txid: string): Promise<void>;
-    findByProviderTxId(providerTxId: string): Promise<TransactionEntity | null>;
-    processAppUserPixCreditPayment(
-        transactionEntity: TransactionEntity,
-        amountReceivedInCents: number,
-    ): Promise<ProcessAppUserPixCreditPaymentResult>;
-    processOfflineTokenPayment(
+  savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity>;
+  processSplitPrePaidPayment(
+    transactionEntity: TransactionEntity,
+    splitOutput: CalculateSplitPrePaidOutput,
+    userInfoUuid: Uuid
+  ): Promise<{
+    success: boolean;
+    finalDebitedUserItemBalance: number;
+    user_cashback_amount: number;
+  }>;
+  findCorrectAccount(): Promise<any>;
+  findBusinessAccountByBusinessInfoId(id: string): Promise<any>;
+  generateTransactionReceiptDetails(transactionId: string): Promise<any>;
+  processSplitPrePaidPaymentTest(
+    transactionEntity: TransactionEntity,
+    userInfoUuid: Uuid
+  ): Promise<{
+    success: boolean;
+    finalDebitedUserItemBalance: number;
+    user_cashback_amount: number;
+  }>;
+  processSplitPostPaidPayment(
+    transactionEntity: TransactionEntity,
+    userInfoUuid: Uuid // <<< Parâmetro adicionado
+  ): Promise<{
+    success: boolean;
+    finalDebitedUserItemBalance: number;
+    user_cashback_amount: number;
+  }>;
+  processPaymentByBusiness(
+    params: ProcessPaymentByBusinessParams
+  ): Promise<ProcessPaymentByBusinessResult>;
+  createPendingCashIn(
+    userId: Uuid,
+    userItem: Uuid,
+    amountInCents: number
+  ): Promise<TransactionEntity>;
+  updateTxId(transactionId: Uuid, txid: string): Promise<void>;
+  findByProviderTxId(providerTxId: string): Promise<TransactionEntity | null>;
+  processAppUserPixCreditPayment(
+    transactionEntity: TransactionEntity,
+    amountReceivedInCents: number,
+  ): Promise<ProcessAppUserPixCreditPaymentResult>;
+  processOfflineTokenPayment(
     transactionEntity: TransactionEntity,
     offlineTokenEntity: OfflineTokenEntity, // Recebe a entidade do token
     userInfoUuid: Uuid,
@@ -93,5 +119,21 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
   upsert(entity: TransactionEntity): Promise<void>;
   cancelTransaction(transactionUuid: Uuid): Promise<void>;
   executeTeiTransfer(data: ExecuteTeiTransferDTO): Promise<void>;
+  findApprovedByItemAndPeriod(
+    businessInfoUuid: string,
+    itemUuid: string,
+    startDate: string, // Alterado para string devido ao seu DB
+    endDate: string    // Alterado para string devido ao seu DB
+  ): Promise<ApprovedTransactionWithUserOutput[]>;
+  findGroupsByEmployerItemDetails(
+    employerItemDetailsUuid: string
+  ): Promise<BenefitGroupSnapshot[]>;
+
+  findActiveUserItemsByGroup(
+    groupUuid: string
+  ): Promise<ActiveUserItemSnapshot[]>;
+
+  executeRolloverTransaction(
+    updates: RolloverTransactionData[]
+  ): Promise<number>; // Retorna o total de colaboradores atualizados
 }
-    

@@ -13,7 +13,7 @@ export class ListCollaboratorsByBenefitController {
             const business_info_uuid = req.companyUser.businessInfoUuid;
 
             // 2. ROTA: O ID do benefício (Item) vem da URL (ex: /business/item/details/:id/collaborators)
-            const item_uuid = req.params.id; 
+            const item_uuid = req.params.id;
 
             // 3. FILTROS: Paginação e Status vêm da Query String (ex: ?page=1&status=inactive)
             const page = Number(req.query.page) || 1;
@@ -31,6 +31,7 @@ export class ListCollaboratorsByBenefitController {
                 limit,
                 status
             });
+            console.log(result)
             return res.status(200).json(result);
 
         } catch (err: any) {

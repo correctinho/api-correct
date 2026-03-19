@@ -9,8 +9,9 @@ import { findAllUserItemsByUser } from "../../modules/AppUser/AppUserManagement/
 import { activateUserItemByEmployer } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/activate-user-item-by-employer";
 import { getAppUserItemHistoryController } from "../../modules/Payments/Accounts/usecases/account-histories/app-user";
 import { activateUserItemsBatchController } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/activate-user-items-batch";
-import { previewRechargeOrderController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessItemsCreditRelease/preview-recharge-order";
-import { createRechargeOrderController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessItemsCreditRelease/create-recharge-order";
+import { previewRechargeOrderController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPrePaidItemsManagement/preview-recharge-order";
+import { createRechargeOrderController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPrePaidItemsManagement/create-recharge-order";
+import { getAvailableMembersController } from "../../modules/Company/BenefitGroups/usecases/get-available-members";
 
 export const appUserItemRouter = Router()
 
@@ -51,10 +52,14 @@ appUserItemRouter.get("/user-item/employer/preview-recharge/:item_uuid", company
   await previewRechargeOrderController.handle(request, response)
 })
 
-//create recharge order 
+//create recharge order
 appUserItemRouter.post("/user-item/employer/recharge-order", companyIsAuth, async (request, response) => {
   await createRechargeOrderController.handle(request, response)
 })
+
+//busca membros ativos em grupos de benefícios pelo empregador
+appUserItemRouter.get("/benefit-groups/available-members", companyIsAuth, async (req, res) => await getAvailableMembersController.handle(req, res))
+
 
 //Busca usuários com itens específicos --- IGNORE ---
 // appUserItemRouter.post("/business/item/details/:id/collaborators", companyIsAuth, async (request, response) => {

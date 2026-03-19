@@ -11,7 +11,6 @@ export class UpdateUserbyAdminController {
   ) { }
 
   async handle(req: Request, res: Response) {
-
     try {
       const data = req.body
       data.uuid = req.query.user_id as string
@@ -22,7 +21,6 @@ export class UpdateUserbyAdminController {
       const updateUserUsecase = new UpdateUserByAdminUsecase(this.companyUserRepository, this.passwordCrypto)
 
       const updateUser = await updateUserUsecase.execute(data)
-
       return res.json(updateUser)
 
     } catch (err: any) {
