@@ -5,7 +5,6 @@ export function ensureApiKey(request: Request, response: Response, next: NextFun
     const apiKeyHeader = request.headers['x-api-key'];
     // Busca a chave real configurada no seu .env
     const validApiKey = process.env.API_KEY;
-    console.log("API Key recebida:", apiKeyHeader);
     if (!apiKeyHeader) {
         return response.status(401).json({
             error: "Acesso negado. API Key não fornecida no header 'x-api-key'."
