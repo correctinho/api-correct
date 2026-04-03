@@ -14,7 +14,18 @@ const app = express()
 app.use(express.json({
   limit:'200mb'
 }))
-app.use(cors())
+app.use(cors({
+  origin: '*', // Permite o URL dinâmico do Bolt
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With',
+    'Content-Type',
+    'Accept',
+    'Authorization',
+    'ngrok-skip-browser-warning'
+  ]
+}));
 
 
 app.use(router)

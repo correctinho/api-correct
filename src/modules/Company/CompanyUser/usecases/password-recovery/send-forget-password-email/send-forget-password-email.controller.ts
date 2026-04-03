@@ -8,7 +8,7 @@ export class SendCompanyForgotPasswordMailController {
   constructor(
     private companyUserRepository: ICompanyUserRepository,
     private mailProvider: IMailProvider
-  ) {}
+  ) { }
 
   async handle(req: Request, res: Response) {
     try {
@@ -26,6 +26,7 @@ export class SendCompanyForgotPasswordMailController {
       return res.status(200).json({ message: "Se o e-mail estiver cadastrado, você receberá o link de recuperação." });
 
     } catch (err: any) {
+      console.log(err)
       return res.status(err.statusCode || 500).json({
         error: err.message || "Erro inesperado."
       });

@@ -4,8 +4,8 @@ import { GetPartnerConfigByBusinessAdminUsecase } from "./get-partner-config.use
 
 export class GetPartnerConfigByBusinessAdminController {
   constructor(
-      private readonly partnerConfigRepository: IPartnerConfigRepository,
-    ) {}
+    private readonly partnerConfigRepository: IPartnerConfigRepository,
+  ) { }
 
   async handle(req: Request, res: Response) {
     try {

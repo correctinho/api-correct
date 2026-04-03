@@ -5,6 +5,7 @@ import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/corre
 import { findCorrectAdminController } from "../../modules/CorrectAdmin/useCases/find-correct-admin";
 import { createCorrectSellerController } from "../../modules/CorrectAdmin/useCases/create-correct-seller-by-admin";
 import { getCorrectAdminAccount } from "../../modules/Payments/Accounts/usecases/correctAdmin/get-correct-admin-account";
+import { listPartnerController, getBusinessDetailController, approveBusinessController, resendAccessController } from "../../modules/business/presentation/controllers";
 
 const correctAdminRouter = Router()
 
@@ -28,6 +29,26 @@ correctAdminRouter.get("/admin/profile", correctIsAuth, async (request, response
 //correct admin accounts
 correctAdminRouter.get("/admin/account", correctIsAuth, async (request, response) => {
   await getCorrectAdminAccount.handle(request, response)
+})
+
+// list partners
+correctAdminRouter.get("/admin/partners", correctIsAuth, async (request, response) => {
+  await listPartnerController.handle(request, response)
+})
+
+// get business detail
+correctAdminRouter.get("/admin/business/:uuid", correctIsAuth, async (request, response) => {
+  await getBusinessDetailController.handle(request, response)
+})
+
+// approve business
+correctAdminRouter.patch("/admin/business/:uuid/approve", correctIsAuth, async (request, response) => {
+  await approveBusinessController.handle(request, response)
+})
+
+// resend access
+correctAdminRouter.patch("/admin/business/:uuid/resend-access", correctIsAuth, async (request, response) => {
+  await resendAccessController.handle(request, response)
 })
 
 export { correctAdminRouter }

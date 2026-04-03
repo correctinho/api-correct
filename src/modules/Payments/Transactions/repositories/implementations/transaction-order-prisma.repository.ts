@@ -26,7 +26,8 @@ import {
 import { CalculateSplitPrePaidOutput } from '../../../../../paymentSplit/prePaidSplit';
 import { CustomError } from '../../../../../errors/custom.error';
 import {
-  calculateCycleSettlementDateAsDate,
+  calculatePostPaidCycleSettlementDateAsDate,
+  calculatePrePaidCycleSettlementDateAsDate,
   newDateF,
 } from '../../../../../utils/date';
 import { prismaClient } from '../../../../../infra/databases/prisma.config';
@@ -1112,7 +1113,12 @@ export class TransactionOrderPrismaRepository
       // 2.1. Leitura e Validação do Benefício a ser Debitado (Limite de Crédito)
       const debitedUserItem = await tx.userItem.findUnique({
         where: { uuid: debitedUserItemId },
-        select: { balance: true, user_info_uuid: true },
+        select: {
+          balance: true,
+          user_info_uuid: true,
+          item_uuid: true,
+          business_info_uuid: true
+        },
       });
       if (!debitedUserItem) {
         throw new CustomError(
@@ -1120,6 +1126,14 @@ export class TransactionOrderPrismaRepository
           404
         );
       }
+
+      if (!debitedUserItem.business_info_uuid) {
+        throw new CustomError(
+          `O benefício ${debitedUserItemId} não está vinculado a um empregador (business_info_uuid ausente).`,
+          400
+        );
+      }
+
       if (debitedUserItem.user_info_uuid !== userInfoUuid.uuid) {
         throw new CustomError(
           `O benefício ${debitedUserItemId} não pertence ao usuário.`,
@@ -1132,6 +1146,24 @@ export class TransactionOrderPrismaRepository
           403
         );
       }
+
+      // 2.1.5 Leitura da Configuração de Ciclo do Empregador
+      const employerDetails = await tx.employerItemDetails.findFirst({
+        where: {
+          item_uuid: debitedUserItem.item_uuid,
+          business_info_uuid: debitedUserItem.business_info_uuid,
+        },
+        select: { cycle_end_day: true },
+      });
+
+      if (!employerDetails || !employerDetails.cycle_end_day) {
+        throw new CustomError(
+          `Dia de corte não configurado para o empregador neste benefício.`,
+          404
+        );
+      }
+
+      const employerCutoffDay = employerDetails.cycle_end_day;
 
       const debitedUserItemBalanceBefore = debitedUserItem.balance;
       const debitedUserItemBalanceAfter =
@@ -1207,8 +1239,12 @@ export class TransactionOrderPrismaRepository
       });
 
       // 3.4. PONTO CHAVE: Criar o registro de Crédito para o Parceiro com a nova lógica de ciclo
-      const settlementDate = calculateCycleSettlementDateAsDate(
-        new Date()
+      // const settlementDate = calculatePostPaid(
+      //   new Date()
+      // );
+      const settlementDate = calculatePostPaidCycleSettlementDateAsDate(
+        new Date(),
+        employerCutoffDay
       );
 
       await tx.partnerCredit.create({
@@ -1397,7 +1433,7 @@ export class TransactionOrderPrismaRepository
         });
 
         // 3. Calcula a NOVA data de liquidação para o vendedor
-        const newSettlementDate = calculateCycleSettlementDateAsDate(
+        const newSettlementDate = calculatePrePaidCycleSettlementDateAsDate(
           new Date()
         );
 

@@ -55,11 +55,32 @@ export const addDaysToDate = async (dateString: string, daysToAdd: number): Prom
   return formatDateToString(date);
 };
 
-// Versão recomendada (retorna um objeto Date)
-export const calculateCycleSettlementDateAsDate = (transactionDate: Date): Date => {
+export const calculatePrePaidCycleSettlementDateAsDate = (transactionDate: Date): Date => {
   const settlementDate = new Date(transactionDate.getTime());
   settlementDate.setMonth(settlementDate.getMonth() + settlementConfig.delayInMonths);
   settlementDate.setDate(settlementConfig.dayOfMonth);
   settlementDate.setHours(0, 0, 0, 0);
+  return settlementDate;
+};
+
+export const calculatePostPaidCycleSettlementDateAsDate = (
+  transactionDate: Date,
+  employerCutoffDay: number // Ex: 19 (O dia que fecha o ciclo do empregador)
+): Date => {
+  const settlementDate = new Date(transactionDate.getTime());
+
+  // O delay base (ex: 1 mês)
+  let monthsToAdd = settlementConfig.delayInMonths;
+
+  // A MÁGICA: Se a compra foi feita DEPOIS do dia de corte do empregador, 
+  // ela pertence ao próximo ciclo. Logo, empurramos +1 mês para frente!
+  if (transactionDate.getDate() > employerCutoffDay) {
+    monthsToAdd += 1;
+  }
+
+  settlementDate.setMonth(settlementDate.getMonth() + monthsToAdd);
+  settlementDate.setDate(settlementConfig.dayOfMonth); // Crava no dia 25
+  settlementDate.setHours(0, 0, 0, 0);
+
   return settlementDate;
 };
