@@ -1,4 +1,3 @@
-import { settlementConfig } from "../config/settlement.config";
 import { CustomError } from "../errors/custom.error";
 
 // Função auxiliar para formatar componentes de data com dois dígitos
@@ -53,6 +52,27 @@ export const addDaysToDate = async (dateString: string, daysToAdd: number): Prom
   date.setDate(date.getDate() + daysToAdd);
 
   return formatDateToString(date);
+};
+
+const settlementConfig = {
+  dayOfMonth: 25,      // O dia fixo do pagamento
+  delayInMonths: 2,    // <--- MUDE AQUI! (1 = mês seguinte, 2 = daqui dois meses, 0 = mesmo mês)
+};
+
+export const calculateB2BCycleSettlementDateAsDate = (transactionDate: Date): Date => {
+  const settlementDate = new Date(transactionDate.getTime());
+
+  // 1º PASSO: Fixa o dia PRIMEIRO puxando da configuração
+  // (Isso evita que o JS crie datas inexistentes como "31 de Fevereiro")
+  settlementDate.setDate(settlementConfig.dayOfMonth);
+
+  // 2º PASSO: Avança os meses com base no que você definiu com seu sócio
+  settlementDate.setMonth(settlementDate.getMonth() + settlementConfig.delayInMonths);
+
+  // 3º PASSO: Zera as horas para padronizar no banco de dados
+  settlementDate.setHours(0, 0, 0, 0);
+
+  return settlementDate;
 };
 
 export const calculatePrePaidCycleSettlementDateAsDate = (transactionDate: Date): Date => {

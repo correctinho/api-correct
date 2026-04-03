@@ -26,6 +26,7 @@ import {
 import { CalculateSplitPrePaidOutput } from '../../../../../paymentSplit/prePaidSplit';
 import { CustomError } from '../../../../../errors/custom.error';
 import {
+  calculateB2BCycleSettlementDateAsDate,
   calculatePostPaidCycleSettlementDateAsDate,
   calculatePrePaidCycleSettlementDateAsDate,
   newDateF,
@@ -1433,7 +1434,7 @@ export class TransactionOrderPrismaRepository
         });
 
         // 3. Calcula a NOVA data de liquidação para o vendedor
-        const newSettlementDate = calculatePrePaidCycleSettlementDateAsDate(
+        const newSettlementDate = calculateB2BCycleSettlementDateAsDate(
           new Date()
         );
 
