@@ -5,19 +5,18 @@ import { ICompanyUserRepository } from "../../repositories/company-user.reposito
 import { AuthenticateCompanyUserUsecase } from "./authenticate-company-user.usecase";
 import { ICompanyDataRepository } from "../../../CompanyData/repositories/company-data.repository";
 
-export class AuthenticateCompanyAdminController{
+export class AuthenticateCompanyAdminController {
     constructor(
         private companyUserRepository: ICompanyUserRepository,
         private companyDataRepository: ICompanyDataRepository,
         private passwordCrypto: IPasswordCrypto,
         private token: ICompanyAdminToken
 
-    ){}
+    ) { }
 
-    async handle(req: Request, res: Response){
-        try{
-            const { business_document, user_name, password, email} = req.body
-            console.log({business_document, user_name, password, email})
+    async handle(req: Request, res: Response) {
+        try {
+            const { business_document, user_name, password, email } = req.body
             const authCompanyUserUsecase = new AuthenticateCompanyUserUsecase(
                 this.companyUserRepository,
                 this.companyDataRepository,
@@ -25,11 +24,10 @@ export class AuthenticateCompanyAdminController{
                 this.token
             )
 
-            const companyUser = await authCompanyUserUsecase.execute({business_document, user_name, password, email})
+            const companyUser = await authCompanyUserUsecase.execute({ business_document, user_name, password, email })
             return res.json(companyUser)
 
-        }catch(err: any){
-            console.log({err})
+        } catch (err: any) {
             return res.status(err.statusCode).json({
                 error: err.message
             })

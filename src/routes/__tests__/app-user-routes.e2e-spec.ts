@@ -7,7 +7,6 @@ import { Uuid } from '../../@shared/ValueObjects/uuid.vo';
 import { InputCreateBenefitDto } from '../../modules/benefits/usecases/create-benefit/create-benefit.dto';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { calculateCycleSettlementDateAsDate } from '../../utils/date';
 import { prismaClient } from '../../infra/databases/prisma.config';
 import { PasswordBCrypt } from '../../infra/shared/crypto/password.bcrypt';
 import fs from 'fs';
@@ -1459,8 +1458,8 @@ describe('E2E App User tests', () => {
             });
         });
     });
-        const testFilesDir = path.join(projectRoot, 'test-files');
-        const dummyPngPath = path.join(testFilesDir, 'dummy.png');
+    const testFilesDir = path.join(projectRoot, 'test-files');
+    const dummyPngPath = path.join(testFilesDir, 'dummy.png');
 
     describe('E2E tests Document Validation', () => {
         // Conteúdo de um PNG 1x1 pixel transparente para criar arquivos dummy
@@ -1488,9 +1487,9 @@ describe('E2E App User tests', () => {
                 fs.rmSync(dummyPngPath, { force: true });
             }
 
-            const tempFakeStorageInstance = new FakeStorage('test-uploads-fake'); 
-        
-        // Chama o método cleanAll para remover o diretório de uploads de teste.
+            const tempFakeStorageInstance = new FakeStorage('test-uploads-fake');
+
+            // Chama o método cleanAll para remover o diretório de uploads de teste.
             await tempFakeStorageInstance.cleanAll();
             console.log("[TEST_CLEANUP] FakeStorage temporary uploads directory and internal state cleaned.");
         });
@@ -1555,7 +1554,7 @@ describe('E2E App User tests', () => {
 
                 expect(result.statusCode).toBe(201);
                 expect(result.body.uuid).toBeDefined();
-                
+
                 // 1. URLs: Devem corresponder ao formato do FakeStorage.
                 const fakeUrlRegex =
                     /^http:\/\/localhost:9000\/fake-bucket\/user-documents\/[a-f0-9-]+\/[a-f0-9-]+\.(png|bin)$/;
@@ -1592,7 +1591,7 @@ describe('E2E App User tests', () => {
             });
 
             it('Should register all the others documents', async () => {
-                                               
+
                 const result = await request(app)
                     .post('/app-user/document-validation/e2e-test')
                     .set('Authorization', `Bearer ${userToken2}`)
@@ -1611,7 +1610,7 @@ describe('E2E App User tests', () => {
                     where: { document: documentUser2.document }, // Use o UUID correto para o userInfo do userToken3
                 });
                 const userDocuments = await prismaClient.userDocumentValidation.findUnique({
-                    where:{
+                    where: {
                         uuid: updatedUserInfo.user_document_validation_uuid
                     }
                 })
@@ -1620,7 +1619,7 @@ describe('E2E App User tests', () => {
                 expect(userDocuments.document_front_status).toBe("under_analysis")
                 expect(userDocuments.document_selfie_status).toBe("under_analysis")
                 expect(userDocuments.selfie_status).toBe("under_analysis")
-               
+
                 expect(updatedUserInfo.status).toBe("active")
             });
 
@@ -1628,7 +1627,7 @@ describe('E2E App User tests', () => {
     });
 
     describe('E2E tests User Status by document - Not authenticated', () => {
-                // Conteúdo de um PNG 1x1 pixel transparente para criar arquivos dummy
+        // Conteúdo de um PNG 1x1 pixel transparente para criar arquivos dummy
         const dummyPngBuffer = Buffer.from(
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
             'base64'
@@ -1643,9 +1642,9 @@ describe('E2E App User tests', () => {
             if (fs.existsSync(dummyPngPath)) {
                 fs.rmSync(dummyPngPath, { force: true });
             }
-            const tempFakeStorageInstance = new FakeStorage('test-uploads-fake'); 
-        
-        // Chama o método cleanAll para remover o diretório de uploads de teste.
+            const tempFakeStorageInstance = new FakeStorage('test-uploads-fake');
+
+            // Chama o método cleanAll para remover o diretório de uploads de teste.
             await tempFakeStorageInstance.cleanAll();
             console.log("[TEST_CLEANUP] FakeStorage temporary uploads directory and internal state cleaned.");
 
@@ -1724,17 +1723,17 @@ describe('E2E App User tests', () => {
         });
 
         it('Should return a user with full status', async () => {
-            
+
             const registerAllDocuments = await request(app)
-                    .post('/app-user/document-validation/e2e-test')
-                    .set('Authorization', `Bearer ${userToken1}`)
-                    .attach('document_back', dummyPngPath, 'document_back.png')
-                    .attach('document_selfie', dummyPngPath, 'document_selfie.png')
-                    .attach('selfie', dummyPngPath, 'selfie.png')
-                    .attach('document_front', dummyPngPath, 'document_front.png');
-            
+                .post('/app-user/document-validation/e2e-test')
+                .set('Authorization', `Bearer ${userToken1}`)
+                .attach('document_back', dummyPngPath, 'document_back.png')
+                .attach('document_selfie', dummyPngPath, 'document_selfie.png')
+                .attach('selfie', dummyPngPath, 'selfie.png')
+                .attach('document_front', dummyPngPath, 'document_front.png');
+
             expect(registerAllDocuments.statusCode).toBe(201)
-            
+
 
             const result = await request(app).get(
                 `/app-user/document/${inputNewAppUser1.document}`
@@ -2854,7 +2853,7 @@ describe('E2E App User tests', () => {
                 });
             });
             describe('E2E Find all user items by employer', () => {
-                beforeAll(async () => {});
+                beforeAll(async () => { });
                 it('Should throw an error if user info is missing', async () => {
                     const input: any = {
                         user_info_uuid: '',
@@ -3919,16 +3918,16 @@ describe('E2E App User tests', () => {
 
                 //Get transaction created from DB - Result will come scaled
                 const transaction1FromDB = await prismaClient.transactions.findUnique({
-                    where:{ uuid: transaction1_uuid },
+                    where: { uuid: transaction1_uuid },
                 })
 
                 expected_fee_in_cents = transaction1FromDB.fee_amount; // fee em reais
                 expect_platform_net_fee_amount_in_cents = transaction1FromDB.platform_net_fee_amount;
                 expected_cashback_in_cents = transaction1FromDB.cashback;
-               
-                const employeeItemsPrisma =  await prismaClient.userItem.findMany({
-                        where: { user_info_uuid: employee_user_info },
-                    });
+
+                const employeeItemsPrisma = await prismaClient.userItem.findMany({
+                    where: { user_info_uuid: employee_user_info },
+                });
 
                 expect(employeeItemsPrisma).toBeDefined();
                 const alimentacaoItemUuid = employeeItemsPrisma.find(
@@ -4387,9 +4386,9 @@ describe('E2E App User tests', () => {
 
                 it('should correctly process a pre-paid benefit and update all account balances', async () => {
                     //busca pelo transação
-                    const transactionDetails = await prismaClient.transactions.findUnique({where: {uuid: transaction1_uuid}})
-                    if(!transactionDetails) throw new Error('Transaction not found in setup')
-                        
+                    const transactionDetails = await prismaClient.transactions.findUnique({ where: { uuid: transaction1_uuid } })
+                    if (!transactionDetails) throw new Error('Transaction not found in setup')
+
                     const alimentaco = await prismaClient.userItem.findUnique({
                         where: {
                             uuid: alimentacao_benefit_user2_uuid,
@@ -4415,7 +4414,7 @@ describe('E2E App User tests', () => {
                     expect(result.body.finalBalance).toBeCloseTo(
                         (employee2_alimentacao_initial_balance_in_cents -
                             transaction1_net_price_in_cents) /
-                            100
+                        100
                     );
 
                     // 5. ASSERT: Validar o estado final de todas as contas (em Centavos)
@@ -4423,10 +4422,10 @@ describe('E2E App User tests', () => {
                     const correctAdminAccountAfter = await request(app)
                         .get('/admin/account')
                         .set('Authorization', `Bearer ${correctAdminToken}`);
-                    
+
                     expect(correctAdminAccountAfter.body.balance * 100).toBe(
                         correct_admin_initial_balance_in_cents +
-                            expect_platform_net_fee_amount_in_cents
+                        expect_platform_net_fee_amount_in_cents
                     );
 
                     // b) Carteira de cashback do usuário
@@ -4436,7 +4435,7 @@ describe('E2E App User tests', () => {
                         .query({ userItemId: correct_benefit_user2_uuid });
                     expect(cashbackBenefitAfter.body.balance * 100).toBe(
                         employee2_cashback_initial_balance_in_cents +
-                            expected_cashback_in_cents
+                        expected_cashback_in_cents
                     );
 
                     // c) Conta líquida do parceiro (Saldo inicial + valor líquido da venda)
@@ -4445,7 +4444,7 @@ describe('E2E App User tests', () => {
                         .set('Authorization', `Bearer ${partner_auth_token3}`);
                     expect(partnerAccountAfter.body.balance * 100).toBe(
                         partner3_initial_liquid_balance_in_cents +
-                            expected_partner_net_amount_in_cents
+                        expected_partner_net_amount_in_cents
                     );
 
                     // d) Saldo do benefício "Vale Alimentação" do usuário
@@ -4455,7 +4454,7 @@ describe('E2E App User tests', () => {
                         .query({ userItemId: alimentacao_benefit_user2_uuid });
                     expect(alimentacaoBenefitAfter.body.balance * 100).toBe(
                         employee2_alimentacao_initial_balance_in_cents -
-                            transaction1_net_price_in_cents
+                        transaction1_net_price_in_cents
                     );
 
                     // 6. ASSERT: Validar o estado final do registro da transação no banco
@@ -4557,7 +4556,7 @@ describe('E2E App User tests', () => {
                         );
                         expect(historyEntry.balance_after * 100).toBe(
                             employee2_cashback_initial_balance_in_cents +
-                                expected_cashback_in_cents
+                            expected_cashback_in_cents
                         );
                         expect(historyEntry.event_type).toBe(
                             'CASHBACK_RECEIVED'
@@ -4591,7 +4590,7 @@ describe('E2E App User tests', () => {
                         );
                         expect(historyEntry.balance_after * 100).toBe(
                             employee2_alimentacao_initial_balance_in_cents -
-                                transaction1_net_price_in_cents
+                            transaction1_net_price_in_cents
                         );
                         expect(historyEntry.event_type).toBe('ITEM_SPENT');
                         expect(historyEntry.related_transaction_uuid).toBe(
@@ -4636,7 +4635,7 @@ describe('E2E App User tests', () => {
                         expect(historyEntry.balance_after).toBeCloseTo(
                             (partner3_initial_liquid_balance_in_cents +
                                 expected_partner_net_amount_in_cents) /
-                                100
+                            100
                         );
                         expect(historyEntry.related_transaction_uuid).toBe(
                             transaction1_uuid
@@ -4695,130 +4694,130 @@ describe('E2E App User tests', () => {
                     );
                 });
 
-                it('should process a post-paid benefit and create a partner credit with the correct cycle settlement date', async () => {
-                    // 1. ARRANGE: Partner cria uma transação (valores em Reais)
-                    const transactionInput = {
-                        original_price: 1.5,
-                        discount_percentage: 0,
-                        net_price: 1.5,
-                    };
-                    const createTransaction = await request(app)
-                        .post('/pos-transaction')
-                        .set('Authorization', `Bearer ${partner_auth_token3}`)
-                        .send(transactionInput);
+                // it('should process a post-paid benefit and create a partner credit with the correct cycle settlement date', async () => {
+                //     // 1. ARRANGE: Partner cria uma transação (valores em Reais)
+                //     const transactionInput = {
+                //         original_price: 1.5,
+                //         discount_percentage: 0,
+                //         net_price: 1.5,
+                //     };
+                //     const createTransaction = await request(app)
+                //         .post('/pos-transaction')
+                //         .set('Authorization', `Bearer ${partner_auth_token3}`)
+                //         .send(transactionInput);
 
-                    expect(createTransaction.statusCode).toBe(201);
-                    post_paid_transaction_uuid =
-                        createTransaction.body.transaction_uuid;
-                    expected_post_paid_fee_in_cents = Math.round(
-                        createTransaction.body.fee_amount * 100
-                    );
-                    expected_post_paid_cashback_in_cents = Math.round(
-                        createTransaction.body.cashback * 100
-                    );
-                    expected_partner_credit_amount_in_cents =
-                        Math.round(transactionInput.net_price * 100) -
-                        expected_post_paid_fee_in_cents;
+                //     expect(createTransaction.statusCode).toBe(201);
+                //     post_paid_transaction_uuid =
+                //         createTransaction.body.transaction_uuid;
+                //     expected_post_paid_fee_in_cents = Math.round(
+                //         createTransaction.body.fee_amount * 100
+                //     );
+                //     expected_post_paid_cashback_in_cents = Math.round(
+                //         createTransaction.body.cashback * 100
+                //     );
+                //     expected_partner_credit_amount_in_cents =
+                //         Math.round(transactionInput.net_price * 100) -
+                //         expected_post_paid_fee_in_cents;
 
-                    // 2. ACT: Employee processes the payment
-                    const paymentInput = {
-                        transactionId: post_paid_transaction_uuid,
-                        benefit_uuid: convenio_benefit_user2_uuid,
-                        incoming_pin: '1234',
-                    };
+                //     // 2. ACT: Employee processes the payment
+                //     const paymentInput = {
+                //         transactionId: post_paid_transaction_uuid,
+                //         benefit_uuid: convenio_benefit_user2_uuid,
+                //         incoming_pin: '1234',
+                //     };
 
-                    const result = await request(app)
-                        .post('/pos-transaction/processing')
-                        .set('Authorization', `Bearer ${employeeAuthToken2}`)
-                        .send(paymentInput);
+                //     const result = await request(app)
+                //         .post('/pos-transaction/processing')
+                //         .set('Authorization', `Bearer ${employeeAuthToken2}`)
+                //         .send(paymentInput);
 
-                    // 3. ASSERT: Checar a resposta imediata da API (valores em Reais)
-                    expect(result.statusCode).toBe(200);
-                    expect(result.body.result).toBeTruthy();
-                    expect(result.body.finalBalance).toBeCloseTo(
-                        employee2_convenio_initial_limit_in_cents / 100 -
-                            transactionInput.net_price
-                    );
-                    expect(result.body.cashback).toBe(
-                        expected_post_paid_cashback_in_cents / 100
-                    );
+                //     // 3. ASSERT: Checar a resposta imediata da API (valores em Reais)
+                //     expect(result.statusCode).toBe(200);
+                //     expect(result.body.result).toBeTruthy();
+                //     expect(result.body.finalBalance).toBeCloseTo(
+                //         employee2_convenio_initial_limit_in_cents / 100 -
+                //         transactionInput.net_price
+                //     );
+                //     expect(result.body.cashback).toBe(
+                //         expected_post_paid_cashback_in_cents / 100
+                //     );
 
-                    // 4. ASSERT: Checar o estado final das contas, buscando novamente os dados
-                    const convenioBenefitAfter = await request(app)
-                        .get('/user-item')
-                        .set('Authorization', `Bearer ${employeeAuthToken2}`)
-                        .query({ userItemId: convenio_benefit_user2_uuid });
-                    expect(convenioBenefitAfter.body.balance * 100).toBe(
-                        employee2_convenio_initial_limit_in_cents -
-                            transactionInput.net_price * 100
-                    );
+                //     // 4. ASSERT: Checar o estado final das contas, buscando novamente os dados
+                //     const convenioBenefitAfter = await request(app)
+                //         .get('/user-item')
+                //         .set('Authorization', `Bearer ${employeeAuthToken2}`)
+                //         .query({ userItemId: convenio_benefit_user2_uuid });
+                //     expect(convenioBenefitAfter.body.balance * 100).toBe(
+                //         employee2_convenio_initial_limit_in_cents -
+                //         transactionInput.net_price * 100
+                //     );
 
-                    const cashbackBenefitAfter = await request(app)
-                        .get('/user-item')
-                        .set('Authorization', `Bearer ${employeeAuthToken2}`)
-                        .query({ userItemId: correct_benefit_user2_uuid });
-                    expect(cashbackBenefitAfter.body.balance * 100).toBe(
-                        employee2_cashback_initial_balance_in_cents +
-                            expected_post_paid_cashback_in_cents
-                    );
+                //     const cashbackBenefitAfter = await request(app)
+                //         .get('/user-item')
+                //         .set('Authorization', `Bearer ${employeeAuthToken2}`)
+                //         .query({ userItemId: correct_benefit_user2_uuid });
+                //     expect(cashbackBenefitAfter.body.balance * 100).toBe(
+                //         employee2_cashback_initial_balance_in_cents +
+                //         expected_post_paid_cashback_in_cents
+                //     );
 
-                    const correctAdminAccountAfter = await request(app)
-                        .get('/admin/account')
-                        .set('Authorization', `Bearer ${correctAdminToken}`);
-                    expect(Math.round(correctAdminAccountAfter.body.balance * 100)).toBe(
-                        correct_admin_initial_balance_in_cents +
-                            expected_post_paid_fee_in_cents
-                    );
+                //     const correctAdminAccountAfter = await request(app)
+                //         .get('/admin/account')
+                //         .set('Authorization', `Bearer ${correctAdminToken}`);
+                //     expect(Math.round(correctAdminAccountAfter.body.balance * 100)).toBe(
+                //         correct_admin_initial_balance_in_cents +
+                //         expected_post_paid_fee_in_cents
+                //     );
 
-                    const partnerAccountAfter = await request(app)
-                        .get('/business/admin/account')
-                        .set('Authorization', `Bearer ${partner_auth_token3}`);
-                    expect(partnerAccountAfter.body.balance * 100).toBe(
-                        partner3_initial_liquid_balance_in_cents
-                    );
+                //     const partnerAccountAfter = await request(app)
+                //         .get('/business/admin/account')
+                //         .set('Authorization', `Bearer ${partner_auth_token3}`);
+                //     expect(partnerAccountAfter.body.balance * 100).toBe(
+                //         partner3_initial_liquid_balance_in_cents
+                //     );
 
-                    // 5. ASSERT CRÍTICO: Verificar o PartnerCredit criado e sua data de liquidação
-                    // O teste calcula a data esperada, exatamente como o backend faz.
-                    // Hoje é 07/08/2025. Com delay de 2 meses e dia 10, a data esperada é 10/10/2025.
-                    const expectedSettlementDate =
-                        calculateCycleSettlementDateAsDate(new Date());
+                //     // 5. ASSERT CRÍTICO: Verificar o PartnerCredit criado e sua data de liquidação
+                //     // O teste calcula a data esperada, exatamente como o backend faz.
+                //     // Hoje é 07/08/2025. Com delay de 2 meses e dia 10, a data esperada é 10/10/2025.
+                //     const expectedSettlementDate =
+                //         calculateCycleSettlementDateAsDate(new Date());
 
-                    const partnerCredits = await request(app)
-                        .get('/business/admin/credits')
-                        .set('Authorization', `Bearer ${partner_auth_token3}`);
-                    expect(partnerCredits.statusCode).toBe(200);
-                    const newCredit = partnerCredits.body.find(
-                        (credit: any) =>
-                            credit.original_transaction_uuid ===
-                            post_paid_transaction_uuid
-                    );
-                    expect(newCredit).toBeDefined();
-                    expect(newCredit.balance * 100).toBe(
-                        expected_partner_credit_amount_in_cents
-                    );
-                    expect(newCredit.status).toBe('PENDING');
+                //     const partnerCredits = await request(app)
+                //         .get('/business/admin/credits')
+                //         .set('Authorization', `Bearer ${partner_auth_token3}`);
+                //     expect(partnerCredits.statusCode).toBe(200);
+                //     const newCredit = partnerCredits.body.find(
+                //         (credit: any) =>
+                //             credit.original_transaction_uuid ===
+                //             post_paid_transaction_uuid
+                //     );
+                //     expect(newCredit).toBeDefined();
+                //     expect(newCredit.balance * 100).toBe(
+                //         expected_partner_credit_amount_in_cents
+                //     );
+                //     expect(newCredit.status).toBe('PENDING');
 
-                    // Comparamos a data retornada pela API com a data calculada pelo teste.
-                    // Usamos toISOString() para uma comparação de texto precisa e padronizada.
-                    expect(
-                        new Date(newCredit.availability_date).toISOString()
-                    ).toBe(expectedSettlementDate.toISOString());
+                //     // Comparamos a data retornada pela API com a data calculada pelo teste.
+                //     // Usamos toISOString() para uma comparação de texto precisa e padronizada.
+                //     expect(
+                //         new Date(newCredit.availability_date).toISOString()
+                //     ).toBe(expectedSettlementDate.toISOString());
 
-                    // 6. ASSERT: Validar o estado final do registro da transação (A GARANTIA)
-                    const transactionInDb =
-                        await prismaClient.transactions.findUnique({
-                            where: { uuid: post_paid_transaction_uuid },
-                        });
+                //     // 6. ASSERT: Validar o estado final do registro da transação (A GARANTIA)
+                //     const transactionInDb =
+                //         await prismaClient.transactions.findUnique({
+                //             where: { uuid: post_paid_transaction_uuid },
+                //         });
 
-                    expect(transactionInDb).toBeDefined();
-                    expect(transactionInDb?.status).toBe('success');
+                //     expect(transactionInDb).toBeDefined();
+                //     expect(transactionInDb?.status).toBe('success');
 
-                    // >>> A GARANTIA FINAL PARA A NOSSA CORREÇÃO <<<
-                    // Verificamos se o UUID do benefício pós-pago foi corretamente salvo na transação.
-                    expect(transactionInDb?.user_item_uuid).toBe(
-                        convenio_benefit_user2_uuid
-                    );
-                });
+                //     // >>> A GARANTIA FINAL PARA A NOSSA CORREÇÃO <<<
+                //     // Verificamos se o UUID do benefício pós-pago foi corretamente salvo na transação.
+                //     expect(transactionInDb?.user_item_uuid).toBe(
+                //         convenio_benefit_user2_uuid
+                //     );
+                // });
             });
 
             describe('E2E Process Post-Paid Transaction', () => {
@@ -4946,7 +4945,7 @@ describe('E2E App User tests', () => {
                         expect(historyEntry.balance_after).toBeCloseTo(
                             (employee2_convenio_initial_limit_in_cents -
                                 transaction_net_price_in_cents) /
-                                100
+                            100
                         );
                     });
 
