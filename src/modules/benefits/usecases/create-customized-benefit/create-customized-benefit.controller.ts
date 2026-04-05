@@ -15,9 +15,9 @@ export class CreateCustomizedBenefitController {
       const usecase = new CreateCustomizedBenefitUsecase(this.benefitsRepository, this.businessInfoRepository)
 
       const result = await usecase.execute(data)
-
       return res.status(201).json(result)
     } catch (err: any) {
+      console.log(err)
       return res.status(err.statusCode).json({
         error: err.message
       });
