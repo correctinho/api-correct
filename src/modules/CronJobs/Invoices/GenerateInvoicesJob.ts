@@ -33,6 +33,7 @@ export class GenerateEmployerInvoicesJob implements ICronJob {
           EmployerItemDetails: {
             some: {
               cycle_end_day: yesterdayDay,
+              is_active: true,
             },
           },
         },
@@ -43,6 +44,7 @@ export class GenerateEmployerInvoicesJob implements ICronJob {
       let generatedCount = 0;
 
       for (const employer of employers) {
+        console.log(JSON.stringify(employer));
         try {
           const aggregate = await prismaClient.transactions.aggregate({
             where: {

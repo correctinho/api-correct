@@ -69,7 +69,7 @@ export class PartnerConfigEntity {
     this._description = props.description;
     this._latitude = props.latitude;
     this._longitude = props.longitude;
-    this._cashback_tax = props.cashback_tax ? props.cashback_tax * 1000 : 0;
+    this._cashback_tax = props.cashback_tax ?? 0;
     this._created_at = newDateF(new Date());
     this._updated_at = newDateF(new Date());
     this.validate();

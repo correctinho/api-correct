@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { ListInvoicesUsecase } from "../../application/usecases/list-invoices.usecase";
 
 export class ListInvoicesController {
-  constructor(private listInvoicesUseCase: ListInvoicesUsecase) {}
+  constructor(private listInvoicesUseCase: ListInvoicesUsecase) { }
 
   async handle(request: Request, response: Response): Promise<Response> {
     const { page, limit, status, business_info_uuid, reference_month } = request.query;
@@ -16,7 +16,7 @@ export class ListInvoicesController {
     };
 
     const result = await this.listInvoicesUseCase.execute(input);
-
+    console.log(result)
     return response.status(200).json(result);
   }
 }

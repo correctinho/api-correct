@@ -17,14 +17,14 @@ export class CreateBranchUsecase {
       const branchEntity = BranchEntity.create(branch)
       //check if branch name already exists
       const branchName = await this.branchRepository.findByName(branchEntity.name)
-      if (branchName) throw new CustomError("Branch name already registered", 409)
+      if (branchName) throw new CustomError("Ramo já registrado", 409)
 
       if (branchEntity.benefits_name.length > 0) {
         for (const item of branchEntity.benefits_name) {
 
           //find items by name
           const findItem = await this.benefitsRepository.findByName(item)
-          if(!findItem) throw new CustomError("Item not found", 404)
+          if (!findItem) throw new CustomError("Item not found", 404)
 
           branchEntity.benefits_uuid.push(findItem.uuid.uuid)
         }

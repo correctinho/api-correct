@@ -5,11 +5,17 @@ import { EmployerInvoice, InvoiceStatus } from "@prisma/client";
 
 export class InvoicesPrismaRepository implements IInvoicesRepository {
   async listInvoices(filters: ListInvoicesInputDTO): Promise<{ data: any[]; count: number }> {
-    const { page, limit, status, business_info_uuid, reference_month } = filters;
+    const { page, limit, status, business_info_uuid, reference_month, search } = filters;
 
     const skip = (page - 1) * limit;
 
     const where: any = {};
+
+    if (search) {
+      where.BusinessInfo = {
+        fantasy_name: { contains: search, mode: 'insensitive' }
+      };
+    }
 
     if (status) {
       where.status = status as InvoiceStatus;

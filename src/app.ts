@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/node";
 import express, { Response, Request, NextFunction, Router } from 'express'
-import {router} from './routes'
+import { router } from './routes'
 import cors from 'cors'
 import swaggerUI from 'swagger-ui-express'
 import { join } from 'path';
@@ -12,7 +12,7 @@ const app = express()
 
 
 app.use(express.json({
-  limit:'200mb'
+  limit: '200mb'
 }))
 app.use(cors({
   origin: '*', // Permite o URL dinâmico do Bolt
@@ -23,7 +23,8 @@ app.use(cors({
     'Content-Type',
     'Accept',
     'Authorization',
-    'ngrok-skip-browser-warning'
+    'ngrok-skip-browser-warning',
+    'correctisauth'
   ]
 }));
 
@@ -31,7 +32,7 @@ app.use(cors({
 app.use(router)
 
 app.get('/', (req: Request, res: Response) => {
-    res.send("Application running successfully")
+  res.send("Application running successfully")
 })
 
 app.use('/images', express.static(join(process.cwd(), 'src/infra/databases/images')));
