@@ -115,8 +115,15 @@ export class BranchPrismaRepository implements IBranchRepository {
     });
   }
 
-  async list(): Promise<BranchEntity[] | []> {
-    const r = await prismaClient.branchInfo.findMany();
+  async list(search?: string): Promise<BranchEntity[] | []> {
+    const where: any = {};
+    if (search) {
+      where.name = { contains: search, mode: 'insensitive' };
+    }
+
+    const r = await prismaClient.branchInfo.findMany({
+      where
+    });
 
     if (r.length > 0) {
       return r as BranchEntity[];

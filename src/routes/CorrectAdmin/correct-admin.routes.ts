@@ -16,6 +16,8 @@ import { ListInvoicesUsecase } from "../../modules/Invoices/application/usecases
 import { PayInvoiceUsecase } from "../../modules/Invoices/application/usecases/pay-invoice.usecase";
 import { ListInvoicesController } from "../../modules/Invoices/presentation/controllers/list-invoices.controller";
 import { PayInvoiceController } from "../../modules/Invoices/presentation/controllers/pay-invoice.controller";
+import { updatePartnerTaxesController } from "../../modules/Company/PartnerConfig/usecases/update-partner-taxes";
+import { getDashboardStatsController } from "../../modules/Dashboard/usecases/get-dashboard-stats";
 
 const correctAdminRouter = Router()
 
@@ -29,6 +31,12 @@ const payInvoiceUsecase = new PayInvoiceUsecase(invoicesRepository);
 const listInvoicesController = new ListInvoicesController(listInvoicesUsecase);
 const payInvoiceController = new PayInvoiceController(payInvoiceUsecase);
 
+import { generateEmployerInvoicesJob } from "../../modules/CronJobs/Invoices/GenerateInvoicesJob";
+
+correctAdminRouter.get('/admin/debug/execute-billing-job', async (request, response) => {
+  await generateEmployerInvoicesJob.execute();
+  return response.status(200).send({ message: "Job executado com sucesso" });
+});
 
 correctAdminRouter.post('/admin', async (request, response) => {
   await createCorrectAdminController.handle(request, response)
@@ -95,6 +103,16 @@ correctAdminRouter.get("/admin/invoices", correctIsAuth, async (req, res) => {
 // pay invoice
 correctAdminRouter.patch("/admin/invoices/:uuid/pay", correctIsAuth, async (req, res) => {
   await payInvoiceController.handle(req, res)
+})
+
+// update partner fees
+correctAdminRouter.patch("/admin/partners/:uuid/fees", correctIsAuth, async (request, response) => {
+  await updatePartnerTaxesController.handle(request, response)
+})
+
+// dashboard stats
+correctAdminRouter.get("/admin/dashboard/stats", correctIsAuth, async (request, response) => {
+  await getDashboardStatsController.handle(request, response)
 })
 
 export { correctAdminRouter }

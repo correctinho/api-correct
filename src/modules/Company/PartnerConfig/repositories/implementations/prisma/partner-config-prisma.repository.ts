@@ -30,7 +30,7 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
 
     await prismaClient.partnerConfig.update({
       where: {
-        uuid: dataToSave.uuid // Usamos o UUID do objeto JSON
+        business_info_uuid: dataToSave.business_info_uuid
       },
       data: {
         // Passamos todos os dados do objeto JSON, garantindo que
@@ -86,24 +86,25 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
       }
     })
     if (!config) return null
-    return {
+    return PartnerConfigEntity.hydrate({
       uuid: new Uuid(config.uuid),
       business_info_uuid: new Uuid(config.business_info_uuid),
       main_branch: new Uuid(config.main_branch),
-      partner_category: config.partner_category,
+      partner_category: config.partner_category as PartnerCategory[],
       items_uuid: config.items_uuid,
-      admin_tax: config.admin_tax,
-      marketing_tax: config.marketing_tax,
+      admin_tax: config.admin_tax || 0,
+      marketing_tax: config.marketing_tax || 0,
       use_marketing: config.use_marketing,
-      market_place_tax: config.market_place_tax,
+      market_place_tax: config.market_place_tax || 0,
       use_market_place: config.use_market_place,
-      title: config.title,
-      phone: config.phone,
-      description: config.description,
-      sales_type: config.sales_type,
-      cashback_tax: config.cashback_tax,
-      created_at: config.created_at,
-    } as PartnerConfigEntity
+      title: config.title || undefined,
+      phone: config.phone || undefined,
+      description: config.description || undefined,
+      sales_type: config.sales_type || undefined,
+      cashback_tax: config.cashback_tax || 0,
+      latitude: config.latitude || undefined,
+      longitude: config.longitude || undefined,
+    });
   }
   findAll(): Promise<PartnerConfigEntity[]> {
     throw new Error("Method not implemented.");

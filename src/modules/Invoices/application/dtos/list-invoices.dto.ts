@@ -4,6 +4,7 @@ export interface ListInvoicesInputDTO {
   status?: string;
   business_info_uuid?: string;
   reference_month?: string;
+  search?: string;
 }
 
 export interface ListInvoicesOutputDTO {
