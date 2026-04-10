@@ -35,11 +35,18 @@ export class CreatePOSTransactionOrderUsecase {
     //Get partner config details
     const partnerConfig = await this.partnerConfigRepository.findByPartnerId(businessInfo.uuid)
     if (!partnerConfig) throw new CustomError("Partner config not found", 400)
+    // --- LOG DE AUDITORIA: EXPLORANDO O PARTNER_CONFIG ---
+    console.log("--- [AUDITORIA USECASE: INÍCIO] ---");
+    console.log("Valores vindos do partnerConfigRepository:");
+    console.log("admin_tax:", partnerConfig.admin_tax, "| tipo:", typeof partnerConfig.admin_tax);
+    console.log("marketing_tax:", partnerConfig.marketing_tax, "| tipo:", typeof partnerConfig.marketing_tax);
+    console.log("cashback_tax:", partnerConfig.cashback_tax, "| tipo:", typeof partnerConfig.cashback_tax);
+    console.log("--- [AUDITORIA USECASE: FIM] ---");
     const transactionEntity = TransactionEntity.create(data)
 
     transactionEntity.setPartnerCashbackPercentage(partnerConfig.cashback_tax)
     // Calculate fee
-    transactionEntity.calculateFeePercentage(partnerConfig.admin_tax, partnerConfig.marketing_tax)
+    transactionEntity.calculateFeePercentage(partnerConfig.admin_tax_raw, partnerConfig.marketing_tax_raw)
     transactionEntity.calculateFee()
 
 
