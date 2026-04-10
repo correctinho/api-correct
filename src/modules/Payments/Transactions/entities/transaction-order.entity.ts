@@ -33,7 +33,7 @@ export type TransactionProps = {
   item_uuid?: string
   favored_partner_user_uuid?: Uuid | null; // Optional: FK to PartnerUser
   used_offline_token_code?: string
-  provider_tx_id?: string | null; 
+  provider_tx_id?: string | null;
   payer_business_info_uuid?: Uuid | null;
   pix_e2e_id?: string | null;
   subscription_uuid?: Uuid | null; // Optional: FK to Subscription (if applicable)
@@ -88,7 +88,7 @@ export class TransactionEntity {
   private _correct_account_uuid?: Uuid | null;
   private _correct_account_balance?: number; // Optional: current balance in cents for correct account
   private _provider_tx_id?: string | null; // <-- Adicionado
-  private _pix_e2e_id?: string | null; 
+  private _pix_e2e_id?: string | null;
   private _used_offline_token_code?: string
   private _payer_business_info_uuid?: Uuid | null;
   private _subscription_uuid?: Uuid | null;
@@ -124,7 +124,7 @@ export class TransactionEntity {
     this._favored_partner_user_uuid = props.favored_partner_user_uuid ?? null;
 
     this._provider_tx_id = props.provider_tx_id ?? null;
-    this._pix_e2e_id = props.pix_e2e_id ?? null; 
+    this._pix_e2e_id = props.pix_e2e_id ?? null;
 
     this._payer_business_info_uuid = props.payer_business_info_uuid ?? null;
     this._used_offline_token_code = props.used_offline_token_code
@@ -168,25 +168,25 @@ export class TransactionEntity {
   get updated_at(): string { return this._updated_at; }
 
   setPixPaymentDetails(endToEndId: string, paidAt: string): void {
-        if (this._status !== TransactionStatus.pending) {
-            throw new CustomError(`Cannot set PIX payment details on a transaction that is not 'pending'. Current status: ${this._status}`, 400);
-        }
-        this._pix_e2e_id = endToEndId;
-        this._paid_at = paidAt;
-        this._status = TransactionStatus.success; // Automaticamente marca como sucesso
-        this._updated_at = newDateF(new Date());
-        this.validate();
+    if (this._status !== TransactionStatus.pending) {
+      throw new CustomError(`Cannot set PIX payment details on a transaction that is not 'pending'. Current status: ${this._status}`, 400);
     }
+    this._pix_e2e_id = endToEndId;
+    this._paid_at = paidAt;
+    this._status = TransactionStatus.success; // Automaticamente marca como sucesso
+    this._updated_at = newDateF(new Date());
+    this.validate();
+  }
 
-    
-    setProviderTxId(txid: string): void {
-        if (this._provider_tx_id && this._provider_tx_id !== txid) {
-            console.warn(`Provider TX ID already set for transaction ${this.uuid.uuid}. Overwriting from ${this._provider_tx_id} to ${txid}.`);
-        }
-        this._provider_tx_id = txid;
-        this._updated_at = newDateF(new Date());
-        this.validate();
+
+  setProviderTxId(txid: string): void {
+    if (this._provider_tx_id && this._provider_tx_id !== txid) {
+      console.warn(`Provider TX ID already set for transaction ${this.uuid.uuid}. Overwriting from ${this._provider_tx_id} to ${txid}.`);
     }
+    this._provider_tx_id = txid;
+    this._updated_at = newDateF(new Date());
+    this.validate();
+  }
 
   changeStatus(newStatus: TransactionStatus): void {
 
@@ -198,7 +198,7 @@ export class TransactionEntity {
     if (percentage < 0) throw new CustomError("Partner cashback percentage cannot be negative", 400);
     this._partner_cashback_percentage = percentage;
     this.validate();
-}
+  }
   completeTransaction(command: {
     user_item_uuid?: Uuid; // Source must be defined on completion
     favored_user_uuid?: Uuid | null;
@@ -283,7 +283,7 @@ export class TransactionEntity {
     // CORREÇÃO: Como os valores já vêm escalados do PartnerConfig (ex: 15000),
     // nós apenas os somamos. 
     this._fee_percentage = admin_tax + marketing_tax;
-    
+
     this.validate();
   }
 
@@ -292,115 +292,103 @@ export class TransactionEntity {
     this.validate()
   }
 
-// TransactionEntity.ts - Revisão FINAL com regra de arredondamento de 0.x para 1 centavo
-static createCompletedSubscriptionPayment(props: {
-        subscription_uuid: Uuid;
-        user_info_uuid: Uuid;
-        hub_account_item_uuid: Uuid; // O item de onde saiu o dinheiro (Saldo Correct)
-        amountInCents: number;
-        description: string;
-    }): TransactionEntity {
-        // Lógica financeira básica para venda direta B2C (sem descontos/taxas complexas por enquanto)
-        const original_price = props.amountInCents;
-        const net_price = props.amountInCents;
-        // Importante: Em vendas B2C diretas, não há geração de crédito para parceiro
-        const partner_credit_amount = 0;
+  // TransactionEntity.ts - Revisão FINAL com regra de arredondamento de 0.x para 1 centavo
+  static createCompletedSubscriptionPayment(props: {
+    subscription_uuid: Uuid;
+    user_info_uuid: Uuid;
+    hub_account_item_uuid: Uuid; // O item de onde saiu o dinheiro (Saldo Correct)
+    amountInCents: number;
+    description: string;
+  }): TransactionEntity {
+    // Lógica financeira básica para venda direta B2C (sem descontos/taxas complexas por enquanto)
+    const original_price = props.amountInCents;
+    const net_price = props.amountInCents;
+    // Importante: Em vendas B2C diretas, não há geração de crédito para parceiro
+    const partner_credit_amount = 0;
 
-        return new TransactionEntity({
-            user_item_uuid: props.hub_account_item_uuid,
-            subscription_uuid: props.subscription_uuid,
+    return new TransactionEntity({
+      user_item_uuid: props.hub_account_item_uuid,
+      subscription_uuid: props.subscription_uuid,
 
-            // Dados Financeiros Obrigatórios pelo Schema
-            original_price: original_price,
-            net_price: net_price,
-            partner_credit_amount: partner_credit_amount,
-            // Valores zerados por padrão para venda simples
-            discount_percentage: 0,
-            fee_percentage: 0,
-            fee_amount: 0,
-            platform_net_fee_amount: 0,
-            cashback: 0,
+      // Dados Financeiros Obrigatórios pelo Schema
+      original_price: original_price,
+      net_price: net_price,
+      partner_credit_amount: partner_credit_amount,
+      // Valores zerados por padrão para venda simples
+      discount_percentage: 0,
+      fee_percentage: 0,
+      fee_amount: 0,
+      platform_net_fee_amount: 0,
+      cashback: 0,
 
-            transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
-            // CRÍTICO: Nasce como SUCESSO imediatamente
-            status: TransactionStatus.success,
-            description: props.description,
+      transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
+      // CRÍTICO: Nasce como SUCESSO imediatamente
+      status: TransactionStatus.success,
+      description: props.description,
 
-            created_at: newDateF(new Date()),
-            // Não há ID externo neste fluxo interno
-            provider_tx_id: null,
-            pix_e2e_id: null
-        });
-    }
-calculateFee(): void {
+      created_at: newDateF(new Date()),
+      // Não há ID externo neste fluxo interno
+      provider_tx_id: null,
+      pix_e2e_id: null
+    });
+  }
+
+
+  calculateFee(): void {
     if (this._net_price === undefined || this._fee_percentage === undefined) {
-        throw new CustomError("Net price and fee percentage must be set before calculating the fee", 400);
+      throw new CustomError("Net price and fee percentage must be set before calculating the fee", 400);
     }
 
-    const netPriceBigInt = BigInt(this._net_price); // Garante que _net_price seja BigInt para cálculos
+    // Usamos Math.round apenas por segurança contra resíduos de ponto flutuante do JS
+    const netPriceBI = BigInt(Math.round(this._net_price));
+    const feePercBI = BigInt(Math.round(this._fee_percentage));
 
-    // 1. Calcular _fee_amount (taxa TOTAL que a plataforma cobra da transação)
-    const calculatedFeeBigInt = (netPriceBigInt * BigInt(this._fee_percentage)) / BigInt(1000000);
-    this._fee_amount = Number(calculatedFeeBigInt); // Armazenar em centavos como Number
+    // 1. Taxa Total da Plataforma (Calculada sobre o valor líquido da venda)
+    // (Centavos * Taxa_Escalada) / 1.000.000 = Centavos reais
+    const calculatedFeeBI = (netPriceBI * feePercBI) / 1000000n;
+    this._fee_amount = Number(calculatedFeeBI);
 
-    let totalCashbackForUserBigInt = 0n;
-    let partnerCashbackAmountBigInt = 0n;
-    let platformCashbackAmountBigInt = 0n;
+    let totalCashbackForUserBI = 0n;
+    let partnerCashbackAmountBI = 0n;
+    let platformCashbackAmountBI = 0n;
 
-    // 2. Cashback do Parceiro (se _partner_cashback_percentage > 0)
+    // 2. Cashback do Parceiro (Configurável por parceiro)
     if (this._partner_cashback_percentage !== undefined && this._partner_cashback_percentage > 0) {
-        // Cálculo do cashback base antes do arredondamento
-        const rawPartnerCashbackBigInt = (netPriceBigInt * BigInt(this._partner_cashback_percentage)); // Numerador
-        // Arredondamento para 1 centavo se a fração for > 0, senão truncar para 0
-        if (rawPartnerCashbackBigInt > 0n && (rawPartnerCashbackBigInt % 1000000n !== 0n)) {
-             // Se o valor real seria 0.x centavos (ex: 0.8), e queremos 1 centavo.
-             // Isso significa que a parte inteira de centavos (rawPartnerCashbackBigInt / 1000000n) seria 0,
-             // mas o resto é > 0. Neste caso, forçamos para 1 centavo.
-            partnerCashbackAmountBigInt = (rawPartnerCashbackBigInt / 1000000n) + 1n; // Arredonda para cima se houver fração
-        } else {
-            partnerCashbackAmountBigInt = rawPartnerCashbackBigInt / 1000000n;
-        }
+      const partnerCashbackPercBI = BigInt(Math.round(this._partner_cashback_percentage));
+      const rawPartnerCashbackBI = (netPriceBI * partnerCashbackPercBI);
+
+      // Arredondamento: 0.x centavos vira 1 centavo para não prejudicar o usuário
+      if (rawPartnerCashbackBI > 0n && (rawPartnerCashbackBI % 1000000n !== 0n)) {
+        partnerCashbackAmountBI = (rawPartnerCashbackBI / 1000000n) + 1n;
+      } else {
+        partnerCashbackAmountBI = rawPartnerCashbackBI / 1000000n;
+      }
     }
-    totalCashbackForUserBigInt += partnerCashbackAmountBigInt;
+    totalCashbackForUserBI += partnerCashbackAmountBI;
 
-
-    // 3. Cashback da Plataforma (SEMPRE 20% do _fee_amount total)
+    // 3. Cashback da Plataforma (Fixo em 20% sobre a TAXA da plataforma)
     const PLATFORM_CASHBACK_PERCENTAGE = 20n;
-    const rawPlatformCashbackBigInt = (calculatedFeeBigInt * PLATFORM_CASHBACK_PERCENTAGE); // Numerador
-    // Arredondamento para 1 centavo se a fração for > 0, senão truncar para 0
-    if (rawPlatformCashbackBigInt > 0n && (rawPlatformCashbackBigInt % 100n !== 0n)) {
-        // Se o valor real seria 0.x centavos, e queremos 1 centavo.
-        platformCashbackAmountBigInt = (rawPlatformCashbackBigInt / 100n) + 1n; // Arredonda para cima se houver fração
+    const rawPlatformCashbackBI = (calculatedFeeBI * PLATFORM_CASHBACK_PERCENTAGE);
+
+    // Divisor 100 porque aqui estamos tirando % de um valor que já é BigInt (calculatedFeeBI)
+    if (rawPlatformCashbackBI > 0n && (rawPlatformCashbackBI % 100n !== 0n)) {
+      platformCashbackAmountBI = (rawPlatformCashbackBI / 100n) + 1n;
     } else {
-        platformCashbackAmountBigInt = rawPlatformCashbackBigInt / 100n;
+      platformCashbackAmountBI = rawPlatformCashbackBI / 100n;
     }
-    totalCashbackForUserBigInt += platformCashbackAmountBigInt;
+    totalCashbackForUserBI += platformCashbackAmountBI;
 
+    // 4. Consolidação dos Valores
+    this._cashback = Number(totalCashbackForUserBI);
+    this._partner_credit_amount = Number(netPriceBI - calculatedFeeBI);
 
-    // 4. Setar o _cashback total (o que o usuário recebe)
-    this._cashback = Number(totalCashbackForUserBigInt);
+    // O que a plataforma realmente ganha: Taxa Bruta - Cashback que ela deu
+    this._platform_net_fee_amount = Number(calculatedFeeBI - platformCashbackAmountBI);
 
-
-    // 5. Calcular _partner_credit_amount (o que o parceiro recebe)
-    this._partner_credit_amount = Number(netPriceBigInt - calculatedFeeBigInt);
-
-
-    // 6. Calcular _platform_net_fee_amount (o que a plataforma retém para si)
-    // A plataforma retém a taxa total MENOS o cashback que ELA mesma gerou.
-    // Como platformCashbackAmountBigInt pode ser 1 centavo agora, mesmo para fee_amount de 4 centavos,
-    // o _platform_net_fee_amount pode diminuir.
-    this._platform_net_fee_amount = Number(calculatedFeeBigInt - platformCashbackAmountBigInt);
-    // Embora a regra de 20% normalmente não leve a negativo, se o fee_amount for 0 e o cashback for 1,
-    // isso seria negativo. A regra de negócio é que cashback não pode consumir *toda* a taxa.
-    // Se o fee_amount for 0, o cashback da plataforma é 0.
-    // Se o fee_amount for 4, o cashback da plataforma é 1. platform_net_fee_amount = 3.
-    // Isso está ok.
-    if (this._platform_net_fee_amount < 0) {
-        this._platform_net_fee_amount = 0; // Garantia, caso a regra de 20% ou outra condição mude
-    }
+    if (this._platform_net_fee_amount < 0) this._platform_net_fee_amount = 0;
 
     this.validate();
-}
+  }
 
 
   changeDescription(description: string): void {
@@ -431,7 +419,7 @@ calculateFee(): void {
     const discountAmount = Math.round((this._original_price * this._discount_percentage) / 1000000);
 
     if (this._net_price !== this._original_price - discountAmount) {
-      
+
       throw new CustomError("Net price is not consistent with original price and discount percentage", 400);
     }
 
@@ -477,7 +465,6 @@ calculateFee(): void {
 
   }
 
-  // Adicione este método dentro da sua classe TransactionEntity
 
   public toJSON() {
     return {
@@ -497,7 +484,7 @@ calculateFee(): void {
       status: this._status,
       transaction_type: this._transaction_type,
       favored_partner_user_uuid: this._favored_partner_user_uuid ? this._favored_partner_user_uuid.uuid : null,
-      provider_tx_id: this._provider_tx_id, 
+      provider_tx_id: this._provider_tx_id,
       pix_e2e_id: this._pix_e2e_id,
       used_offline_token_code: this._used_offline_token_code,
       paid_at: this._paid_at,
@@ -507,7 +494,6 @@ calculateFee(): void {
       updated_at: this._updated_at
     };
   }
-  // Adicione este método dentro da sua classe TransactionEntity
 
   static hydrate(props: TransactionProps): TransactionEntity {
     return new TransactionEntity(props);
@@ -545,15 +531,15 @@ calculateFee(): void {
     amountInCents: number; // Valor total em CENTAVOS
     provider_tx_id: string; // O ID do Sicredi
   }): TransactionEntity {
-    
+
     const props: TransactionProps = {
       uuid: new Uuid(),
-      
-   
+
+
       subscription_uuid: command.subscription_uuid,
-      
+
       user_item_uuid: command.user_item_uuid,
-      favored_user_uuid: command.user_info_uuid, 
+      favored_user_uuid: command.user_info_uuid,
 
       // Valores Monetários
       original_price: command.amountInCents,
@@ -569,11 +555,11 @@ calculateFee(): void {
       platform_net_fee_amount: 0,
 
       status: TransactionStatus.pending,
-      transaction_type: TransactionType.SUBSCRIPTION_PAYMENT, 
+      transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
 
       // O ID DO SICREDI
       provider_tx_id: command.provider_tx_id,
-      
+
       created_at: newDateF(new Date()),
       updated_at: newDateF(new Date())
     };

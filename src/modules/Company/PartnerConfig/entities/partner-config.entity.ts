@@ -152,6 +152,14 @@ export class PartnerConfigEntity {
     return this._updated_at;
   }
 
+  get admin_tax_raw(): number {
+    return this._admin_tax; // Retorna o 25000 puro
+  }
+
+  get marketing_tax_raw(): number {
+    return this._marketing_tax; // Retorna o 10000 puro
+  }
+
   changeAdminTax(admin_tax: number) {
     this._admin_tax = admin_tax;
     this.validate();
