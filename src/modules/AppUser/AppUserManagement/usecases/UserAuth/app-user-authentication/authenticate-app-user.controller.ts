@@ -3,14 +3,15 @@ import { IPasswordCrypto } from "../../../../../../crypto/password.crypto";
 import { IAppUserToken } from "../../../../../../infra/shared/crypto/token/AppUser/token";
 import { AuthenticateAppuserUsecase } from "./authenticate-app-user.usecase";
 import { IAppUserAuthRepository } from "../../../repositories/app-use-auth-repository";
+import { IRedisCacheRepository } from "../../../../../../infra/redis/redis-cache.repository";
 
 export class AuthenticateAppUserController {
 
     constructor(
         private appUserRepository: IAppUserAuthRepository,
         private passwordCrypto: IPasswordCrypto,
-        private token: IAppUserToken
-
+        private token: IAppUserToken,
+        private redisCacheRepository: IRedisCacheRepository
     ) { }
 
     async handle(req: Request, res: Response) {
@@ -21,7 +22,8 @@ export class AuthenticateAppUserController {
             const authAppUserUsecase = new AuthenticateAppuserUsecase(
                 this.appUserRepository,
                 this.passwordCrypto,
-                this.token
+                this.token,
+                this.redisCacheRepository
             )
 
             const appUser = await authAppUserUsecase.execute({ document, password })
@@ -29,7 +31,6 @@ export class AuthenticateAppUserController {
             return res.json(appUser)
 
         } catch (err: any) {
-            console.log({err})
             return res.status(err.statusCode).json({
                 error: err.message
             })

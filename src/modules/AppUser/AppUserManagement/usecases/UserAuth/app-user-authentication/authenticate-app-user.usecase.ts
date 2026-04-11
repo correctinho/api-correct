@@ -4,6 +4,7 @@ import { api } from "../../../../../../infra/axios/axios.config"
 import { IAppUserToken } from "../../../../../../infra/shared/crypto/token/AppUser/token"
 import { DocumentValidator } from "../../../../../../utils/document-validation"
 import { IAppUserAuthRepository } from "../../../repositories/app-use-auth-repository"
+import { IRedisCacheRepository } from "../../../../../../infra/redis/redis-cache.repository"
 
 export type AuthenticateAppuserRequest = {
   document: string
@@ -14,8 +15,8 @@ export class AuthenticateAppuserUsecase {
   constructor(
     private appUserRepository: IAppUserAuthRepository,
     private passwordCrypto: IPasswordCrypto,
-    private token: IAppUserToken
-
+    private token: IAppUserToken,
+    private redisCacheRepository: IRedisCacheRepository
   ) { }
 
   async execute({ document, password }: AuthenticateAppuserRequest) {
@@ -26,14 +27,32 @@ export class AuthenticateAppuserUsecase {
 
     if (!appUser) throw new CustomError("CPF ou senha incorretos", 401)
 
-    const comparePasswordHash = await this.passwordCrypto.compare(password, appUser.password)
-    if (!comparePasswordHash) throw new CustomError("CPF ou senha incorretos", 401)
-
     //Verifica se o email já está validado
     if (!appUser.is_email_verified) {
         throw new CustomError("Email não confirmado.", 403);
     }
-    
+
+    const redisKey = `login_lock:app_user:${appUser.uuid.uuid}`;
+    const failedAttempts = await this.redisCacheRepository.get(redisKey);
+    if (failedAttempts && Number(failedAttempts) >= 5) {
+      throw new CustomError("Sua conta está bloqueada por 15 minutos devido a múltiplas tentativas.", 403);
+    }
+
+    const comparePasswordHash = await this.passwordCrypto.compare(password, appUser.password)
+    if (!comparePasswordHash) {
+      const newAttempts = await this.redisCacheRepository.incr(redisKey);
+      await this.redisCacheRepository.expire(redisKey, 900);
+      const restantes = 5 - newAttempts;
+      
+      if (restantes > 0) {
+        throw new CustomError(`CPF ou senha incorretos. Você tem mais ${restantes} tentativas.`, 401);
+      } else {
+        throw new CustomError("Sua conta está bloqueada por 15 minutos devido a múltiplas tentativas.", 403);
+      }
+    }
+
+    await this.redisCacheRepository.del(redisKey);
+
     //criar token através da api local
     const tokenGenerated = await this.token.create(appUser)
     return {

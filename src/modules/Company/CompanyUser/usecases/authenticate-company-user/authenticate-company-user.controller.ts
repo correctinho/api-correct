@@ -4,30 +4,34 @@ import { ICompanyAdminToken } from "../../../../../infra/shared/crypto/token/Com
 import { ICompanyUserRepository } from "../../repositories/company-user.repository";
 import { AuthenticateCompanyUserUsecase } from "./authenticate-company-user.usecase";
 import { ICompanyDataRepository } from "../../../CompanyData/repositories/company-data.repository";
+import { IRedisCacheRepository } from "../../../../../infra/redis/redis-cache.repository";
 
 export class AuthenticateCompanyAdminController {
     constructor(
         private companyUserRepository: ICompanyUserRepository,
         private companyDataRepository: ICompanyDataRepository,
         private passwordCrypto: IPasswordCrypto,
-        private token: ICompanyAdminToken
+        private token: ICompanyAdminToken,
+        private redisCacheRepository: IRedisCacheRepository
 
     ) { }
 
     async handle(req: Request, res: Response) {
         try {
-            const { business_document, user_name, password, email } = req.body
+            const { business_document, user_name, password, email, required_business_type } = req.body
             const authCompanyUserUsecase = new AuthenticateCompanyUserUsecase(
                 this.companyUserRepository,
                 this.companyDataRepository,
                 this.passwordCrypto,
-                this.token
+                this.token,
+                this.redisCacheRepository
             )
 
-            const companyUser = await authCompanyUserUsecase.execute({ business_document, user_name, password, email })
+            const companyUser = await authCompanyUserUsecase.execute({ business_document, user_name, password, email, required_business_type })
             return res.json(companyUser)
 
         } catch (err: any) {
+            console.log(err)
             return res.status(err.statusCode).json({
                 error: err.message
             })
