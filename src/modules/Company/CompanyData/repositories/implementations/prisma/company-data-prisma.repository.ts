@@ -25,6 +25,8 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
         business_type: data.business_type,
         email: data.email,
         status: data.status,
+        payroll_closing_day: data.payroll_closing_day,
+        txt_delivery_day: data.txt_delivery_day,
         updated_at: newDateF(new Date())
       }
     })

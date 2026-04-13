@@ -9,7 +9,6 @@ import { CompanyDataEntity } from "../../../CompanyData/entities/company-data.en
 export class UpdateCompanyDataAndAddressByAdminController {
     constructor(
         private companyAddressRepository: ICompanyAddressRepository,
-        private companyDataRepository: ICompanyDataRepository
 
 
     ) { }
@@ -17,15 +16,14 @@ export class UpdateCompanyDataAndAddressByAdminController {
     async handle(req: Request, res: Response) {
 
         try {
-            const address: CompanyAddressEntity = {...req.body}
-
-            address.uuid = req.query.address_uuid as string
+            const address = { ...req.body }
+            const address_uuid = req.query.address_uuid as string
 
             const companyAddressUsecase = new UpdateCompanyDataAndAddressByAdminUsecase(this.companyAddressRepository)
 
-            await companyAddressUsecase.execute(address)
+            await companyAddressUsecase.execute(address_uuid, address)
 
-            return res.json({message: "Address updated successfully"})
+            return res.json({ message: "Address updated successfully" })
 
         } catch (err: any) {
             return res.status(err.statusCode).json({
