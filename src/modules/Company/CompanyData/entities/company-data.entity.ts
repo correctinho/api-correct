@@ -4,6 +4,7 @@ import { BusinessTypeOptions, BusinessStatus } from '@prisma/client';
 import { newDateF } from '../../../../utils/date';
 
 type CompanyDataProps = {
+    uuid?: string
     address_uuid: string
     fantasy_name: string
     main_branch?: string
@@ -16,7 +17,9 @@ type CompanyDataProps = {
     phone_2: string | null
     business_type: BusinessTypeOptions
     email: string
-    employer_branch?:string
+    employer_branch?: string
+    payroll_closing_day?: number | null
+    txt_delivery_day?: number | null
     created_at?: string
     updated_at?: string
 }
@@ -36,7 +39,9 @@ export class CompanyDataEntity {
     phone_2: string | null
     business_type: BusinessTypeOptions
     email: string
-    employer_branch?:string
+    employer_branch?: string
+    payroll_closing_day?: number | null
+    txt_delivery_day?: number | null
     created_at?: string
     updated_at?: string
 
@@ -49,7 +54,7 @@ export class CompanyDataEntity {
         if (!props.email) throw new CustomError("Email is required", 400)
         if (!props.phone_1) throw new CustomError("Telephone 1 is required", 400)
 
-        this.uuid = randomUUID()
+        this.uuid = props.uuid ?? randomUUID()
         this.address_uuid = props.address_uuid
         this.fantasy_name = props.fantasy_name
         this.main_branch = props.main_branch
@@ -63,6 +68,8 @@ export class CompanyDataEntity {
         this.business_type = props.business_type
         this.email = props.email
         this.employer_branch = props.employer_branch
+        this.payroll_closing_day = props.payroll_closing_day
+        this.txt_delivery_day = props.txt_delivery_day
         this.created_at = newDateF(new Date())
         this.updated_at = newDateF(new Date())
 

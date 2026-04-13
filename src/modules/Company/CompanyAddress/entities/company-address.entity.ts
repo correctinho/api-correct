@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import { CustomError } from '../../../../errors/custom.error'
 
 export type CompanyAddressProps = {
+    uuid?: string
     line1: string | null
     line2: string | null
     line3: string | null
@@ -27,7 +28,7 @@ export class CompanyAddressEntity {
 
     private constructor(props: CompanyAddressProps) {
 
-        this.uuid = randomUUID()
+        this.uuid = props.uuid ?? randomUUID()
         this.line1 = props.line1
         this.line2 = props.line2
         this.line3 = props.line3
