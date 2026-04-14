@@ -11,9 +11,8 @@ export class UpdateBenefitUsecase {
 
     async execute(input: InputUpdateBenefitDTO): Promise<OutputUpdateBenefitDTO> {
         if (!input.uuid) throw new CustomError("UUID is required", 400)
-
         const findBenefit = await this.BenefitsRepository.find(input.uuid)
-        if (!findBenefit) throw new CustomError("Item not found", 404)
+        if (!findBenefit) throw new CustomError("Benefício não encontrado", 404)
 
 
         const benefit = new BenefitsEntity(findBenefit);

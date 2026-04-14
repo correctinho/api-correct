@@ -5,6 +5,7 @@ import { createBranchController } from '../../modules/branch/usecases/create-bra
 import { updateBranchController } from '../../modules/branch/usecases/update-branch';
 import { getListsBranchController } from '../../modules/branch/usecases/get-list-branch';
 import { getAvailableBranchesByAppUser } from '../../modules/branch/usecases/get-available-branches-by-app-user';
+import { setBenefitsToBranchController } from '../../modules/branch/usecases/set-benefits-to-branch';
 
 export const branchRouter = Router();
 
@@ -38,3 +39,10 @@ branchRouter.get(
   '/branches/available',
   async (request, response) => await getAvailableBranchesByAppUser.handle(request, response)
 )
+
+branchRouter.patch(
+    '/branch/:uuid/benefits',
+    correctIsAuth,
+    async (request, response) =>
+        await setBenefitsToBranchController.handle(request, response)
+);
