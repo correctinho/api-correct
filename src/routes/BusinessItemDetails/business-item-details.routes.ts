@@ -14,6 +14,7 @@ import { approveRechargeOrder } from "../../modules/Company/BusinessItemsDetails
 import { getPostPaidConsumptionController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPostPaidItemsManagement/get-postpaid-consumption";
 import { ensureApiKey } from "../../infra/shared/middlewares/ensureApiKey";
 import { postpaidRolloverController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPostPaidItemsManagement/postpaid-rollover";
+import { updateDefaultBenefitValueController } from "../../modules/Company/BenefitGroups/usecases/update-default-benefit-value";
 
 export const businessItemDetailsRouter = Router()
 
@@ -26,6 +27,11 @@ businessItemDetailsRouter.post("/business/item/details/correct", correctIsAuth, 
 //update employer item details by correct admin - TESTED
 businessItemDetailsRouter.patch('/business/item/details/correct', correctIsAuth, async (request, response) => {
   await setEmployerCyclesController.handle(request, response)
+})
+
+//update default benefit group value by correct admin
+businessItemDetailsRouter.patch('/business/item/benefit-group/value/correct', correctIsAuth, async (request, response) => {
+  await updateDefaultBenefitValueController.handle(request, response)
 })
 
 //find single by correct - TESTED

@@ -140,6 +140,30 @@ export class BenefitGroupsPrismaRepository implements IBenefitGroupsRepository {
         } as BenefitGroupsEntity;
     }
 
+    async findDefaultByItemAndBusiness(businessUuid: string, itemUuid: string): Promise<BenefitGroupsEntity | null> {
+        const group = await prismaClient.benefitGroups.findFirst({
+            where: {
+                business_info_uuid: businessUuid,
+                is_default: true,
+                EmployerItems: {
+                    item_uuid: itemUuid
+                }
+            }
+        });
+        if (!group) return null;
+
+        return BenefitGroupsEntity.hydrate({
+            uuid: new Uuid(group.uuid),
+            group_name: group.group_name,
+            employer_item_details_uuid: new Uuid(group.employer_item_details_uuid),
+            value: group.value,
+            business_info_uuid: new Uuid(group.business_info_uuid),
+            is_default: group.is_default,
+            created_at: group.created_at,
+            updated_at: group.updated_at,
+        });
+    }
+
     async create(entity: BenefitGroupsEntity): Promise<void> {
         throw new Error('Method not implemented.');
     }

@@ -12,6 +12,9 @@ export interface GetEmployerDetailsOutputDto {
   document: string;
   email: string;
   phone_1: string;
+  phone_2: string;
+  payroll_closing_day: number;
+  txt_delivery_day: number;
   colaborators_number: number;
   classification: string;
   status: string;
