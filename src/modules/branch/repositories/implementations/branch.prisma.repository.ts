@@ -150,4 +150,21 @@ export class BranchPrismaRepository implements IBranchRepository {
   //         where: { uuid: uuid },
   //     });
   // }
+
+  async syncBenefits(branchUuid: string, benefitsUuids: string[]): Promise<void> {
+    await prismaClient.$transaction([
+      prismaClient.branchItem.deleteMany({
+        where: {
+          branchInfo_uuid: branchUuid
+        }
+      }),
+      prismaClient.branchItem.createMany({
+        data: benefitsUuids.map(itemUuid => ({
+          branchInfo_uuid: branchUuid,
+          item_uuid: itemUuid,
+          created_at: newDateF(new Date())
+        }))
+      })
+    ]);
+  }
 }

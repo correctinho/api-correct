@@ -8,5 +8,6 @@ export interface IBranchRepository {
     findByName(branch_name: string): Promise<BranchEntity | null>
     createMany(data: BranchEntity[]):Promise<BranchEntity[]>
     getAvailableBranches():Promise<BranchEntity[] | []>
+    syncBenefits(branchUuid: string, benefitsUuids: string[]): Promise<void>;
     // delete(uuid: string): Promise<void>;
 }

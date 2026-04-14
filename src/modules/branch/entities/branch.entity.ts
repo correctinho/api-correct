@@ -43,8 +43,8 @@ export class BranchEntity {
     this._marketing_tax = props.marketing_tax;
     this._admin_tax = props.admin_tax;
     this._market_place_tax = props.market_place_tax;
-    this._created_at = props.created_at ?? randomUUID()
-    this._updated_at = props.updated_at ?? randomUUID()
+    this._created_at = props.created_at
+    this._updated_at = props.updated_at
     this.validate()
   }
 

@@ -4,12 +4,12 @@ import { GetEmployerDetailsUsecase } from '../../application/usecases/get-employ
 import { CustomError } from '../../../../errors/custom.error';
 
 export class GetEmployerDetailsController {
-  constructor(private readonly getEmployerDetailsRepository: IGetEmployerDetailsRepository) {}
+  constructor(private readonly getEmployerDetailsRepository: IGetEmployerDetailsRepository) { }
 
   async handle(request: Request, response: Response): Promise<Response> {
     try {
       const { id } = request.params;
-      
+
       const usecase = new GetEmployerDetailsUsecase(this.getEmployerDetailsRepository);
       const result = await usecase.execute(id);
 
