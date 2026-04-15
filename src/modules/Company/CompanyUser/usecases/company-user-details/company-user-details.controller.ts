@@ -8,7 +8,7 @@ export class CompanyUserDetailsController {
     constructor(
         private serviceRequestRepository: IServiceRequestRepository,
         private productsRepository: IProductRepository
-    ) {}
+    ) { }
 
     async handle(req: Request, res: Response) {
         try {
@@ -34,6 +34,8 @@ export class CompanyUserDetailsController {
             const additionalData = await usecase.execute(
                 companyUser.businessInfoUuid
             );
+
+
             return res.json({ ...user, ...additionalData });
         } catch (err: any) {
             const statusCode = err.statusCode || 500;

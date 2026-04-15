@@ -5,7 +5,7 @@ import { GetPartnerDashboardUseCase } from "./get-partner-dashboard-metrics.usec
 export class GetPartnerDashboardController {
   constructor(
     private partnerDashboardRepository: IPartnerDashboardRepository
-  ) {}
+  ) { }
 
   async handle(req: Request, res: Response) {
     try {
@@ -22,7 +22,6 @@ export class GetPartnerDashboardController {
 
       // Executa a lógica
       const dashboardData = await useCase.execute(businessInfoUuid);
-
       return res.status(200).json(dashboardData);
 
     } catch (err: any) {

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { request, Router } from "express";
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
 import { findCategoryController } from "../../modules/Ecommerce/Categories/usecases/findCategory";
 import { findAllCategoriesController } from "../../modules/Ecommerce/Categories/usecases/findAllCategories";
@@ -40,7 +40,11 @@ ecommerceRouter.get('/ecommerce/categories', async (request, response) => {
   await findAllCategoriesController.handle(request, response)
 })
 
-//REgister product by business user 
+//Register product by business user with no image
+ecommerceRouter.post("/ecommerce/product/no-image", companyIsAuth, async (request, response) => {
+  await createProductController.handle(request, response)
+})
+//REgister product by business user with image
 ecommerceRouter.post('/ecommerce/product', companyIsAuth, uploadImage.array('file', 5), async (request, response) => {
   await createProductControllerOnMinio.handle(request, response)
 })

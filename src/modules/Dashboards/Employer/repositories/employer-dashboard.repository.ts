@@ -1,5 +1,6 @@
 export interface IEmployerDashboardRepository {
     getDashboardMetrics(businessInfoUuid: string): Promise<{
+        fantasy_name: string
         overview: {
             total_benefits: number;
             custom_benefits: number;

@@ -33,6 +33,7 @@ export const companyIsAuth = async (req: Request, res: Response, next: NextFunct
       function: '',
       permissions: [''],
       status: '',
+      fantasy_name: '',
       created_at: '',
       updated_at: ''
     }
