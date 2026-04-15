@@ -9,7 +9,7 @@ declare global {
         email: string | null,
         isAdmin: boolean | null
       },
-      companyUser : {
+      companyUser: {
         companyUserId: string,
         businessInfoUuid: string,
         isAdmin: boolean,
@@ -21,6 +21,7 @@ declare global {
         function: string | null,
         permissions: string[],
         status: string,
+        fantasy_name?: string
         created_at: string,
         updated_at: string | null
       },
@@ -29,7 +30,7 @@ declare global {
         document: string,
         password: string
         transaction_pin: string | null
-        email:string,
+        email: string,
         created_at: string,
         updated_at: string | null
         user_info_uuid: string | null

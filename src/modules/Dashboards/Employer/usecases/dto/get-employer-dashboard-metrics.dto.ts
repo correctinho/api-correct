@@ -1,4 +1,5 @@
 export interface OutputEmployerDashboardMetricsDTO {
+    fantasy_name: string,
     overview: {
         total_benefits: number;      // Total de benefícios ativos
         custom_benefits: number;     // Total de personalizados ativos

@@ -11,6 +11,7 @@ export class GetEmployerDashboardMetricsUsecase {
         const metrics = await this.employerDashboardRepository.getDashboardMetrics(businessInfoUuid);
 
         return {
+            fantasy_name: metrics.fantasy_name,
             overview: {
                 total_benefits: metrics.overview.total_benefits,
                 custom_benefits: metrics.overview.custom_benefits,
@@ -19,7 +20,7 @@ export class GetEmployerDashboardMetricsUsecase {
             },
             distribution: metrics.distribution.map(item => ({
                 category: item.category,
-                amount: item.amount / 100 
+                amount: item.amount / 100
             }))
         }
     }

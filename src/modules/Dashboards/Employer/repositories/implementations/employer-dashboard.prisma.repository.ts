@@ -3,6 +3,7 @@ import { IEmployerDashboardRepository } from "../employer-dashboard.repository";
 
 export class EmployerDashboardPrismaRepository implements IEmployerDashboardRepository {
     async getDashboardMetrics(businessInfoUuid: string): Promise<{
+        fantasy_name: string;
         overview: {
             total_benefits: number;
             custom_benefits: number;
@@ -24,6 +25,9 @@ export class EmployerDashboardPrismaRepository implements IEmployerDashboardRepo
                 Item: {
                     select: { item_category: true, business_info_uuid: true }
                 },
+                BusinessInfo: {
+                    select: { fantasy_name: true }
+                },
                 // Entramos nos Grupos -> UserItems para calcular o custo real
                 BenefitGroups: {
                     include: {
@@ -35,6 +39,16 @@ export class EmployerDashboardPrismaRepository implements IEmployerDashboardRepo
             }
         });
 
+        let fantasyName = "";
+        if (activeBenefits.length > 0) {
+            fantasyName = activeBenefits[0].BusinessInfo.fantasy_name;
+        } else {
+            const business = await prismaClient.businessInfo.findUnique({
+                where: { uuid: businessInfoUuid },
+                select: { fantasy_name: true }
+            });
+            fantasyName = business?.fantasy_name || "Empresa não encontrada";
+        }
         // 2. PROCESSAMENTO EM MEMÓRIA (Zero novas chamadas ao banco)
 
         // A. Contagens Simples
@@ -81,6 +95,7 @@ export class EmployerDashboardPrismaRepository implements IEmployerDashboardRepo
         }));
 
         return {
+            fantasy_name: fantasyName,
             overview: {
                 total_benefits: totalBenefits,    // Apenas ativos
                 custom_benefits: customBenefits,  // Apenas ativos personalizados

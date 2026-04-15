@@ -4,28 +4,27 @@ import { ICompanyUserRepository } from "../company-user.repository";
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 
 export class CompanyUserPrismaRepository implements ICompanyUserRepository {
-  
+
   // Helper privado para mapear o retorno do Prisma para o objeto (Workaround sem hydrate)
   private mapPrismaToEntity(user: any): CompanyUserEntity {
-      return {
-        uuid: new Uuid(user.uuid),
-        business_info_uuid: new Uuid(user.business_info_uuid),
-        is_admin: user.is_admin,
-        document: user.document,
-        name: user.name,
-        email: user.email,
-        user_name: user.user_name,
-        password: user.password,
-        function: user.function,
-        status: user.status,
-        permissions: user.permissions,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-        business_type: user.BusinessInfo?.business_type,
-        // Mapeando os campos de reset
-        password_reset_token: user.password_reset_token,
-        password_reset_expires_at: user.password_reset_expires_at
-      } as unknown as CompanyUserEntity
+    return {
+      uuid: new Uuid(user.uuid),
+      business_info_uuid: new Uuid(user.business_info_uuid),
+      is_admin: user.is_admin,
+      document: user.document,
+      name: user.name,
+      email: user.email,
+      user_name: user.user_name,
+      password: user.password,
+      function: user.function,
+      status: user.status,
+      permissions: user.permissions,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+      // Mapeando os campos de reset
+      password_reset_token: user.password_reset_token,
+      password_reset_expires_at: user.password_reset_expires_at
+    } as unknown as CompanyUserEntity
   }
 
   async findByIdAuth(id: string): Promise<CompanyUserEntity | null> {
@@ -102,7 +101,7 @@ export class CompanyUserPrismaRepository implements ICompanyUserRepository {
         permissions: data.permissions,
         status: data.status,
         created_at: data.created_at,
-        
+
       }
     })
     return this.mapPrismaToEntity(companyUser);
