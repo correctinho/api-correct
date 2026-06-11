@@ -117,6 +117,19 @@ export class SubscriptionPlanEntity {
     this.validate();
   }
 
+  public changeName(name: string): void {
+    if (!name || name.trim().length < 3) {
+      throw new CustomError("O nome do plano deve ter pelo menos 3 caracteres.", 400);
+    }
+    this._name = name;
+    this.touch();
+  }
+
+  public changeDescription(description: string | null): void {
+    this._description = description;
+    this.touch();
+  }
+
   private touch(): void {
     this._updated_at = new Date();
   }

@@ -10,7 +10,6 @@ class ListSubscriptionsController {
         const subscriptions = await listSubscriptionsUseCase.execute();
 
         const subscriptionsJSON = subscriptions.map((subscription) => subscription.toJSON());
-
         return response.status(200).json(subscriptionsJSON);
     }
 }

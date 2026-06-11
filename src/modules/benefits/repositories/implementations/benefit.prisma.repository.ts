@@ -8,13 +8,13 @@ import { BusinessItemsDetailsEntity } from '../../../Company/BusinessItemsDetail
 export class BenefitPrismaRepository implements IBenefitsRepository {
   async findByBusiness(business_info_uuid: string, item_name: string): Promise<BenefitsEntity | null> {
     const item = await prismaClient.item.findFirst({
-      where:{
+      where: {
         name: item_name,
         business_info_uuid: business_info_uuid
       }
     })
 
-    if(!item) return null
+    if (!item) return null
 
     return {
       uuid: new Uuid(item.uuid),
@@ -30,7 +30,7 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
   }
 
   async createCustomBenefit(benefit: BenefitsEntity, itemDetails: BusinessItemsDetailsEntity): Promise<void> {
-   const [item, employer] = await prismaClient.$transaction([
+    const [item, employer] = await prismaClient.$transaction([
 
       prismaClient.item.create({
         data: {
@@ -45,7 +45,7 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
         },
       }),
       prismaClient.employerItemDetails.create({
-        data:{
+        data: {
           uuid: itemDetails.uuid.uuid,
           item_uuid: itemDetails.item_uuid.uuid,
           business_info_uuid: itemDetails.business_info_uuid.uuid,
@@ -59,10 +59,10 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
   }
   async findWithBranches(id: string): Promise<any[]> {
     const item = await prismaClient.branchItem.findMany({
-      where:{
+      where: {
         item_uuid: id
       },
-      select:{
+      select: {
         uuid: true,
         item_uuid: true,
         branchInfo_uuid: true,
@@ -97,7 +97,7 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
       }
     });
 
-    if(!item) return null
+    if (!item) return null
 
     return {
       uuid: new Uuid(item.uuid),
@@ -115,13 +115,13 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
 
   }
 
-  async findByName(name: string):Promise<BenefitsEntity | null> {
+  async findByName(name: string): Promise<BenefitsEntity | null> {
     const item = await prismaClient.item.findFirst({
       where: {
         name
       }
     });
-    if(!item) return null
+    if (!item) return null
 
     return {
       uuid: new Uuid(item.uuid),
@@ -155,11 +155,42 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
     });
   }
 
+  async findAll(): Promise<BenefitsEntity[]> {
+    const itemsFromDb = await prismaClient.item.findMany({
+      include: {
+        SubscriptionPlan: {
+          select: { uuid: true }
+        }
+      }
+    });
 
-  async findAll(): Promise<(BenefitsEntity)[]> {
-    const r = await prismaClient.item.findMany();
-
-    return r as BenefitsEntity[] | []
+    // Mapeia cada item do banco de dados para a Entidade do Domínio
+    return itemsFromDb.map((item) => {
+      return new BenefitsEntity({
+        uuid: new Uuid(item.uuid),
+        name: item.name,
+        description: item.description,
+        img_url: item.img_url ?? undefined,
+        item_type: item.item_type,
+        item_category: item.item_category,
+        parent_uuid: item.parent_uuid ? new Uuid(item.parent_uuid) : null,
+        business_info_uuid: item.business_info_uuid ? new Uuid(item.business_info_uuid) : null,
+        has_subscription: item.SubscriptionPlan && item.SubscriptionPlan.length > 0,
+        created_at: item.created_at,
+        updated_at: item.updated_at ?? undefined
+      });
+    });
   }
+  // async findAll(): Promise<(BenefitsEntity)[]> {
+  //   const r = await prismaClient.item.findMany({
+  //     include: {
+  //       SubscriptionPlan: {
+  //         select: { uuid: true }
+  //       }
+  //     }
+  //   });
+
+  //   return r as BenefitsEntity[] | []
+  // }
 
 }

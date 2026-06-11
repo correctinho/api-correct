@@ -24,9 +24,11 @@ export class CompanyUserDetailsController {
                 function: companyUser.function,
                 permissions: companyUser.permissions,
                 status: companyUser.status,
+                fantasy_name: companyUser.fantasy_name,
                 created_at: companyUser.created_at,
                 updated_at: companyUser.updated_at,
             };
+
             const usecase = new CompanyUserDetailsUsecase(
                 this.serviceRequestRepository,
                 this.productsRepository

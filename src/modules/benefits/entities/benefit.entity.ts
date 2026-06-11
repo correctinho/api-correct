@@ -12,6 +12,7 @@ export type BenefitsProps = {
   item_category: ItemCategory;
   parent_uuid: Uuid | null
   business_info_uuid?: Uuid | null
+  has_subscription?: boolean;
   created_at?: string
   updated_at?: string
 };
@@ -36,6 +37,7 @@ export class BenefitsEntity {
   private _item_type: ItemType;
   private _item_category: ItemCategory;
   private _parent_uuid: Uuid | null
+  private _has_subscription: boolean;
   private _business_info_uuid?: Uuid | null
   private _created_at?: string
   private _updated_at?: string
@@ -49,6 +51,7 @@ export class BenefitsEntity {
     this._item_category = props.item_category;
     this._parent_uuid = props.parent_uuid ?? null
     this._business_info_uuid = props.business_info_uuid ?? null
+    this._has_subscription = props.has_subscription ?? false
     this._created_at = newDateF(new Date())
     this._updated_at = newDateF(new Date())
     this.validate();
@@ -100,6 +103,14 @@ export class BenefitsEntity {
     return this._updated_at || null
   }
 
+  get has_subscription(): boolean {
+    return this._has_subscription;
+  }
+
+  changeSubscriptionStatus(status: boolean) {
+    this._has_subscription = status;
+  }
+
   changeName(name: string) {
     this._name = name;
     this.validate();
@@ -125,7 +136,7 @@ export class BenefitsEntity {
     this.validate()
   }
 
-  changeBusinessInfoUuid(business_info_uuid: Uuid | null){
+  changeBusinessInfoUuid(business_info_uuid: Uuid | null) {
     this._business_info_uuid = business_info_uuid
     this.validate()
   }

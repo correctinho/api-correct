@@ -63,7 +63,16 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
         uuid: id
       },
       include: {
-        Address: true
+        Address: true,
+        BusinessinfoBranch:{
+          select:{
+            BranchInfo:{
+              select: {
+                name: true,
+              }
+            }
+          }
+        }
       }
     })
     if (!companyData) return null
@@ -81,6 +90,7 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
       email: companyData.email,
       business_type: companyData.business_type,
       employer_branch: companyData.employer_branch,
+      branch_name: companyData.BusinessinfoBranch.length > 0 ? companyData.BusinessinfoBranch[0].BranchInfo.name : undefined,
       created_at: companyData.created_at,
       updated_at: companyData.updated_at,
       Address: {

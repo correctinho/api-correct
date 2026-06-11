@@ -3,7 +3,7 @@ import { IBenefitsRepository } from '../../repositories/benefit.repository';
 import { GetListBenefitUsecase } from './get-list-benefit.usecase';
 
 export class GetListBenefitController {
-    constructor(private BenefitsRepository: IBenefitsRepository) {}
+    constructor(private BenefitsRepository: IBenefitsRepository) { }
 
     async handle(req: Request, res: Response) {
         try {
@@ -12,7 +12,6 @@ export class GetListBenefitController {
             );
 
             const resp = await getListBenefitUsecase.execute({});
-
             return res.json(resp);
         } catch (err: any) {
             return res.status(err.statusCode).json({
