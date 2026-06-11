@@ -6,5 +6,5 @@ export interface ISubscriptionPlanRepository extends RepositoryInterface<Subscri
   findActiveByItemAndPayerType(uuid: any, EMPLOYER: any): unknown;
   // Busca apenas os planos ativos (útil para o app/frontend)
   findActivePlansByPayerType(payerType: 'EMPLOYER' | 'USER'): Promise<SubscriptionPlanEntity[]>;
-  
+  findByItemUuid(uuid: Uuid): Promise<SubscriptionPlanEntity[]>;
 }

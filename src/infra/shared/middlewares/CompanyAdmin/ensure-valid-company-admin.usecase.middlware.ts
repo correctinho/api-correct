@@ -13,6 +13,7 @@ export type OutputCompanyUserDTO = {
   function: string | null,
   permissions: string[],
   status: string,
+  fantasy_name: string | null,
   created_at: string,
   updated_at: string
 
@@ -23,10 +24,9 @@ export class EnsureValidCompanyUserUsecase {
     ) { }
     async execute(id: string): Promise<OutputCompanyUserDTO> {
         const user = await this.companyUserRepository.findById(id)
+        if (!user) throw new CustomError("Acesso negado", 401)
 
-        if (!user) throw new CustomError("User is not allowed to access", 401)
-
-        if(user.status === 'inactive') throw new CustomError("Unauthorized", 401)
+        if(user.status === 'inactive') throw new CustomError("Acesso negado", 401)
 
         return {
           uuid: user.uuid.uuid,
@@ -40,6 +40,7 @@ export class EnsureValidCompanyUserUsecase {
           function: user.function,
           permissions: user.permissions,
           status: user.status,
+          fantasy_name: user.fantasy_name,
           created_at: user.created_at,
           updated_at: user.updated_at
 

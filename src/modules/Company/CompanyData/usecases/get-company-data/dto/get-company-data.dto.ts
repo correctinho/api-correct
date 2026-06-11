@@ -14,6 +14,7 @@ export type OutputGetCompanyDataDTO = {
   email: string
   business_type: BusinessTypeOptions
   branches_uuid?: string[]
+  branch_name?: string
   employer_branch?: string | null
   items_uuid?: string[]
   created_at: string

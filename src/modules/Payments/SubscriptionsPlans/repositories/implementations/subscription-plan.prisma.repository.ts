@@ -8,8 +8,8 @@ export class SubscriptionPlanPrismaRepository implements ISubscriptionPlanReposi
   findActiveByItemAndPayerType(uuid: any, EMPLOYER: any): unknown {
     throw new Error("Method not implemented.");
   }
-  
-   
+
+
   async create(entity: SubscriptionPlanEntity): Promise<void> {
     // Conversão Direta: Entidade -> Prisma
     // Usamos rawPriceInCents para garantir que salvamos o inteiro no banco
@@ -69,6 +69,30 @@ export class SubscriptionPlanPrismaRepository implements ISubscriptionPlanReposi
       created_at: rawModel.created_at,
       updated_at: rawModel.updated_at,
     });
+  }
+
+  async findByItemUuid(itemUuid: Uuid): Promise<SubscriptionPlanEntity[]> {
+    console.log(itemUuid)
+    const rawModels = await prismaClient.subscriptionPlan.findMany({
+      where: { item_uuid: itemUuid.uuid },
+    });
+
+    // Se não encontrar nada, o findMany retorna [] (array vazio), então o map resolve naturalmente
+    return rawModels.map((rawModel) =>
+      SubscriptionPlanEntity.hydrate({
+        uuid: new Uuid(rawModel.uuid),
+        item_uuid: new Uuid(rawModel.item_uuid),
+        name: rawModel.name,
+        description: rawModel.description,
+        price: rawModel.price,
+        currency: rawModel.currency,
+        billing_period: rawModel.billing_period,
+        payer_type: rawModel.payer_type,
+        is_active: rawModel.is_active,
+        created_at: rawModel.created_at,
+        updated_at: rawModel.updated_at,
+      })
+    );
   }
 
   async findAll(): Promise<SubscriptionPlanEntity[]> {

@@ -91,6 +91,11 @@ export class CompanyUserPrismaRepository implements ICompanyUserRepository {
     const companyUser = await prismaClient.businessUser.findUnique({
       where: {
         uuid: id
+      },
+      include:{
+        BusinessInfo: {
+          select: {fantasy_name: true}
+        }
       }
 
     })
@@ -108,6 +113,7 @@ export class CompanyUserPrismaRepository implements ICompanyUserRepository {
       function: companyUser.function,
       status: companyUser.status,
       permissions: companyUser.permissions,
+      cmopany_name: companyUser.BusinessInfo?.fantasy_name || null,
       created_at: companyUser.created_at,
       updated_at: companyUser.updated_at,
     } as CompanyUserEntity

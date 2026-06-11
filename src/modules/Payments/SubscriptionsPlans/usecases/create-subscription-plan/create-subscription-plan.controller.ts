@@ -9,7 +9,7 @@ import { IBenefitsRepository } from '../../../../benefits/repositories/benefit.r
 export class CreateSubscriptionPlanController {
     constructor(
         private readonly subscriptionPlanRepository: ISubscriptionPlanRepository,
-        private readonly itemRepository: IBenefitsRepository,    ) {}
+        private readonly itemRepository: IBenefitsRepository,) { }
 
     async handle(request: Request, response: Response): Promise<Response> {
         try {
@@ -23,7 +23,7 @@ export class CreateSubscriptionPlanController {
                 is_active,
                 currency,
             } = request.body;
-
+            console.log(request.body)
             // Validação básica de presença dos campos obrigatórios antes de chamar o UseCase
             // (Validações de negócio mais profundas ocorrem dentro da Entidade)
             if (
@@ -74,9 +74,9 @@ export class CreateSubscriptionPlanController {
             return response.status(201).json(output);
         } catch (err: any) {
             const statusCode = err instanceof CustomError ? err.statusCode : 500;
-                return response.status(statusCode).json({
-                    error: err.message || "Internal Server Error",
-                });
+            return response.status(statusCode).json({
+                error: err.message || "Internal Server Error",
+            });
         }
     }
 }

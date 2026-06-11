@@ -17,7 +17,6 @@ export class GetCompanyDataController{
             )
 
             const companyData = await companyDataUsecase.execute(business_id)
-
             return res.json(companyData)
 
         }catch(err: any){
