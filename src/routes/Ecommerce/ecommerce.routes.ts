@@ -21,6 +21,7 @@ import { updateCartItem } from "../../modules/Ecommerce/Carts/usecases/update-ca
 import { deleteCartItemController } from "../../modules/Ecommerce/Carts/usecases/delete-cart-item";
 import { listCartsController } from "../../modules/Ecommerce/Carts/usecases/list-user-carts";
 import { getCartDetailsController } from "../../modules/Ecommerce/Carts/usecases/get-cart-details";
+import { lookupProductByEanController } from "../../modules/Ecommerce/Products/usecases/lookup-product-by-ean";
 
 const ecommerceRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -60,6 +61,11 @@ ecommerceRouter.get('/ecommerce/business/:business_info_uuid/products', async (r
 })
 ecommerceRouter.get('/ecommerce/business/products', companyIsAuth, async (request, response) => {
   await findBusinessProducts.handle(request, response)
+})
+
+// lookup product by ean
+ecommerceRouter.get('/ecommerce/product/ean/:ean', companyIsAuth, async (request, response) => {
+  await lookupProductByEanController.handle(request, response)
 })
 
 // find product by id
