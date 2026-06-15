@@ -23,8 +23,15 @@ export const sseSubscribe = (req: Request, res: Response) => {
     clients.set(transactionId, res);
     console.log(`✅ PDV inscrito para a transação: ${transactionId}`);
 
+    // Heartbeat para manter a conexão viva contra timeouts de Proxy/Rede
+    const heartbeatInterval = setInterval(() => {
+        // Envia um comentário SSE (iniciado com :), ignorado pelo frontend, mas mantém a rede ativa
+        res.write(': keep-alive-ping\n\n');
+    }, 15000); // 15 segundos
+
     // Quando o cliente fecha a conexão, removemos ele da nossa lista
     req.on('close', () => {
+        clearInterval(heartbeatInterval);
         clients.delete(transactionId);
         console.log(`🔌 PDV desconectado da transação: ${transactionId}`);
     });

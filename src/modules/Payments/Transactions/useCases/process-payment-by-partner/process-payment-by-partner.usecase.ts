@@ -6,7 +6,7 @@ import { TransactionEntity } from "../../entities/transaction-order.entity";
 import { ITransactionOrderRepository } from "../../repositories/transaction-order.repository";
 import { InputProcessPaymentByPartnerDTO, OutputProcessPaymentByPartnerDTO } from "./dto/process-payment-by-partner.dto";
 
-import { sseSendEvent } from "../../../../../infra/sse/sse.config";
+import { sseDisconnect, sseSendEvent } from "../../../../../infra/sse/sse.config";
 
 export class ProcessPaymentByPartnerUsecase {
 
@@ -65,6 +65,7 @@ export class ProcessPaymentByPartnerUsecase {
         amount: transactionEntity.net_price
       });
 
+      sseDisconnect(input.transactionId);
       // 5. Formata a saída para o cliente
       return {
         success: true,
@@ -84,6 +85,8 @@ export class ProcessPaymentByPartnerUsecase {
         status: 'failed',
         message: errorMessage
       });
+
+      sseDisconnect(input.transactionId);
       throw err; // Repassamos o erro para o controller
     }
   }

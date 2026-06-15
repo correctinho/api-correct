@@ -2,7 +2,7 @@
 
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../errors/custom.error";
-import { sseSendEvent } from "../../../../../infra/sse/sse.config";
+import { sseDisconnect, sseSendEvent } from "../../../../../infra/sse/sse.config";
 import { IAppUserItemRepository } from "../../../../AppUser/AppUserManagement/repositories/app-user-item-repository";
 import { ICompanyDataRepository } from "../../../../Company/CompanyData/repositories/company-data.repository"; // Adicionado (se já não estiver em outro lugar)
 import { IPartnerConfigRepository } from "../../../../Company/PartnerConfig/repositories/partner-config.repository";
@@ -21,7 +21,7 @@ export class ProcessPOSTransactionWithOfflineTokenUsecase {
     private userItemRepository: IAppUserItemRepository,
     private partnerConfigRepository: IPartnerConfigRepository,
     private offlineTokenRepository: IOfflineTokenRepository,
-  ) {}
+  ) { }
 
   async execute(data: InputProcessPOSTransactionWithOfflineTokenDTO): Promise<OutputProcessPOSTransactionWithOfflineTokenDTO> {
     // 1. Validações Iniciais dos dados da transação
@@ -125,11 +125,13 @@ export class ProcessPOSTransactionWithOfflineTokenUsecase {
           status: 'failed',
           message: errorMessage
         });
+
+        sseDisconnect(transactionEntity.uuid.uuid);
         throw new CustomError(errorMessage, err.status || 500);
       }
     } else {
-        // Regra de negócio: Tokens offline não são suportados para itens pós-pagos
-        throw new CustomError("Offline tokens are currently only supported for pre-paid user items.", 400);
+      // Regra de negócio: Tokens offline não são suportados para itens pós-pagos
+      throw new CustomError("Offline tokens are currently only supported for pre-paid user items.", 400);
     }
   }
 }
