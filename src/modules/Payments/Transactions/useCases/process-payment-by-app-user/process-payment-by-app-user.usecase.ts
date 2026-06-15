@@ -1,7 +1,7 @@
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { IPasswordCrypto } from "../../../../../crypto/password.crypto";
 import { CustomError } from "../../../../../errors/custom.error";
-import { sseSendEvent } from "../../../../../infra/sse/sse.config";
+import { sseDisconnect, sseSendEvent } from "../../../../../infra/sse/sse.config";
 import { IAppUserAuthRepository } from "../../../../AppUser/AppUserManagement/repositories/app-use-auth-repository";
 import { IAppUserItemRepository } from "../../../../AppUser/AppUserManagement/repositories/app-user-item-repository";
 import { IPartnerConfigRepository } from "../../../../Company/PartnerConfig/repositories/partner-config.repository";
@@ -71,6 +71,9 @@ export class ProcessPaymentByAppUserUsecase {
           amount: transactionEntity.net_price // Enviamos o valor em Reais
         });
 
+        // Desconecta o SSE encerrando a requisição HTTP com sucesso
+        sseDisconnect(data.transactionId);
+
         return { result: repoResult.success, finalBalance: repoResult.finalDebitedUserItemBalance / 100, cashback: repoResult.user_cashback_amount / 100 };
       } catch (err) {
         let errorMessage = 'Ocorreu um erro no pagamento.';
@@ -82,6 +85,8 @@ export class ProcessPaymentByAppUserUsecase {
           status: 'failed',
           message: errorMessage
         });
+
+        sseDisconnect(data.transactionId);
         throw err;
       }
     } else { // Pós-pago

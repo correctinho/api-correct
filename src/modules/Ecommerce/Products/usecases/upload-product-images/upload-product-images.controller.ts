@@ -16,7 +16,6 @@ export class UploadProductImagesController {
             const business_user_uuid = req.companyUser.companyUserId;
             const productId = req.params.product_uuid;
             const files = req.files as Express.Multer.File[];
-
             if (!files || files.length === 0) {
                 return res.status(400).json({ error: "No images provided for upload." });
             }
@@ -27,10 +26,9 @@ export class UploadProductImagesController {
                 this.businessUserRepository
             );
 
-            const result = await usecase.execute({productId, files, business_user_uuid});
+            const result = await usecase.execute({ productId, files, business_user_uuid });
             return res.status(200).json(result);
         } catch (err: any) {
-            console.log({err})
             return res.status(err.statusCode || 500).json({
                 error: err.message || "Internal Server Error",
             });

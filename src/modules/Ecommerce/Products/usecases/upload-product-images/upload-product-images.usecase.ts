@@ -84,10 +84,6 @@ export class UploadProductImagesUsecase {
         if (!product) {
             throw new CustomError('Produto não encontrado.', 404);
         }
-        console.log("\n--- [DIAGNÓSTICO] Verificando o objeto 'product' no Usecase de Upload ---");
-        console.log("O objeto 'product' é uma instância de ProductEntity?", product instanceof ProductEntity);
-        console.log("Conteúdo do objeto 'product':", product);
-        console.log("--- FIM DO DEBUG ---\n");
         // Validação de permissão: Verifica se o produto pertence ao negócio do usuário logado
         const businessUser = await this.businessUserRepository.findById(data.business_user_uuid);
         if (!businessUser || product.business_info_uuid.uuid !== businessUser.business_info_uuid.uuid) {
