@@ -1,11 +1,11 @@
-import { 
-    startOfDay, 
-    endOfDay, 
-    startOfMonth, 
-    endOfMonth, 
-    subMonths, 
-    subDays, 
-    format 
+import {
+    startOfDay,
+    endOfDay,
+    startOfMonth,
+    endOfMonth,
+    subMonths,
+    subDays,
+    format
 } from "date-fns";
 import { IPartnerDashboardRepository } from "../repositories/partner-dashboard.repository";
 import { DailyChartData, OutputGetPartnerDashboardDTO } from "./dto/get-partner-dashboard.dto";
@@ -14,7 +14,7 @@ import { CustomError } from "../../../../errors/custom.error";
 export class GetPartnerDashboardUseCase {
     constructor(
         private partnerDashboardRepository: IPartnerDashboardRepository
-    ) {}
+    ) { }
 
     async execute(businessInfoUuid: string): Promise<OutputGetPartnerDashboardDTO> {
         if (!businessInfoUuid) {
@@ -60,7 +60,7 @@ export class GetPartnerDashboardUseCase {
         // 3. Cálculos de Crescimento (Growth %)
         const currentRevenue = currentMonthMetrics.totalRevenue;
         const lastRevenue = lastMonthMetrics.totalRevenue;
-        
+
         let revenueGrowth = 0;
         if (lastRevenue > 0) {
             revenueGrowth = ((currentRevenue - lastRevenue) / lastRevenue) * 100;
@@ -77,30 +77,27 @@ export class GetPartnerDashboardUseCase {
         }
 
         // 4. Ticket Médio
-        const averageTicket = currentTxCount > 0 
-            ? currentRevenue / currentTxCount 
+        const averageTicket = currentTxCount > 0
+            ? currentRevenue / currentTxCount
             : 0;
 
         // 5. Preenchimento do Gráfico (Garantir que dias com 0 vendas apareçam)
         // O repositório retorna apenas dias com vendas. O frontend precisa de todos os dias.
         const filledChartData: DailyChartData[] = [];
-        
-        // Mapa auxiliar para busca rápida O(1)
         const revenueMap = new Map<string, number>();
         dailyRevenueData.forEach(item => revenueMap.set(item.date, item.amount));
 
-        // Loop pelos últimos 7 dias
         for (let i = 6; i >= 0; i--) {
             const date = subDays(now, i);
-            const dateKey = format(date, 'yyyy-MM-dd'); // Chave usada no Map
-            const displayDate = format(date, 'dd/MM');  // Formato para o Frontend
+            const dateKey = format(date, 'yyyy-MM-dd');
+            const displayDate = format(date, 'dd/MM');
 
             filledChartData.push({
                 date: displayDate,
-                amount: revenueMap.get(dateKey) || 0 // Se não tiver no mapa, é zero
+                // CORREÇÃO: Dividir por 100 para converter centavos em Reais no gráfico
+                amount: (revenueMap.get(dateKey) || 0) / 100
             });
         }
-
         // 6. Formatação da Lista de Transações
         // Como o Repository retorna TransactionEntity, aqui transformamos em JSON simples para o DTO
         const formattedRecentTransactions = recentTransactions.map(tx => {
@@ -114,7 +111,7 @@ export class GetPartnerDashboardUseCase {
                 created_at: tx.created_at,
                 // Fallback simples, já que a entidade TransactionEntity pura não tem o campo 'payerName'
                 // Se precisar muito do nome, podemos ajustar o DTO de retorno do UseCase
-                payerName: 'Cliente' 
+                payerName: 'Cliente'
             };
         });
 
@@ -122,16 +119,18 @@ export class GetPartnerDashboardUseCase {
         return {
             kpis: {
                 currentMonth: {
-                    totalRevenue: currentRevenue,
+                    // CORREÇÃO: Dividir as métricas principais por 100
+                    totalRevenue: currentRevenue / 100,
                     transactionCount: currentTxCount,
-                    averageTicket: Number(averageTicket.toFixed(2))
+                    averageTicket: Number((averageTicket / 100).toFixed(2))
                 },
                 growth: {
                     revenuePercentage: Number(revenueGrowth.toFixed(2)),
                     transactionsPercentage: Number(txGrowth.toFixed(2))
                 },
                 today: {
-                    totalRevenue: todayMetrics.totalRevenue,
+                    // CORREÇÃO: Dividir as métricas de hoje por 100
+                    totalRevenue: todayMetrics.totalRevenue / 100,
                     transactionCount: todayMetrics.transactionCount
                 }
             },
