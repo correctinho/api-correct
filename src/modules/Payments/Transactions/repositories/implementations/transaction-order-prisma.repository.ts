@@ -206,9 +206,21 @@ export class TransactionOrderPrismaRepository
         );
       }
       const correctUserItemId = correctUserItem.uuid;
-      const correctItemBalanceBeforeCashback = correctUserItem.balance;
-      const correctItemBalanceAfterCashback =
-        correctItemBalanceBeforeCashback + cashbackAmountToCreditUser;
+
+      let correctItemBalanceBeforeCashback: number;
+      let correctItemBalanceAfterCashback: number;
+
+      // Verificamos se ele pagou e recebeu cashback na MESMA carteira
+      if (debitedUserItemId === correctUserItemId) {
+        // Se for a mesma, o "saldo antes do cashback" é o saldo que sobrou APÓS o pagamento!
+        correctItemBalanceBeforeCashback = debitedUserItemBalanceAfter;
+      } else {
+        // Se for uma carteira diferente (Ex: pagou com VR, recebeu na Correct), o saldo não foi tocado ainda.
+        correctItemBalanceBeforeCashback = correctUserItem.balance;
+      }
+
+      // O saldo final é calculado em cima da variável correta
+      correctItemBalanceAfterCashback = correctItemBalanceBeforeCashback + cashbackAmountToCreditUser;
 
       // 3. Buscar BusinessAccount do Parceiro
       const currentBusinessAccount = await tx.businessAccount.findFirst({
@@ -939,9 +951,21 @@ export class TransactionOrderPrismaRepository
         );
       }
       const correctUserItemId = correctUserItem.uuid;
-      const correctItemBalanceBeforeCashback = correctUserItem.balance;
-      const correctItemBalanceAfterCashback =
-        correctItemBalanceBeforeCashback + cashbackAmountToCreditUser;
+
+      let correctItemBalanceBeforeCashback: number;
+      let correctItemBalanceAfterCashback: number;
+
+      // Verificamos se ele pagou e recebeu cashback na MESMA carteira
+      if (debitedUserItemId === correctUserItemId) {
+        // Se for a mesma, o "saldo antes do cashback" é o saldo que sobrou APÓS o pagamento!
+        correctItemBalanceBeforeCashback = debitedUserItemBalanceAfter;
+      } else {
+        // Se for uma carteira diferente, o saldo não foi tocado ainda.
+        correctItemBalanceBeforeCashback = correctUserItem.balance;
+      }
+
+      // O saldo final é calculado em cima da variável correta
+      correctItemBalanceAfterCashback = correctItemBalanceBeforeCashback + cashbackAmountToCreditUser;
 
       // 3. Buscar saldo atual da BusinessAccount
       const currentBusinessAccount = await tx.businessAccount.findFirst({
