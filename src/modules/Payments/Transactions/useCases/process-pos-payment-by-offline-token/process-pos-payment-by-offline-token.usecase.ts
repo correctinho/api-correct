@@ -76,12 +76,13 @@ export class ProcessPOSTransactionWithOfflineTokenUsecase {
     const transactionEntity = TransactionEntity.create(transactionDataForEntity);
 
     // 6. Calcular taxas e setar IDs
-    transactionEntity.calculateFeePercentage(partnerConfig.admin_tax, partnerConfig.marketing_tax);
+    transactionEntity.setPartnerCashbackPercentage(partnerConfig.cashback_tax);
+    transactionEntity.calculateFeePercentage(partnerConfig.admin_tax_raw, partnerConfig.marketing_tax_raw);
     transactionEntity.calculateFee();
     transactionEntity.changeFavoredBusinessInfoUuid(new Uuid(data.business_info_uuid));
     transactionEntity.changePartnerUserUuid(new Uuid(data.partner_user_uuid));
     transactionEntity.changeDescription(data.description || "Transação POS com token offline.");
-    transactionEntity.changeStatus('pending'); // Status inicial para esta transação combinada
+    transactionEntity.changeStatus('pending');
     transactionEntity.changeTransactionType(TransactionType.POS_OFFLINE_PAYMENT);
 
     // 7. Validações de Negócio do UserItem (associado ao token)
