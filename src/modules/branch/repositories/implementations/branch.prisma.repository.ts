@@ -45,7 +45,7 @@ export class BranchPrismaRepository implements IBranchRepository {
 
   }
   async createMany(entities: BranchEntity[]): Promise<BranchEntity[]> {
-    
+
     const transactionResult = await prismaClient.$transaction([
       // Criação em massa na tabela branchInfo
       prismaClient.branchInfo.createMany({
@@ -103,12 +103,14 @@ export class BranchPrismaRepository implements IBranchRepository {
   }
 
   async update(uuid: string, data: BranchEntity): Promise<void> {
+    const branchDataToSave = data.toJSON();
+
     const _r = await prismaClient.branchInfo.update({
       data: {
-        name: data.name,
-        marketing_tax: data.marketing_tax,
-        market_place_tax: data.market_place_tax,
-        admin_tax: data.admin_tax,
+        name: branchDataToSave.name,
+        marketing_tax: branchDataToSave.marketing_tax,
+        market_place_tax: branchDataToSave.market_place_tax,
+        admin_tax: branchDataToSave.admin_tax,
         updated_at: newDateF(new Date()),
       },
       where: { uuid: uuid },
