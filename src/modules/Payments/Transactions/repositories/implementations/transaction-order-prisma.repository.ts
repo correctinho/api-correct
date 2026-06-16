@@ -1428,8 +1428,8 @@ export class TransactionOrderPrismaRepository
         await tx.partnerCredit.update({
           where: { uuid: updatedCreditJson.uuid },
           data: {
-            balance: updatedCreditJson.balance,
-            spent_amount: updatedCreditJson.spent_amount,
+            balance: { decrement: spendAmount },
+            spent_amount: { increment: spendAmount },
           },
         });
 
@@ -1474,6 +1474,11 @@ export class TransactionOrderPrismaRepository
           where: { uuid: payerAccountJson.uuid },
           data: { balance: { decrement: totalPaidFromLiquid } },
         });
+
+        // Trava de segurança anti-concorrência
+        if (updatedPayerAccount.balance < 0) {
+          throw new CustomError("Saldo líquido do parceiro ficou negativo durante a liquidação. Transação abortada.", 402);
+        }
 
         // 2. Credita no saldo líquido do vendedor
         const updatedSellerAccount = await tx.businessAccount.update({

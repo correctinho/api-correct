@@ -81,13 +81,14 @@ export class ProcessPaymentByPartnerUsecase {
         errorMessage = err.message;
       }
 
-      sseSendEvent(input.transactionId, 'paymentFailed', {
-        status: 'failed',
-        message: errorMessage
-      });
-
-      sseDisconnect(input.transactionId);
-      throw err; // Repassamos o erro para o controller
+      if (input.transactionId) {
+        sseSendEvent(input.transactionId, 'paymentFailed', {
+          status: 'failed',
+          message: errorMessage
+        });
+        sseDisconnect(input.transactionId);
+      }
+      throw err;
     }
   }
 }
