@@ -11,6 +11,18 @@ export interface DailyMetricResult {
   amount: number;
 }
 
+export interface OperatorRankingResult {
+  name: string;
+  amount: number;
+  count: number;
+}
+
+export interface RecentTransactionResult {
+  entity: TransactionEntity;
+  payerName: string;
+  operatorName: string;
+}
+
 export interface IPartnerDashboardRepository {
   /**
    * Retorna o total faturado e a quantidade de vendas em um intervalo de tempo.
@@ -31,10 +43,20 @@ export interface IPartnerDashboardRepository {
   ): Promise<DailyMetricResult[]>;
 
   /**
-   * Busca as últimas transações aprovadas para exibição rápida.
+   * Retorna o Top 5 Operadores/Vendedores por volume de vendas.
+   */
+  getOperatorRanking(
+    businessInfoUuid: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<OperatorRankingResult[]>;
+
+  /**
+   * Busca as últimas transações aprovadas para exibição rápida,
+   * incluindo os nomes do pagador e do vendedor (operador).
    */
   findRecentTransactions(
     businessInfoUuid: string,
     limit: number
-  ): Promise<TransactionEntity[]>;
+  ): Promise<RecentTransactionResult[]>;
 }

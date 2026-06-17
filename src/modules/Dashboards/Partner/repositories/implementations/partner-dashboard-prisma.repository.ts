@@ -66,13 +66,13 @@ export class PartnerDashboardPrismaRepository implements IPartnerDashboardReposi
       // CORREÇÃO: "Castamos" para unknown para o TypeScript permitir a checagem
       const rawDate = tx.created_at as unknown;
 
-      const dateString = rawDate instanceof Date 
-          ? rawDate.toISOString() 
-          : String(rawDate);
+      const dateString = rawDate instanceof Date
+        ? rawDate.toISOString()
+        : String(rawDate);
 
       // Agora é seguro fazer o split
-      const dateKey = dateString.split('T')[0]; 
-      
+      const dateKey = dateString.split('T')[0];
+
       const currentAmount = revenueMap.get(dateKey) || 0;
       revenueMap.set(dateKey, currentAmount + Number(tx.net_price));
     });
@@ -88,10 +88,58 @@ export class PartnerDashboardPrismaRepository implements IPartnerDashboardReposi
     return results;
   }
 
+  async getOperatorRanking(
+    businessInfoUuid: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<{ name: string; amount: number; count: number }[]> {
+    // Agrupa as transações pelo UUID do parceiro operador
+    const transactions = await prismaClient.transactions.groupBy({
+      by: ['favored_partner_user_uuid'],
+      where: {
+        favored_business_info_uuid: businessInfoUuid,
+        status: 'success',
+        created_at: {
+          gte: newDateF(startDate),
+          lte: newDateF(endDate),
+        },
+      },
+      _sum: { net_price: true },
+      _count: { uuid: true },
+      orderBy: {
+        _sum: { net_price: 'desc' },
+      },
+      take: 5, // Traz apenas o Top 5 vendedores
+    });
+
+    // Busca os nomes desses operadores na tabela BusinessUser
+    const operatorIds = transactions
+      .map((t) => t.favored_partner_user_uuid)
+      .filter(Boolean) as string[];
+
+    const operators = await prismaClient.businessUser.findMany({
+      where: { uuid: { in: operatorIds } },
+      select: { uuid: true, name: true, user_name: true },
+    });
+
+    // Monta o resultado combinando a soma com os nomes
+    return transactions.map((t) => {
+      const operator = operators.find((op) => op.uuid === t.favored_partner_user_uuid);
+      const displayName = operator?.name || operator?.user_name || 'Caixa / Avulso';
+
+      return {
+        name: displayName,
+        amount: Number(t._sum.net_price || 0),
+        count: t._count.uuid,
+      };
+    });
+  }
+
+
   async findRecentTransactions(
     businessInfoUuid: string,
     limit: number
-  ): Promise<TransactionEntity[]> {
+  ): Promise<{ entity: TransactionEntity; payerName: string; operatorName: string }[]> {
     const transactionsData = await prismaClient.transactions.findMany({
       where: {
         favored_business_info_uuid: businessInfoUuid,
@@ -102,16 +150,18 @@ export class PartnerDashboardPrismaRepository implements IPartnerDashboardReposi
         created_at: 'desc',
       },
       include: {
-        // Incluímos UserInfo para mostrar o nome de quem pagou no Dashboard, se necessário
+        // Inclui o usuário pagador
         UserItem: {
-          include: {
-            UserInfo: true
-          }
+          include: { UserInfo: true },
+        },
+        // NOVO: Inclui o operador que fez a venda (BusinessUser)
+        PartnerUser: {
+          select: { name: true, user_name: true }
         }
-      }
+      },
     });
 
-    // Mapeia os resultados do Prisma para a Entidade de Domínio
+    // Retorna a entidade junto com os dados de apresentação
     return transactionsData.map((data) => {
       const props: TransactionProps = {
         uuid: new Uuid(data.uuid),
@@ -139,9 +189,13 @@ export class PartnerDashboardPrismaRepository implements IPartnerDashboardReposi
         favored_partner_user_uuid: data.favored_partner_user_uuid ? new Uuid(data.favored_partner_user_uuid) : null,
       };
 
-      // Como o UserInfo veio no include, podemos injetar ele na entidade se houver suporte
-      // Mas para manter a integridade do Hydrate padrão, retornamos a entidade pura:
-      return TransactionEntity.hydrate(props);
+      const entity = TransactionEntity.hydrate(props);
+
+      // Extraímos os nomes com fallbacks caso sejam nulos
+      const payerName = data.UserItem?.UserInfo?.full_name || data.UserItem?.UserInfo?.display_name || 'Cliente Avulso';
+      const operatorName = data.PartnerUser?.name || data.PartnerUser?.user_name || 'Caixa / Avulso';
+
+      return { entity, payerName, operatorName };
     });
   }
 }
