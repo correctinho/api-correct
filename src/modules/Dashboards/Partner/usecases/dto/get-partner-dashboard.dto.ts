@@ -19,14 +19,23 @@ export interface DailyChartData {
   amount: number;
 }
 
+// NOVO: Interface para o Ranking de Operadores
+export interface OperatorRankingData {
+  name: string;
+  amount: number;
+  count: number;
+}
+
 export interface OutputGetPartnerDashboardDTO {
   kpis: DashboardKPIs;
   salesChart: DailyChartData[];
+  operatorRanking: OperatorRankingData[]; // NOVO
   recentTransactions: {
     uuid: string;
     amount: number;
     status: string;
     created_at: string;
-    payerName: string; // Nome do funcionário que comprou
+    payerName: string;
+    operatorName: string; // NOVO: Nome de quem fez a venda
   }[];
 }
