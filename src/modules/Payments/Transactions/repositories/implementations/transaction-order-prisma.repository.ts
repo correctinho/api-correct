@@ -1405,7 +1405,162 @@ export class TransactionOrderPrismaRepository
 
     return TransactionEntity.hydrate(transactionProps);
   }
+  //*********************** Version without cashback ************************
+  // public async processPaymentByBusiness(
+  //   params: ProcessPaymentByBusinessParams
+  // ): Promise<ProcessPaymentByBusinessResult> {
+  //   const {
+  //     transaction,
+  //     payerAccount,
+  //     payerCredits,
+  //     sellerBusinessInfoId,
+  //   } = params;
 
+  //   const result = await prismaClient.$transaction(async (tx) => {
+  //     // --- PASSO 1: INICIALIZAÇÃO E PREPARAÇÃO ---
+  //     const transactionJson = transaction.toJSON();
+  //     let amountToPayInCents = transactionJson.net_price;
+  //     let totalPaidFromCredits = 0;
+  //     let totalPaidFromLiquid = 0;
+
+  //     // --- PASSO 2: BUSCAR A CONTA DO VENDEDOR ---
+  //     const sellerAccount = await tx.businessAccount.findFirst({
+  //       where: { business_info_uuid: sellerBusinessInfoId },
+  //     });
+  //     if (!sellerAccount) {
+  //       throw new CustomError(
+  //         'Conta do parceiro vendedor não encontrada.',
+  //         404
+  //       );
+  //     }
+
+  //     // --- PASSO 3: LÓGICA DE CONSUMO DE CRÉDITOS (FIFO) ---
+  //     for (const creditToSpend of payerCredits) {
+  //       if (amountToPayInCents <= 0) break; // Para o loop se o pagamento já foi coberto
+
+  //       const creditBalanceInCents = creditToSpend.toJSON().balance; // Pega o saldo em centavos
+  //       const spendAmount = Math.min(
+  //         amountToPayInCents,
+  //         creditBalanceInCents
+  //       );
+
+  //       // 1. Aplica a regra de negócio na entidade (diminui o saldo interno)
+  //       creditToSpend.spend(spendAmount);
+  //       const updatedCreditJson = creditToSpend.toJSON();
+
+  //       // 2. Persiste a alteração do crédito gasto no banco
+  //       await tx.partnerCredit.update({
+  //         where: { uuid: updatedCreditJson.uuid },
+  //         data: {
+  //           balance: { decrement: spendAmount },
+  //           spent_amount: { increment: spendAmount },
+  //         },
+  //       });
+
+  //       // 3. Calcula a NOVA data de liquidação para o vendedor
+  //       const newSettlementDate = calculateB2BCycleSettlementDateAsDate(
+  //         new Date()
+  //       );
+
+  //       // 4. Cria o novo crédito para o vendedor (transferência do recebível)
+  //       await tx.partnerCredit.create({
+  //         data: {
+  //           business_account_uuid: sellerAccount.uuid,
+  //           original_transaction_uuid: transactionJson.uuid,
+  //           balance: spendAmount,
+  //           spent_amount: 0,
+  //           status: 'PENDING',
+  //           availability_date: newSettlementDate,
+  //         },
+  //       });
+
+  //       // 5. Registra o gasto do crédito para fins de auditoria
+  //       await tx.partnerCreditSpend.create({
+  //         data: {
+  //           partner_credit_uuid: creditToSpend.uuid.uuid,
+  //           spending_transaction_uuid: transactionJson.uuid,
+  //           amount_spent: spendAmount,
+  //         },
+  //       });
+
+  //       // 6. Atualiza os contadores
+  //       totalPaidFromCredits += spendAmount;
+  //       amountToPayInCents -= spendAmount;
+  //     }
+
+  //     // --- PASSO 4: LÓGICA DE CONSUMO DE SALDO LÍQUIDO (SE NECESSÁRIO) ---
+  //     if (amountToPayInCents > 0) {
+  //       totalPaidFromLiquid = amountToPayInCents;
+  //       const payerAccountJson = payerAccount.toJSON();
+
+  //       // 1. Debita do saldo líquido do pagador
+  //       const updatedPayerAccount = await tx.businessAccount.update({
+  //         where: { uuid: payerAccountJson.uuid },
+  //         data: { balance: { decrement: totalPaidFromLiquid } },
+  //       });
+
+  //       // Trava de segurança anti-concorrência
+  //       if (updatedPayerAccount.balance < 0) {
+  //         throw new CustomError("Saldo líquido do parceiro ficou negativo durante a liquidação. Transação abortada.", 402);
+  //       }
+
+  //       // 2. Credita no saldo líquido do vendedor
+  //       const updatedSellerAccount = await tx.businessAccount.update({
+  //         where: { uuid: sellerAccount.uuid },
+  //         data: { balance: { increment: totalPaidFromLiquid } },
+  //       });
+
+  //       // 3. Cria históricos para a movimentação de saldo líquido
+  //       await tx.businessAccountHistory.createMany({
+  //         data: [
+  //           {
+  //             // Histórico de débito para o pagador
+  //             business_account_uuid: payerAccountJson.uuid,
+  //             event_type: 'PAYOUT_PROCESSED', // ou um tipo mais específico como "P2P_PAYMENT_SENT"
+  //             amount: -totalPaidFromLiquid,
+  //             balance_before: payerAccountJson.balance,
+  //             balance_after: updatedPayerAccount.balance,
+  //             related_transaction_uuid: transactionJson.uuid,
+  //           },
+  //           {
+  //             // Histórico de crédito para o vendedor
+  //             business_account_uuid: sellerAccount.uuid,
+  //             event_type: 'PAYMENT_RECEIVED',
+  //             amount: totalPaidFromLiquid,
+  //             balance_before: sellerAccount.balance,
+  //             balance_after: updatedSellerAccount.balance,
+  //             related_transaction_uuid: transactionJson.uuid,
+  //           },
+  //         ],
+  //       });
+  //     }
+
+  //     // --- PASSO 5: FINALIZAÇÃO DA TRANSAÇÃO ORIGINAL ---
+  //     await tx.transactions.update({
+  //       where: { uuid: transactionJson.uuid },
+  //       data: {
+  //         status: 'success',
+  //         paid_at: newDateF(new Date()),
+  //         updated_at: newDateF(new Date()),
+  //         payer_business_info_uuid:
+  //           payerAccount.toJSON().business_info_uuid,
+  //       },
+  //     });
+
+  //     // --- PASSO 6: RETORNO PARA O USE CASE ---
+  //     const finalPayerAccountState = await tx.businessAccount.findUnique({
+  //       where: { uuid: payerAccount.uuid.uuid },
+  //     });
+
+  //     return {
+  //       amountPaidFromCredits: totalPaidFromCredits,
+  //       amountPaidFromLiquidBalance: totalPaidFromLiquid,
+  //       payerFinalLiquidBalance: finalPayerAccountState.balance,
+  //     };
+  //   });
+
+  //   return result;
+  // }
   public async processPaymentByBusiness(
     params: ProcessPaymentByBusinessParams
   ): Promise<ProcessPaymentByBusinessResult> {
@@ -1420,8 +1575,12 @@ export class TransactionOrderPrismaRepository
       // --- PASSO 1: INICIALIZAÇÃO E PREPARAÇÃO ---
       const transactionJson = transaction.toJSON();
       let amountToPayInCents = transactionJson.net_price;
+      const cashbackAmountToCreditPayer = transactionJson.cashback || 0; // O Cashback total da compra
       let totalPaidFromCredits = 0;
       let totalPaidFromLiquid = 0;
+
+      const payerAccountJson = payerAccount.toJSON();
+      let currentPayerBalance = payerAccountJson.balance; // Foto inicial do saldo pagador
 
       // --- PASSO 2: BUSCAR A CONTA DO VENDEDOR ---
       const sellerAccount = await tx.businessAccount.findFirst({
@@ -1438,13 +1597,13 @@ export class TransactionOrderPrismaRepository
       for (const creditToSpend of payerCredits) {
         if (amountToPayInCents <= 0) break; // Para o loop se o pagamento já foi coberto
 
-        const creditBalanceInCents = creditToSpend.toJSON().balance; // Pega o saldo em centavos
+        const creditBalanceInCents = creditToSpend.toJSON().balance;
         const spendAmount = Math.min(
           amountToPayInCents,
           creditBalanceInCents
         );
 
-        // 1. Aplica a regra de negócio na entidade (diminui o saldo interno)
+        // 1. Aplica a regra de negócio na entidade
         creditToSpend.spend(spendAmount);
         const updatedCreditJson = creditToSpend.toJSON();
 
@@ -1491,7 +1650,6 @@ export class TransactionOrderPrismaRepository
       // --- PASSO 4: LÓGICA DE CONSUMO DE SALDO LÍQUIDO (SE NECESSÁRIO) ---
       if (amountToPayInCents > 0) {
         totalPaidFromLiquid = amountToPayInCents;
-        const payerAccountJson = payerAccount.toJSON();
 
         // 1. Debita do saldo líquido do pagador
         const updatedPayerAccount = await tx.businessAccount.update({
@@ -1510,52 +1668,75 @@ export class TransactionOrderPrismaRepository
           data: { balance: { increment: totalPaidFromLiquid } },
         });
 
-        // 3. Cria históricos para a movimentação de saldo líquido
-        await tx.businessAccountHistory.createMany({
-          data: [
-            {
-              // Histórico de débito para o pagador
-              business_account_uuid: payerAccountJson.uuid,
-              event_type: 'PAYOUT_PROCESSED', // ou um tipo mais específico como "P2P_PAYMENT_SENT"
-              amount: -totalPaidFromLiquid,
-              balance_before: payerAccountJson.balance,
-              balance_after: updatedPayerAccount.balance,
-              related_transaction_uuid: transactionJson.uuid,
-            },
-            {
-              // Histórico de crédito para o vendedor
-              business_account_uuid: sellerAccount.uuid,
-              event_type: 'PAYMENT_RECEIVED',
-              amount: totalPaidFromLiquid,
-              balance_before: sellerAccount.balance,
-              balance_after: updatedSellerAccount.balance,
-              related_transaction_uuid: transactionJson.uuid,
-            },
-          ],
+        // 3. Cria históricos para a movimentação de saldo líquido (B2B pagador)
+        await tx.businessAccountHistory.create({
+          data: {
+            business_account_uuid: payerAccountJson.uuid,
+            event_type: 'PAYOUT_PROCESSED',
+            amount: -totalPaidFromLiquid,
+            balance_before: currentPayerBalance, // Foto antes do pagamento
+            balance_after: updatedPayerAccount.balance, // Foto exata do banco agora
+            related_transaction_uuid: transactionJson.uuid,
+          },
+        });
+
+        // 4. Atualiza a foto do saldo na memória para o próximo passo
+        currentPayerBalance = updatedPayerAccount.balance;
+
+        // 5. Histórico de crédito para o vendedor
+        await tx.businessAccountHistory.create({
+          data: {
+            business_account_uuid: sellerAccount.uuid,
+            event_type: 'PAYMENT_RECEIVED',
+            amount: totalPaidFromLiquid,
+            balance_before: sellerAccount.balance,
+            balance_after: updatedSellerAccount.balance,
+            related_transaction_uuid: transactionJson.uuid,
+          },
         });
       }
 
-      // --- PASSO 5: FINALIZAÇÃO DA TRANSAÇÃO ORIGINAL ---
+      // --- PASSO 5: CRÉDITO DE CASHBACK (NOVO!) ---
+      if (cashbackAmountToCreditPayer > 0) {
+        // 1. Adiciona o dinheiro na conta da empresa pagadora
+        const updatedPayerAccountWithCashback = await tx.businessAccount.update({
+          where: { uuid: payerAccountJson.uuid },
+          data: { balance: { increment: cashbackAmountToCreditPayer } },
+        });
+
+        // 2. Salva o histórico protegendo contra viagem no tempo
+        await tx.businessAccountHistory.create({
+          data: {
+            business_account_uuid: payerAccountJson.uuid,
+            event_type: 'CASHBACK_RECEIVED',
+            amount: cashbackAmountToCreditPayer,
+            balance_before: currentPayerBalance, // A foto logo após o débito (se houve)
+            balance_after: updatedPayerAccountWithCashback.balance, // Saldo final final
+            related_transaction_uuid: transactionJson.uuid,
+          },
+        });
+      }
+
+      // --- PASSO 6: FINALIZAÇÃO DA TRANSAÇÃO ORIGINAL ---
       await tx.transactions.update({
         where: { uuid: transactionJson.uuid },
         data: {
           status: 'success',
           paid_at: newDateF(new Date()),
           updated_at: newDateF(new Date()),
-          payer_business_info_uuid:
-            payerAccount.toJSON().business_info_uuid,
+          payer_business_info_uuid: payerAccountJson.business_info_uuid,
         },
       });
 
-      // --- PASSO 6: RETORNO PARA O USE CASE ---
+      // --- PASSO 7: RETORNO PARA O USE CASE ---
       const finalPayerAccountState = await tx.businessAccount.findUnique({
-        where: { uuid: payerAccount.uuid.uuid },
+        where: { uuid: payerAccountJson.uuid },
       });
 
       return {
         amountPaidFromCredits: totalPaidFromCredits,
         amountPaidFromLiquidBalance: totalPaidFromLiquid,
-        payerFinalLiquidBalance: finalPayerAccountState.balance,
+        payerFinalLiquidBalance: finalPayerAccountState!.balance,
       };
     });
 
