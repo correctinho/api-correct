@@ -32,7 +32,21 @@ export class ProcessPaymentByAppUserUsecase {
 
     // 2. Buscamos a ENTIDADE diretamente. O método find() já a retorna hidratada.
     const transactionEntity = await this.transactionOrderRepository.find(new Uuid(data.transactionId));
-    if (!transactionEntity) throw new CustomError("Transaction not found", 404);
+    if (!transactionEntity) {
+      throw new CustomError("Transação não encontrada.", 404);
+    }
+
+    if (transactionEntity.status === 'cancelled') {
+      throw new CustomError("Esta cobrança foi cancelada pelo estabelecimento e não pode mais ser paga.", 400);
+    }
+
+    if (transactionEntity.status === 'success') {
+      throw new CustomError("Esta cobrança já foi paga anteriormente.", 400);
+    }
+
+    if (transactionEntity.status !== 'pending') {
+      throw new CustomError(`Transação inválida para pagamento (Status atual: ${transactionEntity.status}).`, 400);
+    }
 
     if (!transactionEntity.favored_business_info_uuid) {
       throw new CustomError("Transaction is missing partner information", 400);
