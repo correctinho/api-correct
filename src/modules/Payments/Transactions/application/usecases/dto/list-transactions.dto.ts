@@ -12,6 +12,7 @@ export interface TransactionSummaryDto {
   amount: number;
   net_price: number;
   platform_fee: number;
+  cashback: number; // NOVO: Cashback adicionado na tabela
   transaction_type: string;
   status: string;
   created_at: string;
@@ -26,6 +27,12 @@ export interface OutputListTransactionsDto {
     total_records: number;
     current_page: number;
     total_pages: number;
-    total_platform_fee: number;
+    // NOVO: Estrutura completa para renderizar os 4 cards no Frontend Admin
+    financial_summary: {
+      total_amount: number;
+      total_net_price: number;
+      total_platform_fee: number;
+      total_cashback: number;
+    };
   };
 }
