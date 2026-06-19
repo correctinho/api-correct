@@ -27,8 +27,20 @@ export class ProcessPaymentByPartnerUsecase {
 
       // 2. Busca a transação pendente
       const transactionEntity = await this.transactionRepository.find(new Uuid(input.transactionId));
-      if (!transactionEntity || transactionEntity.status !== 'pending') {
-        throw new CustomError("Transação não encontrada ou já processada.", 409); // 409 Conflict é mais semântico aqui
+      if (!transactionEntity) {
+        throw new CustomError("Transação não encontrada.", 404);
+      }
+
+      if (transactionEntity.status === 'cancelled') {
+        throw new CustomError("Esta cobrança foi cancelada pelo estabelecimento e não pode mais ser paga.", 400);
+      }
+
+      if (transactionEntity.status === 'success') {
+        throw new CustomError("Esta cobrança já foi paga anteriormente.", 400);
+      }
+
+      if (transactionEntity.status !== 'pending') {
+        throw new CustomError(`Transação inválida para pagamento (Status atual: ${transactionEntity.status}).`, 400);
       }
       const sellerBusinessInfoId = transactionEntity.favored_business_info_uuid;
       if (!sellerBusinessInfoId) {
