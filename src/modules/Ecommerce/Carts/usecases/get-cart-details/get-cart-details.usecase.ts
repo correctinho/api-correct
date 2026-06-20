@@ -43,11 +43,22 @@ export class GetCartDetailsUsecase {
             };
         });
 
+        const addressDto = cart.business_address ? {
+            line1: cart.business_address.line1,
+            line2: cart.business_address.line2,
+            line3: cart.business_address.line3,
+            neighborhood: cart.business_address.neighborhood,
+            city: cart.business_address.city,
+            state: cart.business_address.state,
+            postalCode: cart.business_address.postal_code,
+        } : null;
+
         return {
             cartId: cart.uuid.uuid,
             businessInfo: {
                 id: cart.business_info_uuid.uuid,
                 name: cart.business_name,
+                address: addressDto,
             },
             priceSummary: {
                 subtotal: cart.total,
