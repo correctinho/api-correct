@@ -3,12 +3,14 @@ import { CustomError } from "../../../../errors/custom.error";
 import { ProductEntity } from "../../Products/entities/product.entity";
 import { CartItemEntity } from "./cart-item.entity";
 import { newDateF } from "../../../../utils/date";
+import { AddressEntity } from "../../../../infra/shared/address/address.entity";
 
 export type CartProps = {
     uuid?: Uuid;
     user_info_uuid: Uuid;
     business_info_uuid: Uuid;
     items?: CartItemEntity[];
+    business_address?: AddressEntity | null;
     created_at?: string;
     business_name?: string
     updated_at?: string;
@@ -22,6 +24,7 @@ export class CartEntity {
     private _uuid: Uuid;
     private _user_info_uuid: Uuid;
     private _business_info_uuid: Uuid;
+    private _business_address: AddressEntity | null;
     private _items: CartItemEntity[];
     private _business_name: string;
     private _created_at: string;
@@ -31,6 +34,7 @@ export class CartEntity {
         this._uuid = props.uuid ?? new Uuid();
         this._user_info_uuid = props.user_info_uuid;
         this._business_info_uuid = props.business_info_uuid;
+        this._business_address = props.business_address ?? null;
         this._items = props.items ?? [];
         this._business_name = props.business_name ?? 'Nome Indisponível';
         this._created_at = props.created_at ?? newDateF(new Date());
@@ -41,6 +45,7 @@ export class CartEntity {
     get uuid(): Uuid { return this._uuid; }
     get user_info_uuid(): Uuid { return this._user_info_uuid; }
     get business_info_uuid(): Uuid { return this._business_info_uuid; }
+    get business_address(): AddressEntity | null { return this._business_address; }
     get items(): CartItemEntity[] { return this._items; }
     get total(): number {
         const totalInReais = this._items.reduce((sum, item) => sum + item.total, 0);

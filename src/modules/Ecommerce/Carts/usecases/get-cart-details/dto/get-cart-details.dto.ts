@@ -11,6 +11,15 @@ export interface OutputGetCartDetailsDTO {
     businessInfo: {
         id: string;
         name: string;
+        address: {
+            line1: string | null;
+            line2: string | null;
+            line3: string | null;
+            neighborhood: string | null;
+            city: string | null;
+            state: string | null;
+            postalCode: string;
+        } | null;
     };
     priceSummary: {
         subtotal: number;

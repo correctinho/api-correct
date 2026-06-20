@@ -4,6 +4,7 @@ import { ProductEntity, ProductProps } from "../../../Products/entities/product.
 import { CartItemEntity } from "../../entities/cart-item.entity";
 import { CartEntity } from "../../entities/cart.entity";
 import { ICartRepository } from "../cart.repository";
+import { AddressEntity } from "../../../../../infra/shared/address/address.entity";
 
 export class CartPrismaRepository implements ICartRepository {
     async findCartById(cartId: Uuid): Promise<CartEntity | null> {
@@ -12,7 +13,20 @@ export class CartPrismaRepository implements ICartRepository {
             include: {
                 business: {
                     select: {
-                        fantasy_name: true
+                        fantasy_name: true,
+                        Address: {
+                            select: {
+                                uuid: true,
+                                line1: true,
+                                line2: true,
+                                line3: true,
+                                city: true,
+                                state: true,
+                                country: true,
+                                neighborhood: true,
+                                postal_code: true,
+                            }
+                        }
                     }
                 },
                 cartItems: {
@@ -65,10 +79,27 @@ export class CartPrismaRepository implements ICartRepository {
             });
         });
 
+        let business_address: AddressEntity | null = null;
+        const rawAddress = Array.isArray(cartData.business.Address) ? cartData.business.Address[0] : cartData.business.Address;
+        if (rawAddress) {
+            business_address = new AddressEntity({
+                uuid: new Uuid(rawAddress.uuid),
+                line1: rawAddress.line1,
+                line2: rawAddress.line2,
+                line3: rawAddress.line3,
+                city: rawAddress.city,
+                state: rawAddress.state,
+                country: rawAddress.country,
+                neighborhood: rawAddress.neighborhood,
+                postal_code: rawAddress.postal_code,
+            });
+        }
+
         return CartEntity.hydrate({
             uuid: new Uuid(cartData.uuid),
             user_info_uuid: new Uuid(cartData.user_info_uuid),
             business_info_uuid: new Uuid(cartData.business_info_uuid),
+            business_address,
             items: hydratedItems,
             created_at: cartData.created_at,
             updated_at: cartData.updated_at,
@@ -81,9 +112,11 @@ export class CartPrismaRepository implements ICartRepository {
             include: {
                 business: {
                     select: {
-                        fantasy_name: true
+                        fantasy_name: true,
+
                     }
                 },
+
                 cartItems: {
                     where: { deleted_at: null },
                     include: {
