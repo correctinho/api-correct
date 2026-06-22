@@ -444,4 +444,29 @@ export class CartPrismaRepository implements ICartRepository {
         throw new Error("Method not implemented.");
     }
     // Implementação dos métodos do repositório usando Prisma
+
+    async findById(uuid: string): Promise<any> {
+        const cart = await prismaClient.cart.findUnique({
+            where: { uuid },
+            select: {
+                uuid: true,
+                business_info_uuid: true,
+            }
+        });
+        return cart;
+    }
+
+    async updateFreight(cartId: Uuid, data: { amount: number, minutes: number, lat: number, lng: number, address: string, quoted_at: Date }): Promise<void> {
+        await prismaClient.cart.update({
+            where: { uuid: cartId.uuid }, // <-- Usa cartId.uuid para pegar a string
+            data: {
+                freight_amount: data.amount,
+                freight_estimated_minutes: data.minutes,
+                destination_lat: data.lat,
+                destination_lng: data.lng,
+                destination_address: data.address,
+                freight_quoted_at: data.quoted_at,
+            }
+        });
+    }
 }

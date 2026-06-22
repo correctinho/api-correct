@@ -22,6 +22,7 @@ import { deleteCartItemController } from "../../modules/Ecommerce/Carts/usecases
 import { listCartsController } from "../../modules/Ecommerce/Carts/usecases/list-user-carts";
 import { getCartDetailsController } from "../../modules/Ecommerce/Carts/usecases/get-cart-details";
 import { lookupProductByEanController } from "../../modules/Ecommerce/Products/usecases/lookup-product-by-ean";
+import { quoteCartFreightController } from "../../modules/Ecommerce/Carts/usecases/quote-cart-freight";
 
 const ecommerceRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -111,5 +112,10 @@ ecommerceRouter.get('/ecommerce/user/carts', appUserIsAuth, async (request, resp
 //get cart details by id
 ecommerceRouter.get('/ecommerce/cart/:cartId', appUserIsAuth, async (request, response) => {
   await getCartDetailsController.handle(request, response)
+})
+
+//quote cart freight
+ecommerceRouter.post('/ecommerce/cart/:uuid/quote-freight', appUserIsAuth, async (request, response) => {
+  await quoteCartFreightController.handle(request, response)
 })
 export { ecommerceRouter }

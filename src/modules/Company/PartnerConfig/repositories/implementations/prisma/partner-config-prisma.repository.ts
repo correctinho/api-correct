@@ -228,4 +228,16 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
     })
     return partners
   }
+
+  async findByBusinessInfoId(businessInfoUuid: string): Promise<any> {
+    return await prismaClient.partnerConfig.findUnique({
+      where: {
+        business_info_uuid: businessInfoUuid
+      },
+      select: {
+        latitude: true,
+        longitude: true
+      }
+    })
+  }
 }
