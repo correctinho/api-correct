@@ -25,12 +25,13 @@ export class QuoteCartFreightUseCase {
         const businessInfoUuidStr = cart.business_info_uuid.uuid;
 
         const partnerConfig = await this.partnerConfigRepository.findByBusinessInfoId(businessInfoUuidStr);
-        if (!partnerConfig || !partnerConfig.latitude || !partnerConfig.longitude) {
-            throw new Error("Partner origin not configured");
+
+        if (!partnerConfig || !partnerConfig.DispatchAddress || !partnerConfig.DispatchAddress.latitude || !partnerConfig.DispatchAddress.longitude) {
+            throw new Error("Parceiro não configurado");
         }
 
-        const originLat = partnerConfig.latitude;
-        const originLng = partnerConfig.longitude;
+        const originLat = partnerConfig.DispatchAddress.latitude;
+        const originLng = partnerConfig.DispatchAddress.longitude;
 
         const quote = await this.deliveryProvider.quoteDelivery({
             origin: {

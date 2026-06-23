@@ -234,9 +234,8 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
       where: {
         business_info_uuid: businessInfoUuid
       },
-      select: {
-        latitude: true,
-        longitude: true
+      include: {
+        DispatchAddress: true
       }
     })
   }
