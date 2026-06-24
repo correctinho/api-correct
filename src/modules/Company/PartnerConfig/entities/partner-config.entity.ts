@@ -23,6 +23,7 @@ export type PartnerConfigProps = {
   latitude?: number,
   longitude?: number
   cashback_tax?: number;
+  dispatch_address_uuid?: string;
 
 };
 export type PartnerConfigCreateCommand = Omit<PartnerConfigProps, 'admin_tax' | 'marketing_tax' | 'market_place_tax' | 'cashback_tax'> & {
@@ -49,6 +50,7 @@ export class PartnerConfigEntity {
   private _latitude?: number;
   private _longitude?: number;
   private _cashback_tax?: number;
+  private _dispatch_address_uuid?: string;
   private _created_at?: string;
   private _updated_at?: string;
 
@@ -70,6 +72,7 @@ export class PartnerConfigEntity {
     this._latitude = props.latitude;
     this._longitude = props.longitude;
     this._cashback_tax = props.cashback_tax ?? 0;
+    this._dispatch_address_uuid = props.dispatch_address_uuid;
     this._created_at = newDateF(new Date());
     this._updated_at = newDateF(new Date());
     this.validate();
@@ -142,6 +145,10 @@ export class PartnerConfigEntity {
 
   get cashback_tax(): number | undefined {
     return this._cashback_tax / 10000;
+  }
+
+  get dispatch_address_uuid(): string | undefined {
+    return this._dispatch_address_uuid;
   }
 
   get created_at(): string | undefined {
@@ -230,6 +237,11 @@ export class PartnerConfigEntity {
     this._cashback_tax = cashback_tax;
     this.validate()
   }
+
+  changeDispatchAddressUuid(uuid: string) {
+    this._dispatch_address_uuid = uuid;
+    this.validate();
+  }
   // Método de validação
   validate() {
     if (!this._business_info_uuid) {
@@ -303,6 +315,7 @@ export class PartnerConfigEntity {
       latitude: this._latitude,
       longitude: this._longitude,
       cashback_tax: this._cashback_tax,
+      dispatch_address_uuid: this._dispatch_address_uuid,
       created_at: this._created_at,
       updated_at: this._updated_at
     }

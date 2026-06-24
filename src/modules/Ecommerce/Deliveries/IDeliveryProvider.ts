@@ -1,18 +1,26 @@
 export interface QuoteDeliveryInput {
     origin: {
-        lat: number;
-        lng: number;
+        lat: string | number;
+        lng: string | number;
+        addressLine: string;
+        neighborhood: string;
+        city: string;
+        state: string;
     };
     destination: {
-        lat: number;
-        lng: number;
+        lat: string | number;
+        lng: string | number;
+        addressLine: string;
+        neighborhood: string;
+        city: string;
+        state: string;
     };
 }
 
 export interface QuoteDeliveryOutput {
     priceInCents: number;
-    estimatedMinutes?: number;
-    estimatedKm?: number;
+    estimatedMinutes: number;
+    estimatedKm: number;
 }
 
 export interface CreateDeliveryInput {

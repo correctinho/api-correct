@@ -6,4 +6,8 @@ export const taxiMachineApi = axios.create({
         'api-key': process.env.TAXIMACHINE_API_KEY,
         'Content-Type': 'application/json',
     },
+    auth: {
+        username: process.env.TAXIMACHINE_USER || '',
+        password: process.env.TAXIMACHINE_PASSWORD || ''
+    }
 });

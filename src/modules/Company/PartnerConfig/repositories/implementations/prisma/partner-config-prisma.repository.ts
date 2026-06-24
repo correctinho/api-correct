@@ -48,6 +48,7 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
         phone: dataToSave.phone,
         description: dataToSave.description,
         sales_type: dataToSave.sales_type,
+        dispatch_address_uuid: dataToSave.dispatch_address_uuid,
         updated_at: newDateF(new Date()) // Atualiza sempre a data de modificação
       }
     })
@@ -102,8 +103,6 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
       description: config.description || undefined,
       sales_type: config.sales_type || undefined,
       cashback_tax: config.cashback_tax || 0,
-      latitude: config.latitude || undefined,
-      longitude: config.longitude || undefined,
     });
   }
   findAll(): Promise<PartnerConfigEntity[]> {
