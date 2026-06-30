@@ -52,3 +52,15 @@ export interface AvailableUserItemDetails {
   balance: number;
   status: UserItemStatus;
 }
+
+export interface InputGetCartPaymentMethodsDTO {
+  cart_uuid: string;
+  appUserId: string;
+  appUserInfoID: string;
+}
+
+export interface OutputGetCartPaymentMethodsDTO {
+  cart_uuid: string;
+  business_name: string;
+  availableItems: AvailableUserItemDetails[];
+}

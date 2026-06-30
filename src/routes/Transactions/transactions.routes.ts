@@ -4,6 +4,7 @@ import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/compa
 import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
 import { processPaymentByAppUserController } from "../../modules/Payments/Transactions/useCases/process-payment-by-app-user";
 import { getPOSTransactionByAppUserController } from "../../modules/Payments/Transactions/useCases/get-pos-transaction-by-appuser";
+import { getAvailablePaymentMethodsByCartController } from "../../modules/Payments/Transactions/useCases/get-available-payment-methods-by-cart";
 import { geTransactionReceiptController } from "../../modules/Payments/Transactions/useCases/get-transaction-receipt";
 import { generateReceiptPDFController } from "../../modules/Payments/Transactions/useCases/get-transaction-receipt/generate-receipt-pdf";
 import { processPaymentByPartnerController } from "../../modules/Payments/Transactions/useCases/process-payment-by-partner";
@@ -105,6 +106,11 @@ transactionsRouter.post('/tei/transfer', appUserIsAuth, async (request, response
 //Execute TEI Internal Transfer
 transactionsRouter.post('/tei/transfer/internal', appUserIsAuth, async (request, response) => {
   await transferBetweenOwnCardsController.handle(request, response);
+});
+
+// Get available payment methods by cart
+transactionsRouter.get("/cart/:cart_uuid/payment-methods", appUserIsAuth, async (request, response) => {
+  await getAvailablePaymentMethodsByCartController.handle(request, response);
 });
 
 export { transactionsRouter }
