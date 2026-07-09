@@ -22,6 +22,9 @@ import { deleteCartItemController } from "../../modules/Ecommerce/Carts/usecases
 import { listCartsController } from "../../modules/Ecommerce/Carts/usecases/list-user-carts";
 import { getCartDetailsController } from "../../modules/Ecommerce/Carts/usecases/get-cart-details";
 import { lookupProductByEanController } from "../../modules/Ecommerce/Products/usecases/lookup-product-by-ean";
+import { quoteCartFreightController } from "../../modules/Ecommerce/Carts/usecases/quote-cart-freight";
+import { getAddressFromCoordsController } from "../../modules/Ecommerce/Address/useCases/get-address-from-coords";
+import { processCartPaymentController } from "../../modules/Ecommerce/Checkout/usecases/process-cart-payment";
 
 const ecommerceRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -112,4 +115,20 @@ ecommerceRouter.get('/ecommerce/user/carts', appUserIsAuth, async (request, resp
 ecommerceRouter.get('/ecommerce/cart/:cartId', appUserIsAuth, async (request, response) => {
   await getCartDetailsController.handle(request, response)
 })
+
+//quote cart freight
+ecommerceRouter.post('/ecommerce/cart/:uuid/quote-freight', appUserIsAuth, async (request, response) => {
+  await quoteCartFreightController.handle(request, response)
+})
+
+// reverse geocode
+ecommerceRouter.get('/address/reverse', async (request, response) => {
+  await getAddressFromCoordsController.handle(request, response)
+})
+
+// process cart payment
+ecommerceRouter.post('/ecommerce/cart/checkout', appUserIsAuth, async (request, response) => {
+  await processCartPaymentController.handle(request, response)
+})
+
 export { ecommerceRouter }

@@ -145,6 +145,7 @@ export class ProductEntity {
   get description(): string | null { return this._description; }
   get original_price(): number { return this._original_price / 100; }
   get promotional_price(): number { return this._promotional_price / 100; }
+  get price_in_cents(): number { return this._promotional_price; }
   get discount(): number { return this._discount / 10000; }
   get stock(): number { return this._stock; }
   get image_urls(): string[] { return this._image_urls; }

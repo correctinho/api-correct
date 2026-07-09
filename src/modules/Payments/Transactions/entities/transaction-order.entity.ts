@@ -287,6 +287,8 @@ export class TransactionEntity {
     this.validate();
   }
 
+
+
   changeUsedOfflineToken(token: string) {
     this._used_offline_token_code = token
     this.validate()
@@ -390,6 +392,72 @@ export class TransactionEntity {
     this.validate();
   }
 
+  calculateEcommerceFee(freightAmountInCents: number): void {
+    if (this._net_price === undefined || this._fee_percentage === undefined) {
+      throw new CustomError("Net price and fee percentage must be set before calculating the fee", 400);
+    }
+    if (freightAmountInCents < 0) {
+      throw new CustomError("Freight amount cannot be negative", 400);
+    }
+
+    const totalNetPriceBI = BigInt(Math.round(this._net_price));
+    const freightBI = BigInt(Math.round(freightAmountInCents));
+
+    // ISOLAMENTO DO FRETE: A base de cálculo (produtos) exclui o frete
+    const productPriceBI = totalNetPriceBI - freightBI;
+
+    if (productPriceBI < 0n) {
+      throw new CustomError("Freight amount cannot be greater than the net price", 400);
+    }
+
+    const feePercBI = BigInt(Math.round(this._fee_percentage));
+
+    // 1. Taxa Total da Plataforma (Calculada APENAS sobre o valor dos produtos)
+    const calculatedFeeBI = (productPriceBI * feePercBI) / 1000000n;
+    this._fee_amount = Number(calculatedFeeBI);
+
+    let totalCashbackForUserBI = 0n;
+    let partnerCashbackAmountBI = 0n;
+    let platformCashbackAmountBI = 0n;
+
+    // 2. Cashback do Parceiro (Calculado APENAS sobre os produtos)
+    if (this._partner_cashback_percentage !== undefined && this._partner_cashback_percentage > 0) {
+      const partnerCashbackPercBI = BigInt(Math.round(this._partner_cashback_percentage));
+      const rawPartnerCashbackBI = (productPriceBI * partnerCashbackPercBI);
+
+      if (rawPartnerCashbackBI > 0n && (rawPartnerCashbackBI % 1000000n !== 0n)) {
+        partnerCashbackAmountBI = (rawPartnerCashbackBI / 1000000n) + 1n;
+      } else {
+        partnerCashbackAmountBI = rawPartnerCashbackBI / 1000000n;
+      }
+    }
+    totalCashbackForUserBI += partnerCashbackAmountBI;
+
+    // 3. Cashback da Plataforma
+    const PLATFORM_CASHBACK_PERCENTAGE = 20n;
+    const rawPlatformCashbackBI = (calculatedFeeBI * PLATFORM_CASHBACK_PERCENTAGE);
+
+    if (rawPlatformCashbackBI > 0n && (rawPlatformCashbackBI % 100n !== 0n)) {
+      platformCashbackAmountBI = (rawPlatformCashbackBI / 100n) + 1n;
+    } else {
+      platformCashbackAmountBI = rawPlatformCashbackBI / 100n;
+    }
+    totalCashbackForUserBI += platformCashbackAmountBI;
+
+    // 4. Consolidação dos Valores
+    this._cashback = Number(totalCashbackForUserBI);
+
+    // O Vendedor (Parceiro) recebe APENAS o valor dos produtos líquidos de taxas.
+    // O Frete será enviado para a Muralha no Repositório.
+    this._partner_credit_amount = Number(productPriceBI - calculatedFeeBI);
+
+    // O que a plataforma realmente ganha: Taxa Bruta - Cashback que ela deu
+    this._platform_net_fee_amount = Number(calculatedFeeBI - platformCashbackAmountBI);
+
+    if (this._platform_net_fee_amount < 0) this._platform_net_fee_amount = 0;
+
+    this.validate();
+  }
 
   changeDescription(description: string): void {
     this._description = description;

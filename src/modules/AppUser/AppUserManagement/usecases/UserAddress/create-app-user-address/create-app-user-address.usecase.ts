@@ -24,7 +24,7 @@ export class CreateAppUserAddressUsecase{
         if(!userInfo) throw new CustomError("User info must be completed first", 404)
 
 
-        const userAddress = await AddressEntity.create(data)
+        const userAddress = await AddressEntity.create({ ...data, latitude: 0, longitude: 0 })
 
         await this.addressRepository.createAddress(userAddress, userAuth.document)
 

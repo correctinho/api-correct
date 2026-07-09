@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { CustomError } from '../../../../errors/custom.error'
+import { newDateF } from '../../../../utils/date'
 
 export type CompanyAddressProps = {
     uuid?: string
@@ -11,6 +12,10 @@ export type CompanyAddressProps = {
     city: string | null
     state: string | null
     country: string | null
+    latitude?: number | null
+    longitude?: number | null
+    created_at?: string
+    updated_at?: string
 
 }
 
@@ -24,7 +29,10 @@ export class CompanyAddressEntity {
     city: string | null
     state: string | null
     country: string | null
-
+    latitude?: number | null
+    longitude?: number | null
+    created_at?: string
+    updated_at?: string
 
     private constructor(props: CompanyAddressProps) {
 
@@ -37,6 +45,10 @@ export class CompanyAddressEntity {
         this.city = props.city
         this.state = props.state
         this.country = props.country
+        this.latitude = props.latitude
+        this.longitude = props.longitude
+        this.created_at = props.created_at ?? newDateF(new Date)
+        this.updated_at = props.updated_at
 
     }
 
@@ -48,11 +60,23 @@ export class CompanyAddressEntity {
         if (!data.city) throw new CustomError("City is required", 400)
         if (!data.state) throw new CustomError("State is required", 400)
         if (!data.country) throw new CustomError("Country is required", 400)
-        
+
         const companyAddress = new CompanyAddressEntity(data)
         return companyAddress
     }
 
+    private updateDate() {
+        this.updated_at = newDateF(new Date());
+    }
 
+    changeLatitude(lat: number) { this.latitude = lat; this.updateDate(); }
+    changeLongitude(lng: number) { this.longitude = lng; this.updateDate(); }
+    changeLine1(line1: string) { this.line1 = line1; this.updateDate(); }
+    changeLine2(line2: string) { this.line2 = line2; this.updateDate(); }
+    changeLine3(line3: string) { this.line3 = line3; this.updateDate(); }
+    changeNeighborhood(neighborhood: string) { this.neighborhood = neighborhood; this.updateDate(); }
+    changePostalCode(postal_code: string) { this.postal_code = postal_code; this.updateDate(); }
+    changeCity(city: string) { this.city = city; this.updateDate(); }
+    changeState(state: string) { this.state = state; this.updateDate(); }
 
 }
