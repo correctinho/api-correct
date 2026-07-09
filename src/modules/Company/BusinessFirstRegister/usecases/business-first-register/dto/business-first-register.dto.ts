@@ -31,6 +31,7 @@ export interface InputBusinessFirstRegisterDTO {
     use_market_place: boolean,
     title?: string
   }
+  referred_by_code?: string;
 }
 
 export interface OutputBusinessFirstRegisterDTO {

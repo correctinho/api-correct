@@ -24,6 +24,7 @@ import { getCartDetailsController } from "../../modules/Ecommerce/Carts/usecases
 import { lookupProductByEanController } from "../../modules/Ecommerce/Products/usecases/lookup-product-by-ean";
 import { quoteCartFreightController } from "../../modules/Ecommerce/Carts/usecases/quote-cart-freight";
 import { getAddressFromCoordsController } from "../../modules/Ecommerce/Address/useCases/get-address-from-coords";
+import { processCartPaymentController } from "../../modules/Ecommerce/Checkout/usecases/process-cart-payment";
 
 const ecommerceRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -123,6 +124,11 @@ ecommerceRouter.post('/ecommerce/cart/:uuid/quote-freight', appUserIsAuth, async
 // reverse geocode
 ecommerceRouter.get('/address/reverse', async (request, response) => {
   await getAddressFromCoordsController.handle(request, response)
+})
+
+// process cart payment
+ecommerceRouter.post('/ecommerce/cart/checkout', appUserIsAuth, async (request, response) => {
+  await processCartPaymentController.handle(request, response)
 })
 
 export { ecommerceRouter }

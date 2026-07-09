@@ -35,6 +35,8 @@ export class CartPrismaRepository implements ICartRepository {
                         product: true,
                     },
                 },
+                // MÁGICA: Buscar o endereço de destino que a Cotação de Frete salvou!
+                DestinationAddress: true
             },
         });
 
@@ -43,8 +45,7 @@ export class CartPrismaRepository implements ICartRepository {
         }
 
         // A lógica de hidratação completa que já validamos
-        const hydratedItems = cartData.cartItems.map(item => {
-            // ... (mapeamento completo das props do produto)
+        const hydratedItems = cartData.cartItems.map((item: any) => {
             const productProps: ProductProps = {
                 uuid: new Uuid(item.product.uuid),
                 category_uuid: new Uuid(item.product.category_uuid),
@@ -79,10 +80,12 @@ export class CartPrismaRepository implements ICartRepository {
             });
         });
 
+        // 1. Hidratando o Endereço da Empresa
         let business_address: AddressEntity | null = null;
         const rawAddress = Array.isArray(cartData.business.Address) ? cartData.business.Address[0] : cartData.business.Address;
         if (rawAddress) {
-            business_address = new AddressEntity({
+            // CORREÇÃO: Usar a fábrica estática 'hydrate' pois o construtor é privado.
+            business_address = AddressEntity.hydrate({
                 uuid: new Uuid(rawAddress.uuid),
                 line1: rawAddress.line1,
                 line2: rawAddress.line2,
@@ -92,6 +95,26 @@ export class CartPrismaRepository implements ICartRepository {
                 country: rawAddress.country,
                 neighborhood: rawAddress.neighborhood,
                 postal_code: rawAddress.postal_code,
+                latitude: rawAddress.latitude,
+                longitude: rawAddress.longitude,
+            });
+        }
+
+        // 2. Hidratando o Endereço de Destino (Para a logística do Checkout!)
+        let destination_address: AddressEntity | null = null;
+        if (cartData.DestinationAddress) {
+            destination_address = AddressEntity.hydrate({
+                uuid: new Uuid(cartData.DestinationAddress.uuid),
+                line1: cartData.DestinationAddress.line1,
+                line2: cartData.DestinationAddress.line2,
+                line3: cartData.DestinationAddress.line3,
+                city: cartData.DestinationAddress.city,
+                state: cartData.DestinationAddress.state,
+                country: cartData.DestinationAddress.country,
+                neighborhood: cartData.DestinationAddress.neighborhood,
+                postal_code: cartData.DestinationAddress.postal_code,
+                latitude: cartData.DestinationAddress.latitude,
+                longitude: cartData.DestinationAddress.longitude,
             });
         }
 
@@ -100,12 +123,15 @@ export class CartPrismaRepository implements ICartRepository {
             user_info_uuid: new Uuid(cartData.user_info_uuid),
             business_info_uuid: new Uuid(cartData.business_info_uuid),
             business_address,
+            destination_address, // Injetando o endereço de destino tipado
+            freight_amount: cartData.freight_amount || 0, // Garantindo que o frete venha junto
             items: hydratedItems,
             created_at: cartData.created_at,
             updated_at: cartData.updated_at,
             business_name: cartData.business.fantasy_name,
         });
     }
+
     async findAllByUserId(userId: Uuid): Promise<CartEntity[]> {
         const cartsData = await prismaClient.cart.findMany({
             where: { user_info_uuid: userId.uuid },
@@ -336,6 +362,8 @@ export class CartPrismaRepository implements ICartRepository {
             items: items,
             created_at: cartData.created_at,
             updated_at: cartData.updated_at,
+            freight_amount: cartData.freight_amount ?? 0,
+            freight_quoted_at: cartData.freight_quoted_at ?? null,
         });
     }
     // async create(cart: CartEntity): Promise<void> {
@@ -456,16 +484,30 @@ export class CartPrismaRepository implements ICartRepository {
         return cart;
     }
 
-    async updateFreight(cartId: Uuid, data: { amount: number, minutes: number, lat: number, lng: number, address: string, quoted_at: Date }): Promise<void> {
+    async updateFreight(cartId: Uuid, data: { amount: number, minutes: number, address: AddressEntity, quoted_at: Date }): Promise<void> {
         await prismaClient.cart.update({
-            where: { uuid: cartId.uuid }, // <-- Usa cartId.uuid para pegar a string
+            where: { uuid: cartId.uuid },
             data: {
                 freight_amount: data.amount,
                 freight_estimated_minutes: data.minutes,
-                destination_lat: data.lat,
-                destination_lng: data.lng,
-                destination_address: data.address,
                 freight_quoted_at: data.quoted_at,
+                DestinationAddress: {
+                    create: {
+                        uuid: data.address.uuid.uuid,
+                        line1: data.address.line1,
+                        line2: data.address.line2,
+                        line3: data.address.line3,
+                        postal_code: data.address.postal_code,
+                        neighborhood: data.address.neighborhood,
+                        city: data.address.city,
+                        state: data.address.state,
+                        country: data.address.country,
+                        latitude: data.address.latitude,
+                        longitude: data.address.longitude,
+                        created_at: data.address.created_at,
+                        updated_at: data.address.updated_at
+                    }
+                }
             }
         });
     }

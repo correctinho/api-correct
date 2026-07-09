@@ -12,6 +12,8 @@ export type AddressProps = {
     city: string | null;
     state: string | null;
     country: string | null;
+    latitude: number | null;
+    longitude: number | null;
     created_at?: string;
     updated_at?: string;
 };
@@ -25,6 +27,8 @@ export type AddressCreateCommand = {
     city: string | null;
     state: string | null;
     country: string | null;
+    latitude: number | null;
+    longitude: number | null;
     created_at?: string;
     updated_at?: string;
 };
@@ -39,6 +43,8 @@ export class AddressEntity {
     private _city: string | null;
     private _state: string | null;
     private _country: string | null;
+    private _latitude: number | null;
+    private _longitude: number | null;
     private _created_at?: string;
     private _updated_at?: string;
 
@@ -52,6 +58,8 @@ export class AddressEntity {
         this._city = props.city;
         this._state = props.state;
         this._country = props.country;
+        this._latitude = props.latitude;
+        this._longitude = props.longitude;
         this._created_at = newDateF(new Date());
         this._updated_at = newDateF(new Date());
         this.validate();
@@ -91,6 +99,14 @@ export class AddressEntity {
 
     get country(): string | null {
         return this._country;
+    }
+
+    get latitude(): number | null {
+        return this._latitude;
+    }
+
+    get longitude(): number | null {
+        return this._longitude;
     }
 
     get created_at(): string | undefined {
@@ -141,6 +157,16 @@ export class AddressEntity {
         this.validate();
     }
 
+    changeLatitude(latitude: number | null) {
+        this._latitude = latitude;
+        this.validate();
+    }
+
+    changeLongitude(longitude: number | null) {
+        this._longitude = longitude;
+        this.validate();
+    }
+
     validate() {
         if (!this._line1) throw new CustomError("Line1 is required", 400);
         if (!this._line2) throw new CustomError("Line2 is required", 400);
@@ -163,5 +189,9 @@ export class AddressEntity {
     static async create(data: AddressCreateCommand) {
         const address = new AddressEntity(data);
         return address;
+    }
+
+    static hydrate(props: AddressProps): AddressEntity {
+        return new AddressEntity(props);
     }
 }

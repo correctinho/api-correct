@@ -14,6 +14,9 @@ export type CartProps = {
     created_at?: string;
     business_name?: string
     updated_at?: string;
+    freight_amount?: number;
+    freight_quoted_at?: Date | null;
+    destination_address?: AddressEntity | null;
 };
 
 /**
@@ -29,6 +32,9 @@ export class CartEntity {
     private _business_name: string;
     private _created_at: string;
     private _updated_at: string;
+    private _freight_amount?: number;
+    private _freight_quoted_at?: Date | null;
+    private _destination_address?: AddressEntity | null;
 
     private constructor(props: CartProps) {
         this._uuid = props.uuid ?? new Uuid();
@@ -39,6 +45,9 @@ export class CartEntity {
         this._business_name = props.business_name ?? 'Nome Indisponível';
         this._created_at = props.created_at ?? newDateF(new Date());
         this._updated_at = props.updated_at ?? newDateF(new Date());
+        this._freight_amount = props.freight_amount ?? 0;
+        this._freight_quoted_at = props.freight_quoted_at ?? null;
+        this._destination_address = props.destination_address ?? null;
     }
 
     // --- Getters ---
@@ -47,13 +56,21 @@ export class CartEntity {
     get business_info_uuid(): Uuid { return this._business_info_uuid; }
     get business_address(): AddressEntity | null { return this._business_address; }
     get items(): CartItemEntity[] { return this._items; }
+    get freight_amount(): number { return this._freight_amount; }
+    get freight_quoted_at(): Date | null { return this._freight_quoted_at; }
     get total(): number {
         const totalInReais = this._items.reduce((sum, item) => sum + item.total, 0);
         // Arredonda para 2 casas decimais para evitar imprecisões de float
         return Math.round(totalInReais * 100) / 100;
     }
+    get destination_address(): AddressEntity | null { return this._destination_address; }
+
+
+    public calculateTotalInCents(): number {
+        return this._items.reduce((sum, item) => sum + (item.quantity * item.product.price_in_cents), 0);
+    }
     get business_name(): string { return this._business_name; }
-    
+
     public addItem(product: ProductEntity, quantity: number = 1): void {
         if (product.business_info_uuid.uuid !== this._business_info_uuid.uuid) {
             throw new CustomError("Este produto não pertence à loja deste carrinho.", 400);

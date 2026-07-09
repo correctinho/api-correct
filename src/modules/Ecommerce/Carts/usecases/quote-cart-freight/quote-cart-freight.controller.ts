@@ -15,7 +15,10 @@ export class QuoteCartFreightController {
                 destination_number,
                 destination_complement,
                 destination_neighborhood,
-                destination_cep
+                destination_cep,
+                destination_city,
+                destination_state,
+                destination_country
             } = req.body;
 
             const result = await this.useCase.execute({
@@ -26,7 +29,10 @@ export class QuoteCartFreightController {
                 destination_number,
                 destination_complement,
                 destination_neighborhood,
-                destination_cep
+                destination_cep,
+                destination_city,
+                destination_state,
+                destination_country
             });
             return res.json(result);
         } catch (error: any) {

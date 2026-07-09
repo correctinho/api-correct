@@ -3,6 +3,7 @@ import { BusinessRegisterEntity } from "../entities/business-first-register.enti
 
 export interface IBusinessFirstRegisterRepository{
     savePartner(data: BusinessRegisterEntity, partnerConfig: PartnerConfigEntity, correctUserUuid?: string): Promise<any>
+    saveSelfServicePartner(data: BusinessRegisterEntity, partnerConfig: PartnerConfigEntity): Promise<any>
     saveEmployer(data: BusinessRegisterEntity, correctUserUuid?: string): Promise<any>
     save(data: any, data1: any): Promise<any>
 }

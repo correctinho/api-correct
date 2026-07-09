@@ -1,5 +1,6 @@
 import RepositoryInterface from "../../../../@shared/domain/repository/repository-interface";
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
+import { AddressEntity } from "../../../../infra/shared/address/address.entity";
 import { CartEntity } from "../entities/cart.entity";
 
 export interface ICartRepository extends RepositoryInterface<CartEntity> {
@@ -9,5 +10,10 @@ export interface ICartRepository extends RepositoryInterface<CartEntity> {
     findAllByUserId(userId: Uuid): Promise<CartEntity[]>;
     findCartById(cartId: Uuid): Promise<CartEntity | null>;
     findById(uuid: string): Promise<any>;
-    updateFreight(cartId: Uuid, data: { amount: number, minutes: number, lat: number, lng: number, address: string, quoted_at: Date }): Promise<void>;
+    updateFreight(cartId: Uuid, data: {
+        amount: number,
+        minutes: number,
+        address: AddressEntity,
+        quoted_at: Date
+    }): Promise<void>;
 }
