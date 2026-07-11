@@ -1,3 +1,4 @@
+import { BusinessStatus } from "@prisma/client";
 import { prismaClient } from "../../../../../../infra/databases/prisma.config";
 import { newDateF } from "../../../../../../utils/date";
 import { CompanyDataEntity } from "../../../../CompanyData/entities/company-data.entity";
@@ -64,9 +65,9 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
       },
       include: {
         Address: true,
-        BusinessinfoBranch:{
-          select:{
-            BranchInfo:{
+        BusinessinfoBranch: {
+          select: {
+            BranchInfo: {
               select: {
                 name: true,
               }
@@ -207,5 +208,12 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
     })
 
     return partner
+  }
+
+  async updateStatus(uuid: string, status: BusinessStatus): Promise<void> {
+    await prismaClient.businessInfo.update({
+      where: { uuid },
+      data: { status: status }
+    });
   }
 }

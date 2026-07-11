@@ -2043,4 +2043,34 @@ export class TransactionOrderPrismaRepository
     // Retorna a quantidade de carteiras que foram atualizadas com sucesso
     return updates.length;
   }
+
+  async registerPlatformRevenue(amountInCents: number, eventType: any, transactionUuid: string): Promise<void> {
+    // Busca a conta master da Correct (Como só tem uma, findFirst resolve perfeitamente)
+    const masterAccount = await prismaClient.correctAccount.findFirst();
+
+    if (!masterAccount) {
+      throw new CustomError("Conta principal da Correct não encontrada no banco de dados.", 500);
+    }
+
+    const balanceBefore = masterAccount.balance;
+    const balanceAfter = balanceBefore + amountInCents;
+
+    // Atualiza o saldo e cria o histórico de forma atômica
+    await prismaClient.$transaction([
+      prismaClient.correctAccount.update({
+        where: { uuid: masterAccount.uuid },
+        data: { balance: balanceAfter }
+      }),
+      prismaClient.correctAccountHistory.create({
+        data: {
+          correct_account_uuid: masterAccount.uuid,
+          event_type: eventType,
+          amount: amountInCents,
+          balance_before: balanceBefore,
+          balance_after: balanceAfter,
+          related_transaction_uuid: transactionUuid
+        }
+      })
+    ]);
+  }
 }

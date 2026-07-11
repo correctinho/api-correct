@@ -3,7 +3,7 @@ import { prismaClient } from "../../../../../infra/databases/prisma.config";
 import { newDateF } from "../../../../../utils/date";
 import { PartnerConfigEntity } from "../../../PartnerConfig/entities/partner-config.entity";
 import { BusinessRegisterEntity } from "../../entities/business-first-register.entity";
-import { IBusinessFirstRegisterRepository } from "../business-first-register.repository";
+import { CheckBusinessStatusResult, IBusinessFirstRegisterRepository } from "../business-first-register.repository";
 import { randomUUID } from 'crypto'
 import { BusinessStatus } from "@prisma/client";
 
@@ -350,6 +350,18 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
         created_at: partner.created_at
       }
     }
+  }
+  async checkBusinessStatus(document: string): Promise<CheckBusinessStatusResult | null> {
+    const business = await prismaClient.businessInfo.findUnique({
+      where: { document: document },
+      select: {
+        uuid: true,
+        status: true,
+        fantasy_name: true
+      }
+    });
+
+    return business;
   }
 
 }

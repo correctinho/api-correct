@@ -1,11 +1,12 @@
 import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
 import { CustomError } from '../../../../../errors/custom.error';
 import { ITransactionOrderRepository } from '../../../Transactions/repositories/transaction-order.repository';
-import { TransactionStatus, TransactionType } from '@prisma/client';
+import { BusinessStatus, CorrectAccountEventType, TransactionStatus, TransactionType } from '@prisma/client';
 import { newDateF } from '../../../../../utils/date';
 import { TransactionEntity } from '../../../Transactions/entities/transaction-order.entity';
 import { ISubscriptionRepository } from '../../../SubscriptionsPlans/repositories/subscription.repository';
 import { IAppUserItemRepository } from '../../../../AppUser/AppUserManagement/repositories/app-user-item-repository';
+import { ICompanyDataRepository } from '../../../../Company/CompanyData/repositories/company-data.repository';
 
 // Tipagem do payload do Sicredi
 export interface SicrediPix {
@@ -29,8 +30,9 @@ export class ProcessPixWebhookUsecase {
     constructor(
         private readonly transactionRepository: ITransactionOrderRepository,
         private readonly subscriptionRepository: ISubscriptionRepository,
-        private readonly userItemRepository: IAppUserItemRepository
-    ) {}
+        private readonly userItemRepository: IAppUserItemRepository,
+        private readonly businessRepository: ICompanyDataRepository
+    ) { }
 
     public async execute(payload: SicrediPixWebhookPayload): Promise<void> {
         console.log('\n✅✅✅ WEBHOOK DO SICREDI RECEBIDO! ✅✅✅');
@@ -109,6 +111,12 @@ export class ProcessPixWebhookUsecase {
                     case 'SUBSCRIPTION_PAYMENT' as TransactionType: // Casting se necessário
                         // Ou se você importou o enum: case TransactionType.SUBSCRIPTION_PAYMENT:
                         await this.processSubscriptionPayment(
+                            transaction,
+                            pixPayment
+                        );
+                        break;
+                    case TransactionType.ONBOARDING_PIX:
+                        await this.processOnboardingPix(
                             transaction,
                             pixPayment
                         );
@@ -284,5 +292,48 @@ export class ProcessPixWebhookUsecase {
         console.log(
             `✅ SUCESSO: Pagamento de assinatura processado e serviço liberado.`
         );
+    }
+
+    /**
+     * Processa o pagamento da Taxa de Adesão (Onboarding) de um novo Lojista.
+     * Atualiza a transação para SUCCESS e altera o status do BusinessInfo para pending_approval.
+     */
+    private async processOnboardingPix(
+        transaction: TransactionEntity,
+        pixPayment: SicrediPix
+    ): Promise<void> {
+        console.log(`Iniciando processamento de ONBOARDING_PIX para a transação ${transaction.uuid.uuid}`);
+
+        const receivedAmountInCents = Math.round(parseFloat(pixPayment.valor) * 100);
+        const expectedAmountInCents = Math.round(transaction.net_price);
+
+        if (receivedAmountInCents !== expectedAmountInCents) {
+            throw new CustomError(`ERRO DE VALOR para ONBOARDING_PIX. Esperado: ${expectedAmountInCents}, Recebido: ${receivedAmountInCents}`, 400);
+        }
+
+        if (!transaction.payer_business_info_uuid) {
+            throw new CustomError(`ERRO: Transação sem payer_business_info_uuid.`, 500);
+        }
+
+        const paidAtString = newDateF(new Date(pixPayment.horario));
+        transaction.setPixPaymentDetails(pixPayment.endToEndId, paidAtString);
+        await this.transactionRepository.upsert(transaction);
+
+        // ==========================================
+        // Registro da Receita (Novo)
+        // ==========================================
+        await this.transactionRepository.registerPlatformRevenue(
+            expectedAmountInCents,
+            CorrectAccountEventType.ONBOARDING_REVENUE,
+            transaction.uuid.uuid
+        );
+        console.log(`Receita registrada na Correct Account para a transação ${transaction.uuid.uuid}`);
+
+        // Atualizar status da empresa
+        await this.businessRepository.updateStatus(
+            transaction.payer_business_info_uuid.uuid,
+            'pending_approval'
+        );
+        console.log(`✅ SUCESSO: Empresa ativada para pending_approval.`);
     }
 }

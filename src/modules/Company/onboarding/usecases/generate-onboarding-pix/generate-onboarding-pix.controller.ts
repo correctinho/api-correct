@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { GenerateOnboardingPixUseCase } from "./generate-onboarding-pix.usecase";
 
 export class GenerateOnboardingPixController {
-    constructor(private useCase: GenerateOnboardingPixUseCase) {}
+    constructor(private useCase: GenerateOnboardingPixUseCase) { }
 
     async handle(req: Request, res: Response): Promise<Response> {
         try {
