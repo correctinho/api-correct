@@ -15,6 +15,7 @@ export type TermAcceptanceProps = {
     accepted_at: Date;
     ip_address?: string | null;
     user_agent?: string | null;
+    snapshot_html?: string | null;
 };
 
 export class TermAcceptanceEntity {

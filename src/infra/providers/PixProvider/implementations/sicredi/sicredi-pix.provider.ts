@@ -115,11 +115,21 @@ export class SicrediPixProvider implements IPixProvider {
 
         const expirationSeconds = chargeData.expiracaoSegundos || 3600;
 
+        // 1. Limpa o documento garantindo que só passem números
+        // Nota: Mesmo que a interface se chame 'cpf', ela está recebendo o document genérico do UseCase
+        const rawDocument = chargeData.cpf || '';
+        const cleanDocument = rawDocument.replace(/\D/g, '');
+        const isCnpj = cleanDocument.length === 14;
+
+        // 2. Limita o nome para evitar recusa por nomes muito longos (regra da API Pix)
+        const safeName = chargeData.nome ? chargeData.nome.substring(0, 100) : '';
+
+
         const requestBody = {
             calendario: { expiracao: expirationSeconds },
             devedor: {
-                cpf: chargeData.cpf,
-                nome: chargeData.nome,
+                ...(isCnpj ? { cnpj: cleanDocument } : { cpf: cleanDocument }),
+                nome: safeName, // ← Aqui entra o nome seguro
             },
             valor: {
                 original: chargeData.valor,
@@ -138,7 +148,7 @@ export class SicrediPixProvider implements IPixProvider {
 
             const bankCreatedAt = new Date(response.data.calendario.criacao); // Ex: 14:56:40
             const bankExpirationSeconds = response.data.calendario.expiracao; // Ex: 3600
-            
+
             // Soma os segundos à data de criação
             const realExpirationDate = new Date(
                 bankCreatedAt.getTime() + (bankExpirationSeconds * 1000)
@@ -183,7 +193,7 @@ export class SicrediPixProvider implements IPixProvider {
             if (error.response?.status === 404) {
                 throw new Error('Cobrança não encontrada no Sicredi.');
             }
-            
+
             throw new Error('Falha ao consultar cobrança no Sicredi.');
         }
     }
@@ -211,7 +221,7 @@ export class SicrediPixProvider implements IPixProvider {
             if (error.response?.status === 404) {
                 throw new Error('Nenhum webhook configurado para esta chave Pix.');
             }
-            
+
             throw new Error('Falha ao consultar configuração de webhook no Sicredi.');
         }
     }

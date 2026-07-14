@@ -1,6 +1,7 @@
 import { prismaClient } from '../../../../../../infra/databases/prisma.config';
 import { IApproveBusinessRepository } from '../../../../domain/repositories/approve-business.repository.interface';
 import { ApproveBusinessRepoInputDto, ApproveBusinessOutputDto } from '../../../../application/usecases/dto/approve-business.dto';
+import { BusinessStatus } from '@prisma/client';
 
 export class ApproveBusinessPrismaRepository implements IApproveBusinessRepository {
   async approve(data: ApproveBusinessRepoInputDto): Promise<ApproveBusinessOutputDto> {
@@ -20,7 +21,7 @@ export class ApproveBusinessPrismaRepository implements IApproveBusinessReposito
       await tx.businessInfo.update({
         where: { uuid: data.uuid },
         data: {
-          status: 'active',
+          status: BusinessStatus.active,
           approved_at: new Date().toISOString(),
         }
       });

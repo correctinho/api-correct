@@ -11,7 +11,7 @@ export interface InputBusinessFirstRegisterDTO {
   state: string
   country: string
   address_fk_uuid: string
-  fantasy_name: string
+  fantasy_name: string | null
   corporate_reason: string | null
   document: string
   classification: string
@@ -50,7 +50,7 @@ export interface OutputBusinessFirstRegisterDTO {
   BusinessInfo: {
     uuid: string;
     address_uuid: string;
-    fantasy_name: string;
+    fantasy_name: string | null
     corporate_reason: string | null;
     document: string;
     classification: string;

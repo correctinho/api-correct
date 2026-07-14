@@ -29,14 +29,15 @@ export class ApproveBusinessUsecase {
           to: input.admin_email,
           subject: 'Conta Aprovada - Correct',
           body: `
-            <p>Sua conta na Correct foi aprovada.</p>
+            <p>Boas notícias! O pagamento da sua taxa de adesão foi confirmado e seus dados foram aprovados.</p>
+            <p>O próximo passo para a liberação total da sua loja é a <strong>assinatura do contrato</strong>, que já está disponível no seu painel.</p>
             <p>Seu login é: <strong>${input.admin_email}</strong></p>
             <p>Sua senha temporária é: <strong>${temporaryPassword}</strong></p>
-            <p>Acesse o painel para cadastrar sua senha definitiva.</p>
+            <p>Acesse o painel, cadastre sua senha definitiva e assine o contrato para começar a vender!</p>
           `,
           from: {
             name: 'Correct',
-            address: process.env.MAIL_ACCOUNT_NOREPLY_USER || 'noreply@correct.com.br'
+            address: process.env.MAIL_ACCOUNT_NOREPLY_USER
           }
         });
       } catch (emailError: any) {

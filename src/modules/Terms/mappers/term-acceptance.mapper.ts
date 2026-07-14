@@ -24,6 +24,7 @@ export class TermAcceptanceMapper {
             terms_uuid: data.terms_uuid.uuid,
             transaction_uuid: data.transaction_uuid ? data.transaction_uuid.uuid : null,
             accepted_at: data.accepted_at,
+            snapshot_html: data.snapshot_html,
             ip_address: data.ip_address || null,
             user_agent: data.user_agent || null,
         };
