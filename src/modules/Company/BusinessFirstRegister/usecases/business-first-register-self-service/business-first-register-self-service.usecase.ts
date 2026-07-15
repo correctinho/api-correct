@@ -1,5 +1,6 @@
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { CustomError } from "../../../../../errors/custom.error";
+import { IMailProvider } from "../../../../../infra/providers/MailProvider/models/IMailProvider";
 import { BenefitsEntity } from "../../../../benefits/entities/benefit.entity";
 import { IBenefitsRepository } from "../../../../benefits/repositories/benefit.repository";
 import { BranchEntity } from "../../../../branch/entities/branch.entity";
@@ -15,6 +16,7 @@ export class CreateBusinessRegisterSelfServiceUsecase {
     private businessRegisterRepository: IBusinessFirstRegisterRepository,
     private companyDataRepository: ICompanyDataRepository,
     private branchRepository: IBranchRepository,
+    private mailProvider: IMailProvider
   ) { }
 
   async execute(data: InputBusinessFirstRegisterDTO): Promise<OutputBusinessFirstRegisterDTO> {
@@ -56,6 +58,11 @@ export class CreateBusinessRegisterSelfServiceUsecase {
       partnerConfigEntity.changeItemsUuid(mainBranchDetails.benefits_uuid);
 
       const response = await this.businessRegisterRepository.saveSelfServicePartner(register, partnerConfigEntity);
+
+      // ==========================================
+      this.sendNotifications(register).catch(err => {
+        console.error("[CreateBusinessRegister] Falha silenciosa no envio de emails:", err);
+      });
       return response;
 
     } else if (register.business_type === 'empregador') {
@@ -73,6 +80,66 @@ export class CreateBusinessRegisterSelfServiceUsecase {
       verifiedBranches.push(findBranch);
     }
     return verifiedBranches;
+  }
+
+  private async sendNotifications(register: BusinessRegisterEntity): Promise<void> {
+    const senderAddress = process.env.MAIL_ACCOUNT_NOREPLY_USER;
+    const adminAlertEmail = process.env.ADMIN_ALERT_EMAIL; // <-- Crie isso no seu .env
+
+    if (!senderAddress) {
+      console.warn("Remetente (MAIL_ACCOUNT_NOREPLY_USER) não configurado. E-mails não foram enviados.");
+      return;
+    }
+
+    // 1. E-mail para a Empresa (Lojista)
+    const partnerSubject = "Bem-vindo à Correct! Falta pouco para ativar seu cadastro.";
+    const partnerBody = `
+        <div style="font-family: sans-serif; color: #333;">
+            <h2>Olá, equipe da ${register.fantasy_name}!</h2>
+            <p>Recebemos o seu pré-cadastro com sucesso na plataforma Correct.</p>
+            <p>Para liberar o seu acesso ao painel de parceiro e começar a aproveitar nossos benefícios, é necessário realizar o pagamento da taxa de adesão via PIX.</p>
+            <p>Se você já realizou o pagamento através da tela de sucesso, ignore este e-mail. Caso contrário, acesse a plataforma para gerar o seu QR Code.</p>
+            <br/>
+            <p>Abraços,</p>
+            <p><strong>Equipe Correct</strong></p>
+        </div>
+    `;
+
+    const sendToPartner = this.mailProvider.sendMail({
+      to: register.email,
+      subject: partnerSubject,
+      body: partnerBody,
+      from: { name: "Plataforma Correct", address: senderAddress }
+    });
+
+    // 2. E-mail para o Admin da Correct (Alerta Interno)
+    let sendToAdmin = Promise.resolve(); // Promessa vazia por padrão
+    if (adminAlertEmail) {
+      const adminSubject = `🚨 Novo Pré-cadastro: ${register.fantasy_name}`;
+      const adminBody = `
+            <div style="font-family: sans-serif; color: #333;">
+                <h2>Novo Lojista Registrado (Aguardando PIX)</h2>
+                <ul>
+                    <li><strong>Fantasia:</strong> ${register.fantasy_name}</li>
+                    <li><strong>Razão Social:</strong> ${register.corporate_reason}</li>
+                    <li><strong>Documento:</strong> ${register.document}</li>
+                    <li><strong>E-mail:</strong> ${register.email}</li>
+                    <li><strong>Telefone:</strong> ${register.phone_1}</li>
+                </ul>
+                <p>O status atual da empresa é: <b>AGUARDANDO PAGAMENTO</b>.</p>
+            </div>
+        `;
+
+      sendToAdmin = this.mailProvider.sendMail({
+        to: adminAlertEmail,
+        subject: adminSubject,
+        body: adminBody,
+        from: { name: "Notificações Syscorrect", address: senderAddress }
+      });
+    }
+
+    // Dispara os dois simultaneamente e aguarda a conclusão
+    await Promise.allSettled([sendToPartner, sendToAdmin]);
   }
 
 

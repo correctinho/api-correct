@@ -15,8 +15,8 @@ export type BusinessRegisterProps = {
 
   //businessinfo
   address_fk_uuid: string
-  fantasy_name: string
-  corporate_reason: string | null
+  fantasy_name: string | null
+  corporate_reason: string
   document: string
   classification: string
   colaborators_number: number
@@ -98,7 +98,8 @@ export class BusinessRegisterEntity {
     if (!this.city) throw new CustomError("City is required", 400)
     if (!this.state) throw new CustomError("State is required", 400)
     if (!this.country) throw new CustomError("Country is required", 400)
-    if (!this.fantasy_name) throw new CustomError("Fantasy name is required", 400)
+    //if (!this.fantasy_name) throw new CustomError("Fantasy name is required", 400)
+    if (!this.corporate_reason) throw new CustomError("Razão Social é obrigatório", 400)
     if (!this.document) throw new CustomError("Document is required", 400)
     if (!this.classification) throw new CustomError("Company classification is required", 400)
     if (!this.colaborators_number) throw new CustomError("Total employees is required", 400)
@@ -109,7 +110,7 @@ export class BusinessRegisterEntity {
     if (this.business_type === 'autonomo_comercio' || this.business_type === 'comercio') {
       // A verificação `!this.branches_uuid.length` é mais segura do que `[0] === ''`
       if (!this.branches_uuid || !this.branches_uuid.length || this.branches_uuid[0] === '') {
-        throw new CustomError("Business branch is required", 400);
+        throw new CustomError("Ramo do negócio é necessário", 400);
       }
     }
 

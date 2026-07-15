@@ -5,16 +5,45 @@ const formatDateComponent = (component: number): string => {
   return component.toString().padStart(2, '0');
 };
 
-// Função para formatar uma data em string no formato desejado
-const formatDateToString = (date: Date): string => {
-  const day = formatDateComponent(date.getDate());
-  const month = formatDateComponent(date.getMonth() + 1);
-  const year = `${date.getFullYear()}`;
-  const h = formatDateComponent(date.getHours());
-  const m = formatDateComponent(date.getMinutes());
-  const s = formatDateComponent(date.getSeconds());
+// // Função para formatar uma data em string no formato desejado
+// const formatDateToString = (date: Date): string => {
+//   const day = formatDateComponent(date.getDate());
+//   const month = formatDateComponent(date.getMonth() + 1);
+//   const year = `${date.getFullYear()}`;
+//   const h = formatDateComponent(date.getHours());
+//   const m = formatDateComponent(date.getMinutes());
+//   const s = formatDateComponent(date.getSeconds());
 
-  return `${year}-${month}-${day}T${h}:${m}:${s}`;
+//   return `${year}-${month}-${day}T${h}:${m}:${s}`;
+// };
+
+const formatDateToString = (date: Date): string => {
+  // Gera uma string no formato 'YYYY-MM-DDTHH:mm:ss' já ajustada para o fuso brasileiro
+  const formatter = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(date);
+
+  // Extrai as partes para montar a sua string customizada exatamente no seu padrão
+  const getPart = (type: string) => parts.find((p) => p.type === type)?.value;
+
+  const year = getPart('year');
+  const month = getPart('month');
+  const day = getPart('day');
+  const hour = getPart('hour');
+  const minute = getPart('minute');
+  const second = getPart('second');
+
+  // Mantém exatamente o padrão que já está no seu banco: "YYYY-MM-DDTHH:mm:ss"
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
 };
 
 export const newDateF = (date: Date): string => {
@@ -24,22 +53,38 @@ export const newDateF = (date: Date): string => {
   return formatDateToString(date);
 };
 
+// export const calculateHourDifference = async (olderDateString: string, newestDateString: string): Promise<number> => {
+//   const parseDate = (dateString: string): Date => {
+//     const [datePart, timePart] = dateString.split('T');
+//     const [day, month, year] = datePart.split('/').map(Number);
+//     const [hour, minute, second] = timePart.split(':').map(Number);
+//     return new Date(year, month - 1, day, hour, minute, second);
+//   };
+
+//   const date1 = parseDate(olderDateString);
+//   const date2 = parseDate(newestDateString);
+//   const differenceInMs = date2.getTime() - date1.getTime();
+//   const differenceInHours = differenceInMs / (1000 * 60 * 60);
+
+//   return differenceInHours;
+// };
+
 export const calculateHourDifference = async (olderDateString: string, newestDateString: string): Promise<number> => {
   const parseDate = (dateString: string): Date => {
     const [datePart, timePart] = dateString.split('T');
-    const [day, month, year] = datePart.split('/').map(Number);
+    // Usa split no traço, pois é assim que a formatDateToString salva!
+    const [year, month, day] = datePart.split('-').map(Number);
     const [hour, minute, second] = timePart.split(':').map(Number);
+    // IMPORTANTE: no JS, os meses começam em 0 (Janeiro = 0, Fevereiro = 1, etc.)
     return new Date(year, month - 1, day, hour, minute, second);
   };
 
   const date1 = parseDate(olderDateString);
   const date2 = parseDate(newestDateString);
   const differenceInMs = date2.getTime() - date1.getTime();
-  const differenceInHours = differenceInMs / (1000 * 60 * 60);
 
-  return differenceInHours;
+  return differenceInMs / (1000 * 60 * 60);
 };
-
 export const addDaysToDate = async (dateString: string, daysToAdd: number): Promise<string> => {
   const parseDate = (dateString: string): Date => {
     const [datePart, timePart] = dateString.split('T');

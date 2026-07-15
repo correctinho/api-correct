@@ -4,6 +4,7 @@ import { businessRegisterSelfServiceController } from "../../modules/Company/Bus
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
 import { businessRegisterByCorrectController } from "../../modules/Company/BusinessFirstRegister/usecases/business-first-register-by-correct";
 import { generateOnboardingPixController } from "../../modules/Company/onboarding/usecases/generate-onboarding-pix";
+import { checkBusinessStatusController } from "../../modules/Company/BusinessFirstRegister/usecases/check-business-status";
 // import { deleteCompanyDataController } from "../../modules/Company/CompanyData/usecases/delete-company-data";
 
 export const businessRegisterRouter = Router()
@@ -21,4 +22,9 @@ businessRegisterRouter.post('/business/register/correct', correctIsAuth, async (
 //generate onboarding pix
 businessRegisterRouter.post('/business/:uuid/onboarding-pix', async (request, response) => {
     await generateOnboardingPixController.handle(request, response)
+})
+
+//check business status
+businessRegisterRouter.get('/business/check/:document', async (request, response) => {
+    await checkBusinessStatusController.handle(request, response)
 })

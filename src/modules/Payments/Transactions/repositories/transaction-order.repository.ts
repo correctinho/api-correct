@@ -1,3 +1,4 @@
+import { CorrectAccountEventType } from '@prisma/client';
 import RepositoryInterface from '../../../../@shared/domain/repository/repository-interface';
 import { Uuid } from '../../../../@shared/ValueObjects/uuid.vo';
 import { CalculateSplitPrePaidOutput } from '../../../../paymentSplit/prePaidSplit';
@@ -136,4 +137,9 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
   executeRolloverTransaction(
     updates: RolloverTransactionData[]
   ): Promise<number>; // Retorna o total de colaboradores atualizados
+  registerPlatformRevenue(
+    amountInCents: number,
+    eventType: CorrectAccountEventType,
+    transactionUuid: string
+  ): Promise<void>;
 }

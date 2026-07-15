@@ -1,11 +1,13 @@
 import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
 import { CustomError } from '../../../../../errors/custom.error';
 import { ITransactionOrderRepository } from '../../../Transactions/repositories/transaction-order.repository';
-import { TransactionStatus, TransactionType } from '@prisma/client';
+import { BusinessStatus, CorrectAccountEventType, TransactionStatus, TransactionType } from '@prisma/client';
 import { newDateF } from '../../../../../utils/date';
 import { TransactionEntity } from '../../../Transactions/entities/transaction-order.entity';
 import { ISubscriptionRepository } from '../../../SubscriptionsPlans/repositories/subscription.repository';
 import { IAppUserItemRepository } from '../../../../AppUser/AppUserManagement/repositories/app-user-item-repository';
+import { ICompanyDataRepository } from '../../../../Company/CompanyData/repositories/company-data.repository';
+import { IMailProvider } from '../../../../../infra/providers/MailProvider/models/IMailProvider';
 
 // Tipagem do payload do Sicredi
 export interface SicrediPix {
@@ -29,8 +31,10 @@ export class ProcessPixWebhookUsecase {
     constructor(
         private readonly transactionRepository: ITransactionOrderRepository,
         private readonly subscriptionRepository: ISubscriptionRepository,
-        private readonly userItemRepository: IAppUserItemRepository
-    ) {}
+        private readonly userItemRepository: IAppUserItemRepository,
+        private readonly businessRepository: ICompanyDataRepository,
+        private readonly mailProvider: IMailProvider
+    ) { }
 
     public async execute(payload: SicrediPixWebhookPayload): Promise<void> {
         console.log('\n✅✅✅ WEBHOOK DO SICREDI RECEBIDO! ✅✅✅');
@@ -109,6 +113,12 @@ export class ProcessPixWebhookUsecase {
                     case 'SUBSCRIPTION_PAYMENT' as TransactionType: // Casting se necessário
                         // Ou se você importou o enum: case TransactionType.SUBSCRIPTION_PAYMENT:
                         await this.processSubscriptionPayment(
+                            transaction,
+                            pixPayment
+                        );
+                        break;
+                    case TransactionType.ONBOARDING_PIX:
+                        await this.processOnboardingPix(
                             transaction,
                             pixPayment
                         );
@@ -232,7 +242,6 @@ export class ProcessPixWebhookUsecase {
             // ou para marcar como fraude.
             throw new CustomError(errorMessage, 400);
         }
-        console.log(transaction)
         // 2. Validar se a transação tem os vínculos necessários
         if (!transaction.subscription_uuid || !transaction.user_item_uuid) {
             const errorMessage = `ERRO: Transação de assinatura ${transaction.uuid.uuid} sem subscription_uuid ou user_item_uuid vinculado.`;
@@ -284,5 +293,119 @@ export class ProcessPixWebhookUsecase {
         console.log(
             `✅ SUCESSO: Pagamento de assinatura processado e serviço liberado.`
         );
+    }
+
+    /**
+     * Processa o pagamento da Taxa de Adesão (Onboarding) de um novo Lojista.
+     * Atualiza a transação para SUCCESS e altera o status do BusinessInfo para pending_approval.
+     */
+    private async processOnboardingPix(
+        transaction: TransactionEntity,
+        pixPayment: SicrediPix
+    ): Promise<void> {
+        console.log(`Iniciando processamento de ONBOARDING_PIX para a transação ${transaction.uuid.uuid}`);
+
+        const receivedAmountInCents = Math.round(parseFloat(pixPayment.valor) * 100);
+        const expectedAmountInCents = Math.round(transaction.net_price);
+
+        if (receivedAmountInCents !== expectedAmountInCents) {
+            throw new CustomError(`ERRO DE VALOR para ONBOARDING_PIX. Esperado: ${expectedAmountInCents}, Recebido: ${receivedAmountInCents}`, 400);
+        }
+
+        if (!transaction.payer_business_info_uuid) {
+            throw new CustomError(`ERRO: Transação sem payer_business_info_uuid.`, 500);
+        }
+
+        const paidAtString = newDateF(new Date(pixPayment.horario));
+        transaction.setPixPaymentDetails(pixPayment.endToEndId, paidAtString);
+        await this.transactionRepository.upsert(transaction);
+
+        // ==========================================
+        // Registro da Receita 
+        // ==========================================
+        await this.transactionRepository.registerPlatformRevenue(
+            expectedAmountInCents,
+            CorrectAccountEventType.ONBOARDING_REVENUE,
+            transaction.uuid.uuid
+        );
+        console.log(`Receita registrada na Correct Account para a transação ${transaction.uuid.uuid}`);
+
+        // Atualizar status da empresa
+        await this.businessRepository.updateStatus(
+            transaction.payer_business_info_uuid.uuid,
+            'pending_approval'
+        );
+        console.log(`✅ SUCESSO: Empresa ativada para pending_approval.`);
+
+        // ==========================================
+        // Disparo de Notificações (Em Background)
+        // ==========================================
+        const company = await this.businessRepository.findById(transaction.payer_business_info_uuid.uuid);
+
+        if (company) {
+            this.sendPaymentNotifications(company, expectedAmountInCents).catch(err => {
+                console.error("[Webhook] Falha silenciosa no envio de emails de pagamento:", err);
+            });
+        }
+    }
+
+    private async sendPaymentNotifications(company: any, amountInCents: number): Promise<void> {
+        const senderAddress = process.env.MAIL_ACCOUNT_NOREPLY_USER;
+        const adminAlertEmail = process.env.ADMIN_ALERT_EMAIL;
+
+        if (!senderAddress) {
+            console.warn("Remetente (MAIL_ACCOUNT_NOREPLY_USER) não configurado. E-mails não foram enviados.");
+            return;
+        }
+
+        const valorReais = (amountInCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        // 1. E-mail para a Empresa (Lojista)
+        const partnerSubject = "Pagamento Recebido! Sua conta está em análise.";
+        const partnerBody = `
+            <div style="font-family: sans-serif; color: #333;">
+                <h2>Olá, equipe da ${company.fantasy_name}!</h2>
+                <p>Recebemos a confirmação do seu pagamento via PIX no valor de <strong>${valorReais}</strong>.</p>
+                <p>O seu status atual agora é <b>Em Análise</b>.</p>
+                <p>A nossa equipe já foi notificada e está revisando as suas informações. Em breve, você receberá as instruções finais para acessar o seu painel de parceiro.</p>
+                <br/>
+                <p>Abraços,</p>
+                <p><strong>Equipe Correct</strong></p>
+            </div>
+        `;
+
+        const sendToPartner = this.mailProvider.sendMail({
+            to: company.email,
+            subject: partnerSubject,
+            body: partnerBody,
+            from: { name: "Plataforma Correct", address: senderAddress }
+        });
+
+        // 2. E-mail para o Admin da Correct (Alerta Interno)
+        let sendToAdmin = Promise.resolve();
+        if (adminAlertEmail) {
+            const adminSubject = `✅ PIX Confirmado: ${company.fantasy_name}`;
+            const adminBody = `
+                <div style="font-family: sans-serif; color: #333;">
+                    <h2>Pagamento de Taxa de Adesão Confirmado</h2>
+                    <p>O lojista efetuou o pagamento e o status no banco foi alterado para <b>pending_approval</b>.</p>
+                    <ul>
+                        <li><strong>Fantasia:</strong> ${company.fantasy_name}</li>
+                        <li><strong>Documento:</strong> ${company.document}</li>
+                        <li><strong>Valor Pago:</strong> ${valorReais}</li>
+                    </ul>
+                    <p>Por favor, acesse o painel administrativo para validar os dados e liberar o acesso final da loja.</p>
+                </div>
+            `;
+
+            sendToAdmin = this.mailProvider.sendMail({
+                to: adminAlertEmail,
+                subject: adminSubject,
+                body: adminBody,
+                from: { name: "Notificações Syscorrect", address: senderAddress }
+            });
+        }
+
+        await Promise.allSettled([sendToPartner, sendToAdmin]);
     }
 }
