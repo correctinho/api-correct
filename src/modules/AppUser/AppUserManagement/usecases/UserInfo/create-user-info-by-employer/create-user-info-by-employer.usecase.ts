@@ -40,7 +40,7 @@ export class CreateAppUserInfoByEmployerUsecase {
 
     //get debit benefit
     const benefit = await this.benefitsRepository.findByName("Correct")
-    if (!benefit) throw new CustomError("Correct benefit not found", 404)
+    if (!benefit) throw new CustomError("Correct benefit not found", 500)
     //set debit benefit
     userInfoEntity.setDebitBenefitUuid(benefit.uuid)
 
@@ -50,7 +50,7 @@ export class CreateAppUserInfoByEmployerUsecase {
 
     for (const employerItem of employerActiveItems) {
       const group = (employerItem.BenefitGroups.find(group => group.is_default === true))
-      const employeeItemEntityData: AppUserItemCreateCommand  = {
+      const employeeItemEntityData: AppUserItemCreateCommand = {
         user_info_uuid: userInfoEntity.uuid,
         business_info_uuid: userInfoEntity.business_info_uuid,
         item_uuid: new Uuid(employerItem.item_uuid),
@@ -78,7 +78,7 @@ export class CreateAppUserInfoByEmployerUsecase {
     }
     if (existingUserInfo && !isEmployee) {
       userInfoEntity.changeUuid(new Uuid(existingUserInfo.uuid))
-      
+
       //create only employee data
       await this.appUserInfoRepository.createEmployeeAndItems(userInfoEntity, employeeItemsArray)
     }
