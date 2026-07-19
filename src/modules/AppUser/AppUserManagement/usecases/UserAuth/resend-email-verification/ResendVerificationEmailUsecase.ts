@@ -11,13 +11,14 @@ export class ResendVerificationEmailUsecase {
     constructor(
         private appUserAuthRepository: IAppUserAuthRepository,
         private mailProvider: IMailProvider
-    ) {}
+    ) { }
 
     async execute(document: string) {
-        if(!document) throw new CustomError("Documento é obrigatório.", 400);
+        console.log(document)
+        if (!document) throw new CustomError("Documento é obrigatório.", 400);
         // 1. Buscar o usuário pelo e-mail
         const userEntity = await this.appUserAuthRepository.findByDocument(document);
-
+        console.log(userEntity)
         const email = userEntity.email
         if (!userEntity || userEntity.is_email_verified) {
             console.log(`[ResendVerification] Tentativa para ${email}, mas usuário não existe ou já está verificado. Ignorando.`);
@@ -30,15 +31,14 @@ export class ResendVerificationEmailUsecase {
 
         // 3. Salvar o novo token no banco de dados
         await this.appUserAuthRepository.update(userEntity);
-
-
+        console.log("Atualizou...")
         // 4. Reenviar o E-mail (Lógica similar ao SignUp)
         try {
-             if (!userEntity.email_verification_token) {
-                 throw new Error("Falha ao gerar novo token.");
-             }
+            if (!userEntity.email_verification_token) {
+                throw new Error("Falha ao gerar novo token.");
+            }
 
-             const frontendBaseUrl = process.env.FRONTEND_URL;
+            const frontendBaseUrl = process.env.FRONTEND_URL;
 
             if (!frontendBaseUrl) {
                 // Log de erro crítico para o desenvolvedor (não vaza para o cliente)
@@ -47,11 +47,11 @@ export class ResendVerificationEmailUsecase {
                 );
                 return;
             }
-             const validationRoute = '/validar-email';
-             const validationLink = `${frontendBaseUrl}${validationRoute}?token=${userEntity.email_verification_token}`;
+            const validationRoute = '/validar-email';
+            const validationLink = `${frontendBaseUrl}${validationRoute}?token=${userEntity.email_verification_token}`;
 
-             // (Idealmente, extrair este template para um arquivo compartilhado para não duplicar código)
-             const emailBody = `
+            // (Idealmente, extrair este template para um arquivo compartilhado para não duplicar código)
+            const emailBody = `
                  <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
                      <h2>Olá novamente!</h2>
                      <p>Você solicitou um novo link de verificação para sua conta no MegaApp.</p>
@@ -67,7 +67,7 @@ export class ResendVerificationEmailUsecase {
                  </div>
              `;
 
-             await this.mailProvider.sendMail({
+            await this.mailProvider.sendMail({
                 to: userEntity.email,
                 subject: "Confirme seu email",
                 body: emailBody,
@@ -76,18 +76,18 @@ export class ResendVerificationEmailUsecase {
                     name: 'Equipe MegaApp',
                     address: 'nao-responda@correct.com.br'
                 }
-});
+            });
 
-             console.log(`[ResendVerification] Novo e-mail enviado para ${email}`);
+            console.log(`[ResendVerification] Novo e-mail enviado para ${email}`);
 
-             return {
+            return {
                 email: userEntity.email
-             }
+            }
 
         } catch (error) {
-             console.error(`[ResendVerification] ERRO CRÍTICO ao enviar para ${email}:`, error);
-             // Aqui podemos lançar erro, pois o usuário solicitou ativamente e falhou.
-             throw new CustomError("Erro ao tentar reenviar o e-mail. Tente novamente mais tarde.", 500);
+            console.error(`[ResendVerification] ERRO CRÍTICO ao enviar para ${email}:`, error);
+            // Aqui podemos lançar erro, pois o usuário solicitou ativamente e falhou.
+            throw new CustomError("Erro ao tentar reenviar o e-mail. Tente novamente mais tarde.", 500);
         }
     }
 }
