@@ -23,10 +23,10 @@ export class AppUserAuthSignUpUsecase {
         ]);
 
         //check if app user is already registered by document
-        if (findUserByDocument) throw new CustomError("User already has an account", 409)
+        if (findUserByDocument) throw new CustomError("Usuário já cadastrado", 409)
 
         //find user by email
-        if (findUserByEmail) throw new CustomError("Email already in use", 409)
+        if (findUserByEmail) throw new CustomError("Email já cadastrado", 409)
 
         //check if user was already previously registered
         const findUser = await this.appUserInfoRepository.findByDocumentUserInfo(authEntity.document)
