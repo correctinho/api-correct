@@ -73,7 +73,7 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
                 document: data.document,
             },
             data: {
-                user_info_uuid: data.user_info_uuid.uuid,
+                user_info_uuid: data.user_info_uuid ? data.user_info_uuid.uuid : null,
                 document: data.document,
                 email: data.email,
                 email_verification_expires_at:
@@ -85,7 +85,6 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
         });
     }
     async updatePassword(data: AppUserAuthSignUpEntity): Promise<void> {
-        console.log("Updating password for user:", data);
         await prismaClient.userAuth.update({
             where: {
                 // Usamos o UUID para garantir que estamos alterando o usuário correto
@@ -134,7 +133,6 @@ export class AppUserAuthPrismaRepository implements IAppUserAuthRepository {
             where: { document: document },
         });
         if (!appUser) return null;
-
         // Cria o objeto de props (CORRIGIDO: Adicionados campos faltantes)
         const props = {
             uuid: new Uuid(appUser.uuid),
