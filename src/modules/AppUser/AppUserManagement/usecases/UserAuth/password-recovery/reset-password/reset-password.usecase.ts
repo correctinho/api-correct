@@ -8,7 +8,7 @@ export class ResetPasswordUsecase {
     constructor(
         private appUserAuthRepository: IAppUserAuthRepository,
         // private passwordCrypto: IPasswordCrypto // Removido: a responsabilidade do hash é da entidade
-    ) {}
+    ) { }
 
     async execute({ token, newPassword }: ResetPasswordDTO): Promise<void> {
         // 1. Validações básicas de entrada
@@ -29,7 +29,6 @@ export class ResetPasswordUsecase {
 
         // 3. Buscar o usuário no banco
         const userEntity = await this.appUserAuthRepository.find(userUuid);
-        console.log('User entity fetched for password reset:', userEntity);
         if (!userEntity) {
             throw new CustomError("Usuário não encontrado.", 404);
         }
@@ -45,10 +44,10 @@ export class ResetPasswordUsecase {
 
         // b) Verifica a expiração salva no banco comparando com a hora atual do servidor.
         if (!userEntity.password_reset_expires_at || new Date() > userEntity.password_reset_expires_at) {
-             // Opcional: Limpar o token expirado por segurança e salvar
-             userEntity.clearPasswordResetToken();
-             await this.appUserAuthRepository.updatePassword(userEntity);
-             throw new CustomError("O link de redefinição expirou. Por favor, solicite um novo.", 400);
+            // Opcional: Limpar o token expirado por segurança e salvar
+            userEntity.clearPasswordResetToken();
+            await this.appUserAuthRepository.updatePassword(userEntity);
+            throw new CustomError("O link de redefinição expirou. Por favor, solicite um novo.", 400);
         }
         // ---------------------------------------------------------
 

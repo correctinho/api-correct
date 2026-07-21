@@ -127,7 +127,7 @@ async findStatuses(id: Uuid): Promise<DocumentValidationEntity | null> {
                 if (areAllDocumentsInValidState) {
                     userInfoUpdateData.status = Status.active;
                 } else {
-                    userInfoUpdateData.status = Status.inactive
+                    userInfoUpdateData.status = Status.pending
                   }
 
                 // 3. Atualizar UserInfo
