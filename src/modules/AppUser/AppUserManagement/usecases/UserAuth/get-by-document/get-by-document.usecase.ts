@@ -122,7 +122,7 @@ export class GetByDocumentUsecase {
                 };
             }
 
-            status = getUserInfo.status === 'active' ? true : false
+            status = true; // status = getUserInfo.status === 'active' ? true : false
     
             if (!getUserInfo.address_uuid) {
                 status = false;
