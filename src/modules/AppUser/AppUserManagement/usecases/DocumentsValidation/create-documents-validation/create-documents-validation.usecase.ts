@@ -76,9 +76,7 @@ export class CreateDocumentsValidationUsecase {
 
             } catch (uploadError: any) {
                 console.error(`[CREATE_DOC_VAL] Falha no upload de ${documentType} para storage:`, uploadError);
-                // Se o upload falhar, marca o status como denied e limpa a URL
-                setEntityStatus(UserDocumentValidationStatus.denied);
-                setEntityUrl(null);
+                throw new CustomError(`Failed to upload ${documentType} to storage.`, 500);
             }
         };
         // 4. Processar todos os documentos em paralelo
