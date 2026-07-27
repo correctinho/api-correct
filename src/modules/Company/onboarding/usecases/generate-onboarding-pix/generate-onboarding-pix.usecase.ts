@@ -34,12 +34,11 @@ export class GenerateOnboardingPixUseCase {
         if (!pixKey) {
             throw new CustomError("Chave PIX não configurada no servidor", 500);
         }
-        console.log(pixKey)
 
         // 1. Chama a integração real
         const chargeResult = await this.pixProvider.createImmediateCharge({
             cpf: businessInfo.document,
-            nome: businessInfo.fantasy_name,
+            nome: businessInfo.fantasy_name ? businessInfo.fantasy_name : businessInfo.corporate_reason,
             valor: valorString,
             chave: pixKey,
             solicitacaoPagador: "Taxa de Adesão"

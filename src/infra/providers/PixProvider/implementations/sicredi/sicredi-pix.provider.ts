@@ -10,6 +10,7 @@ import {
 } from '../../IPixProvider';
 import { createSicrediAxiosClient } from '../../../../axios/sicredi-api';
 import redisClient from '../../../../redis/redis.client';
+import { CustomError } from '../../../../../errors/custom.error';
 
 export class SicrediPixProvider implements IPixProvider {
     private apiClient: AxiosInstance;
@@ -108,36 +109,104 @@ export class SicrediPixProvider implements IPixProvider {
             throw new Error('Falha ao registrar webhook no Sicredi.');
         }
     }
+    // public async createImmediateCharge(
+    //     chargeData: PixChargeCreationData
+    // ): Promise<PixChargeCreationResult> {
+    //     const token = await this.getAccessToken();
+
+    //     const expirationSeconds = chargeData.expiracaoSegundos || 3600;
+
+    //     // 1. Limpa o documento garantindo que só passem números
+    //     // Nota: Mesmo que a interface se chame 'cpf', ela está recebendo o document genérico do UseCase
+    //     const rawDocument = chargeData.cpf || '';
+    //     const cleanDocument = rawDocument.replace(/\D/g, '');
+    //     const isCnpj = cleanDocument.length === 14;
+
+    //     console.log("chargeData:", chargeData)
+
+    //     return
+    //     // 2. Limita o nome para evitar recusa por nomes muito longos (regra da API Pix)
+    //     const safeName = chargeData.nome ? chargeData.nome.substring(0, 100) : '';
+
+
+    //     const requestBody = {
+    //         calendario: { expiracao: expirationSeconds },
+    //         devedor: {
+    //             ...(isCnpj ? { cnpj: cleanDocument } : { cpf: cleanDocument }),
+    //             nome: safeName, // ← Aqui entra o nome seguro
+    //         },
+    //         valor: {
+    //             original: chargeData.valor,
+    //         },
+    //         chave: chargeData.chave,
+    //         solicitacaoPagador:
+    //             chargeData.solicitacaoPagador || 'Pagamento via Syscorrect',
+    //     };
+
+    //     try {
+    //         const response = await this.apiClient.post(
+    //             `/api/v2/cob`,
+    //             requestBody,
+    //             { headers: { Authorization: `Bearer ${token}` } }
+    //         );
+
+    //         const bankCreatedAt = new Date(response.data.calendario.criacao); // Ex: 14:56:40
+    //         const bankExpirationSeconds = response.data.calendario.expiracao; // Ex: 3600
+
+    //         // Soma os segundos à data de criação
+    //         const realExpirationDate = new Date(
+    //             bankCreatedAt.getTime() + (bankExpirationSeconds * 1000)
+    //         );
+    //         // Retornamos os dados no formato do DTO genérico da interface
+    //         return {
+    //             txid: response.data.txid,
+    //             pixCopiaECola: response.data.pixCopiaECola,
+    //             expirationDate: realExpirationDate
+    //         };
+    //     } catch (error: any) {
+    //         console.error(
+    //             'ERRO ao criar cobrança PIX no Sicredi:',
+    //             error.response?.data || error.message
+    //         );
+    //         throw new Error('Falha ao criar cobrança PIX no Sicredi.');
+    //     }
+    // }
     public async createImmediateCharge(
         chargeData: PixChargeCreationData
     ): Promise<PixChargeCreationResult> {
         const token = await this.getAccessToken();
-
         const expirationSeconds = chargeData.expiracaoSegundos || 3600;
 
         // 1. Limpa o documento garantindo que só passem números
-        // Nota: Mesmo que a interface se chame 'cpf', ela está recebendo o document genérico do UseCase
         const rawDocument = chargeData.cpf || '';
         const cleanDocument = rawDocument.replace(/\D/g, '');
         const isCnpj = cleanDocument.length === 14;
 
-        // 2. Limita o nome para evitar recusa por nomes muito longos (regra da API Pix)
-        const safeName = chargeData.nome ? chargeData.nome.substring(0, 100) : '';
+        // 2. Limita o nome e remove espaços em branco (evita nomes vazios "   ")
+        const safeName = chargeData.nome ? chargeData.nome.trim().substring(0, 100) : '';
 
-
-        const requestBody = {
+        // 3. Monta o corpo base da requisição (sem o devedor inicialmente)
+        const requestBody: any = {
             calendario: { expiracao: expirationSeconds },
-            devedor: {
-                ...(isCnpj ? { cnpj: cleanDocument } : { cpf: cleanDocument }),
-                nome: safeName, // ← Aqui entra o nome seguro
-            },
             valor: {
                 original: chargeData.valor,
             },
             chave: chargeData.chave,
-            solicitacaoPagador:
-                chargeData.solicitacaoPagador || 'Pagamento via Syscorrect',
+            solicitacaoPagador: chargeData.solicitacaoPagador || 'Pagamento via Syscorrect',
         };
+
+        // 4. Regra de negócio do PIX: Só anexa o objeto 'devedor' se houver documento
+        if (cleanDocument) {
+            if (!safeName) {
+                // Bloqueio local: Evita gastar uma requisição HTTP se já sabemos que o Bacen vai recusar
+                throw new CustomError("API Sicredi exige: Se informado CPF/CNPJ, o 'nome' do devedor é obrigatório.", 400);
+            }
+
+            requestBody.devedor = {
+                ...(isCnpj ? { cnpj: cleanDocument } : { cpf: cleanDocument }),
+                nome: safeName,
+            };
+        }
 
         try {
             const response = await this.apiClient.post(
@@ -146,14 +215,13 @@ export class SicrediPixProvider implements IPixProvider {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            const bankCreatedAt = new Date(response.data.calendario.criacao); // Ex: 14:56:40
-            const bankExpirationSeconds = response.data.calendario.expiracao; // Ex: 3600
+            const bankCreatedAt = new Date(response.data.calendario.criacao);
+            const bankExpirationSeconds = response.data.calendario.expiracao;
 
-            // Soma os segundos à data de criação
             const realExpirationDate = new Date(
                 bankCreatedAt.getTime() + (bankExpirationSeconds * 1000)
             );
-            // Retornamos os dados no formato do DTO genérico da interface
+
             return {
                 txid: response.data.txid,
                 pixCopiaECola: response.data.pixCopiaECola,
@@ -167,14 +235,12 @@ export class SicrediPixProvider implements IPixProvider {
             throw new Error('Falha ao criar cobrança PIX no Sicredi.');
         }
     }
-
     public async getChargeByTxid(txid: string): Promise<ChargeDetailsResult> {
         const token = await this.getAccessToken();
 
         // O endpoint para consultar uma cobrança é /cob/{txid}
         const endpoint = `/api/v2/cob/${txid}`;
 
-        console.log(`SicrediPixProvider: Consultando cobrança com txid: ${txid}`);
 
         try {
             const response = await this.apiClient.get(endpoint, {
