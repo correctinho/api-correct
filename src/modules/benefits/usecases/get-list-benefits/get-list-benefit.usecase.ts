@@ -17,7 +17,7 @@ class OutputMapper {
     static toOutput(benefit: BenefitsEntity[]): OutputListBenefitDTO {
         return {
             benefits: benefit.map((benefit) => ({
-                uuid: benefit.uuid,
+                uuid: benefit.uuid.uuid,
                 name: benefit.name,
                 description: benefit.description,
                 item_type: benefit.item_type,

@@ -3,7 +3,7 @@ import { ItemCategory, ItemType } from "@prisma/client";
 
 export interface InputListCustomerDTO { }
 type Benefit = {
-    uuid: Uuid
+    uuid: string
     name: string
     description: string
     item_type: ItemType

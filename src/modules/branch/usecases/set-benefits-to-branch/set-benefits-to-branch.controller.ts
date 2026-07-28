@@ -7,7 +7,7 @@ export class SetBenefitsToBranchController {
   constructor(
     private branchRepository: IBranchRepository,
     private benefitsRepository: IBenefitsRepository
-  ) {}
+  ) { }
 
   async handle(req: Request, res: Response) {
     try {
@@ -18,6 +18,7 @@ export class SetBenefitsToBranchController {
         this.branchRepository,
         this.benefitsRepository
       );
+      console.log("benefit_uuids: ", benefits_uuids)
 
       await usecase.execute({
         branch_uuid: uuid,
@@ -26,6 +27,7 @@ export class SetBenefitsToBranchController {
 
       return res.status(204).send();
     } catch (err: any) {
+      console.log(err)
       return res.status(err.statusCode || 500).json({
         error: err.message || 'Internal Server Error',
       });

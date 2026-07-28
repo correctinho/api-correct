@@ -241,6 +241,7 @@ export class SicrediPixProvider implements IPixProvider {
         // O endpoint para consultar uma cobrança é /cob/{txid}
         const endpoint = `/api/v2/cob/${txid}`;
 
+        console.log(`SicrediPixProvider: Consultando cobrança com txid: ${txid}`);
 
         try {
             const response = await this.apiClient.get(endpoint, {
