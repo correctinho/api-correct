@@ -6,7 +6,7 @@ export interface CreatePendingPixTransactionDTO {
 }
 
 export interface IOnboardingPixRepository {
-    getBusinessInfo(uuid: string): Promise<{ uuid: string, status: string, document: string, fantasy_name: string } | null>;
+    getBusinessInfo(uuid: string): Promise<{ uuid: string, status: string, document: string, corporate_reason: string, fantasy_name: string } | null>;
     getSystemConfig(key: string): Promise<string | null>;
     createPendingTransaction(data: CreatePendingPixTransactionDTO): Promise<void>;
 }
