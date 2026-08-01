@@ -39,7 +39,8 @@ export class ApproveBusinessPrismaRepository implements IApproveBusinessReposito
 
       return {
         success: true,
-        message: 'Empresa aprovada e usuário administrador criado com sucesso.'
+        message: 'Empresa aprovada e usuário administrador criado com sucesso.',
+        business_type: business.business_type,
       };
     });
   }

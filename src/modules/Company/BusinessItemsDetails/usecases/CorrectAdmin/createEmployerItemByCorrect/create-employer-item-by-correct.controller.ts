@@ -13,9 +13,10 @@ export class CreateEmployerItemByCorrectController {
 
   ) { }
 
-  async handle(req: Request, res: Response){
-    try{
-      const data =  req.body
+  async handle(req: Request, res: Response) {
+    try {
+      const data = req.body
+      console.log(data)
       const usecase = new CreateEmployerItemByCorrectUsecase(
         this.itemDetailsRepository,
         this.benefitsRepository,
@@ -25,7 +26,8 @@ export class CreateEmployerItemByCorrectController {
       const result = await usecase.execute(data)
 
       return res.status(201).json(result)
-    }catch(err: any){
+    } catch (err: any) {
+      console.log(err)
       return res.status(err.statusCode).json({
         error: err.message
       })

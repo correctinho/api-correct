@@ -16,7 +16,7 @@ export class CreateBusinessRegisterController {
   async handle(req: Request, res: Response) {
     try {
       const data = req.body
-      if(req?.correctAdmin) data.correct_user_uuid = req.correctAdmin.correctAdminId
+      if (req?.correctAdmin) data.correct_user_uuid = req.correctAdmin.correctAdminId
 
       const businessRegisterUsecase = new CreateBusinessRegisterUsecase(
         this.businessRegisterRepository,
