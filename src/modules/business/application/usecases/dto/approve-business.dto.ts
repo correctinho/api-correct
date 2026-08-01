@@ -13,4 +13,5 @@ export interface ApproveBusinessOutputDto {
   success: boolean;
   message: string;
   temporary_password?: string;
+  business_type?: string;
 }
