@@ -15,10 +15,7 @@ export class CreateSubscriptionPlanUsecase {
   ) { }
 
   async execute(input: InputCreateSubscriptionPlanDto): Promise<OutputCreateSubscriptionPlanDto> {
-    console.log("entrou no usecase")
-    console.log(input)
     const itemUuid = new Uuid(input.item_uuid); // Converte string para VO primeiro para a busca
-    console.log(itemUuid)
     // 1. Validações Prévias (Fail Fast)
     // Verifica se o item existe no repositório de benefícios
     const item = await this.itemRepository.find(itemUuid);

@@ -919,32 +919,32 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
         };
     }
     async findSimpleListByBusiness(business_info_uuid: string): Promise<OutputGetSimpleEmployeesDTO[]> {
-    const employees = await prismaClient.employee.findMany({
-        where: {
-            business_info_uuid: business_info_uuid,
-            status: 'active' 
-        },
-        select: {
-            uuid: true,
-            job_title: true,
-            UserInfo: {
-                select: {
-                    full_name: true,
-                    UserItem: {
-                        where: {
-                            status: 'active' 
-                        },
-                        select: {
-                            uuid: true,
-                            item_uuid: true,   // Importante para saber de qual benefício é
-                            group_uuid: true   // Importante para saber o grupo atual
+        const employees = await prismaClient.employee.findMany({
+            where: {
+                business_info_uuid: business_info_uuid,
+                status: 'active'
+            },
+            select: {
+                uuid: true,
+                job_title: true,
+                UserInfo: {
+                    select: {
+                        full_name: true,
+                        UserItem: {
+                            where: {
+                                status: 'active'
+                            },
+                            select: {
+                                uuid: true,
+                                item_uuid: true,   // Importante para saber de qual benefício é
+                                group_uuid: true   // Importante para saber o grupo atual
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
 
-    return employees as unknown as OutputGetSimpleEmployeesDTO[]; 
-}
+        return employees as unknown as OutputGetSimpleEmployeesDTO[];
+    }
 }

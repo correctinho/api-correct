@@ -7,16 +7,16 @@ import { InputCreateUserInfoDTO } from "./dto/create-user-info.dto";
 import { IAppUserItemRepository } from "../../../repositories/app-user-item-repository";
 import { IBenefitsRepository } from "../../../../../benefits/repositories/benefit.repository";
 
-export class CreateUserInfoController{
+export class CreateUserInfoController {
     constructor(
         private appUserInfoRepository: IAppUserInfoRepository,
         private benefitsRepository: IBenefitsRepository
 
-    ){}
+    ) { }
 
-    async handle(req: Request, res: Response){
+    async handle(req: Request, res: Response) {
 
-        try{
+        try {
 
             const data = req.body as InputCreateUserInfoDTO
 
@@ -30,9 +30,8 @@ export class CreateUserInfoController{
 
             await userInfoUsecase.execute(data)
 
-            return res.status(201).json({sucess: "User info registered successfully"})
-        }catch(err: any){
-            console.log({err})
+            return res.status(201).json({ sucess: "User info registered successfully" })
+        } catch (err: any) {
             return res.status(err.statusCode).json({
                 error: err.message,
             });
