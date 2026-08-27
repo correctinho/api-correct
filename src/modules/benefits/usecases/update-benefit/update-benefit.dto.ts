@@ -19,6 +19,7 @@ export interface OutputUpdateBenefitDTO {
     item_category: ItemCategory
     parent_uuid: string | null
     business_info_uuid?: string | null
+    has_subscription: boolean
     created_at: string | null
     updated_at: string | null
 }
