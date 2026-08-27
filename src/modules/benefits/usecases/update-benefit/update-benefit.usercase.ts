@@ -34,6 +34,7 @@ export class UpdateBenefitUsecase {
             item_category: benefit.item_category,
             parent_uuid: benefit.parent_uuid ? benefit.parent_uuid.uuid : null,
             business_info_uuid: benefit.business_info_uuid ? benefit.business_info_uuid.uuid : null,
+            has_subscription: benefit.has_subscription,
             created_at: benefit.created_at,
             updated_at: benefit.updated_at
         }

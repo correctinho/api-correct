@@ -94,24 +94,29 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
     const item = await prismaClient.item.findUnique({
       where: {
         uuid: id.uuid,
+      },
+      include: {
+        SubscriptionPlan: {
+          select: { uuid: true }
+        }
       }
     });
 
     if (!item) return null
 
-    return {
+    return new BenefitsEntity({
       uuid: new Uuid(item.uuid),
       name: item.name,
-      img_url: item.img_url,
+      img_url: item.img_url ?? undefined,
       description: item.description,
       item_type: item.item_type,
       item_category: item.item_category,
-      parent_uuid: new Uuid(item.parent_uuid),
+      parent_uuid: item.parent_uuid ? new Uuid(item.parent_uuid) : null,
+      business_info_uuid: item.business_info_uuid ? new Uuid(item.business_info_uuid) : null,
+      has_subscription: item.SubscriptionPlan && item.SubscriptionPlan.length > 0,
       created_at: item.created_at,
-      updated_at: item.updated_at
-
-    } as BenefitsEntity
-
+      updated_at: item.updated_at ?? undefined
+    });
 
   }
 
