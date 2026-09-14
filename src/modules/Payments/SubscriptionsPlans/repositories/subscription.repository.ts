@@ -12,8 +12,8 @@ export interface ISubscriptionRepository extends RepositoryInterface<Subscriptio
   findActiveByUserAndPlan(userUuid: Uuid, planUuid: Uuid): Promise<SubscriptionEntity | null>;
   findActiveByBusinessAndPlan(businessUuid: Uuid, planUuid: Uuid): Promise<SubscriptionEntity | null>
   upsert(entity: SubscriptionEntity): Promise<void>;
-  // Busca todas as assinaturas ativas de um usuário
   findActiveByUser(userUuid: Uuid): Promise<SubscriptionEntity[]>;
+  findDetailedByUser(userUuid: Uuid): Promise<any[]>;
   findExpiredActiveSubscriptions(referenceDate: Date): Promise<SubscriptionEntity[]>;
   updateStatusBulk(uuids: Uuid[], newStatus: string): Promise<void>;
   executeCheckoutWithBalance(

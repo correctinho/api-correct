@@ -134,6 +134,25 @@ export class SubscriptionPrismaRepository implements ISubscriptionRepository {
         return raw.map((sub) => this.mapToDomain(sub));
     }
 
+    async findDetailedByUser(userUuid: Uuid): Promise<any[]> {
+        const raw = await prismaClient.subscription.findMany({
+            where: {
+                user_info_uuid: userUuid.uuid,
+            },
+            include: {
+                SubscriptionPlan: {
+                    include: {
+                        Item: true
+                    }
+                }
+            },
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
+        return raw;
+    }
+
     async findExpiredActiveSubscriptions(referenceDate: Date): Promise<SubscriptionEntity[]> {
     // 1. Executa a query no banco via Prisma
     const expiredSubscriptionsModels = await prismaClient.subscription.findMany({
