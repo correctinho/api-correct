@@ -7,4 +7,5 @@ export interface IBenefitsRepository extends RepositoryInterface<BenefitsEntity>
   findWithBranches(id: string):Promise<any[]>
   createCustomBenefit(benefit: BenefitsEntity, itemDetails: BusinessItemsDetailsEntity): Promise<void>
   findByBusiness(business_info_uuid: string, item_name: string): Promise<BenefitsEntity | null>
+  findProgramsByPayerType(payerType: 'USER' | 'EMPLOYER'): Promise<BenefitsEntity[]>
 }

@@ -4,20 +4,25 @@ import { CorrectAdminEntity } from "../../entities/correct-admin.entity"
 import { ICorrectAdminRepository } from "../../repositories/correct-admin.repository"
 
 
-export class CreateCorrectAdminUseCase{
+export class CreateCorrectAdminUseCase {
     constructor(
         private adminRepository: ICorrectAdminRepository
-    ){}
-    
-    async execute(data: InputCreateAdminDTO){
+    ) { }
+
+    async execute(data: InputCreateAdminDTO) {
         const admin = await CorrectAdminEntity.create(data)
 
         const adminExists = await this.adminRepository.findByUserName(data.userName)
 
-        if(adminExists) throw new CustomError("UserName already exists", 409,)
+        if (adminExists) throw new CustomError("UserName already exists", 409,)
 
-        await this.adminRepository.create(admin)
-    
+        if (!admin.isAdmin) {
+            await this.adminRepository.createCorrectUser(admin)
+        } else {
+            await this.adminRepository.create(admin)
+        }
+
+
         return {
             uuid: admin.uuid,
             name: admin.name,

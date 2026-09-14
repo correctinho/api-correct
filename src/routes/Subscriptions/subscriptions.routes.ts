@@ -7,6 +7,7 @@ import { hireUserSubscriptionByCorrectBalanceController } from "../../modules/Pa
 import { listSubscriptionPlansAdminController } from "../../modules/Payments/SubscriptionsPlans/usecases/list-subscription-plans";
 import { updateSubscriptionPlanController } from "../../modules/Payments/SubscriptionsPlans/usecases/update-subscription-plan";
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
+import { listProgramsByAudienceController } from "../../modules/benefits/usecases/list-programs-by-audience";
 
 const subscriptionRouter = Router()
 
@@ -33,6 +34,11 @@ subscriptionRouter.post("/user-subscription/pix", appUserIsAuth, async (request,
 //hire user subscription with CORRECT balance
 subscriptionRouter.post("/user-subscription/correct-balance", appUserIsAuth, async (request, response) => {
     await hireUserSubscriptionByCorrectBalanceController.handle(request, response)
+})
+
+//list all programs by app user
+subscriptionRouter.get("/app-user/programs", appUserIsAuth, async (request, response) => {
+    await listProgramsByAudienceController.handle(request, response)
 })
 
 //list all subscription plans by app user
