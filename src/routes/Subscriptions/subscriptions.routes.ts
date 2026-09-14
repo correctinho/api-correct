@@ -9,6 +9,8 @@ import { updateSubscriptionPlanController } from "../../modules/Payments/Subscri
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
 import { listProgramsByAudienceController } from "../../modules/benefits/usecases/list-programs-by-audience";
 import { listMySubscriptionsController } from "../../modules/Payments/SubscriptionsPlans/usecases/list-my-subscriptions";
+import { cancelUserSubscriptionController, cancelUserSubscriptionAdminController } from "../../modules/Payments/SubscriptionsPlans/usecases/cancel-user-subscription";
+import { getAppUserSubscriptionsByAdminController } from "../../modules/Payments/SubscriptionsPlans/usecases/get-app-user-subscriptions-by-admin";
 
 const subscriptionRouter = Router()
 
@@ -27,6 +29,16 @@ subscriptionRouter.put("/subscription-plan/:uuid", correctIsAuth, async (request
     await updateSubscriptionPlanController.handle(request, response)
 })
 
+//cancel user subscription for admin
+subscriptionRouter.post("/admin/user-subscription/cancel", correctIsAuth, async (request, response) => {
+    await cancelUserSubscriptionAdminController.handle(request, response)
+})
+
+//get user subscriptions for admin
+subscriptionRouter.get("/admin/app-users/:user_info_uuid/subscriptions", correctIsAuth, async (request, response) => {
+    await getAppUserSubscriptionsByAdminController.handle(request, response)
+})
+
 //hire user subscription with PIX
 subscriptionRouter.post("/user-subscription/pix", appUserIsAuth, async (request, response) => {
     await createUserSubscriptionController.handle(request, response)
@@ -35,6 +47,11 @@ subscriptionRouter.post("/user-subscription/pix", appUserIsAuth, async (request,
 //hire user subscription with CORRECT balance
 subscriptionRouter.post("/user-subscription/correct-balance", appUserIsAuth, async (request, response) => {
     await hireUserSubscriptionByCorrectBalanceController.handle(request, response)
+})
+
+//cancel user subscription
+subscriptionRouter.post("/user-subscription/cancel", appUserIsAuth, async (request, response) => {
+    await cancelUserSubscriptionController.handle(request, response)
 })
 
 //list all programs by app user

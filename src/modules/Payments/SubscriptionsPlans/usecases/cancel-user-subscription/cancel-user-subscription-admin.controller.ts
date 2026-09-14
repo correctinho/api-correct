@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
 import { CancelUserSubscriptionUsecase } from "./cancel-user-subscription.usecase";
 
-export class CancelUserSubscriptionController {
+export class CancelUserSubscriptionAdminController {
     constructor(private readonly usecase: CancelUserSubscriptionUsecase) { }
 
     async handle(request: Request, response: Response): Promise<Response> {
-        // Obter ID do usuário logado (geralmente extraído do token pelo middleware de auth)
-        const userId = request.appUser.user_info_uuid;
+        // Obter ID do admin logado (geralmente extraído do token pelo middleware correctIsAuth)
+        const adminId = request.correctAdmin.correctAdminId
 
         // Pega os dados do corpo da requisição
         const { subscriptionUuid, reason } = request.body;
@@ -17,10 +17,11 @@ export class CancelUserSubscriptionController {
 
         await this.usecase.execute({
             subscriptionUuid,
-            userId,
-            reason: reason || "Cancelamento solicitado pelo usuário"
+            userId: adminId, // Passamos o adminId apenas para constar, pois com isAdmin = true a checagem de posse é ignorada
+            reason: reason || "Cancelamento administrativo",
+            isAdmin: true
         });
 
-        return response.status(200).json({ message: "Assinatura cancelada com sucesso. O benefício continuará ativo até o fim do ciclo." });
+        return response.status(200).json({ message: "Assinatura cancelada administrativamente com sucesso." });
     }
 }

@@ -25,6 +25,9 @@ import { verifyEmailController } from "../../modules/AppUser/AppUserManagement/u
 import { resendEmailVerificationController } from "../../modules/AppUser/AppUserManagement/usecases/UserAuth/resend-email-verification";
 import { sendForgotPassword } from "../../modules/AppUser/AppUserManagement/usecases/UserAuth/password-recovery/send-forgot-password-email";
 import { resetPasswordController } from "../../modules/AppUser/AppUserManagement/usecases/UserAuth/password-recovery/reset-password";
+import { getAppUserOverviewByAdminController } from "../../modules/AppUser/UserByCorrect/usecases/get-app-user-overview-by-admin";
+import { getDocumentValidationByAdminController } from "../../modules/AppUser/AppUserManagement/usecases/DocumentsValidation/get-document-validation-by-admin";
+import { updateDocumentValidationStatusByAdminController } from "../../modules/AppUser/AppUserManagement/usecases/DocumentsValidation/update-document-validation-status-by-admin";
 
 const appUserRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -159,5 +162,19 @@ appUserRouter.post(
     await createDocumentsE2ETestsController.handle(request, response);
   }
 );
+
+//**********Admin Correct Routes*********** */
+
+appUserRouter.get("/admin/app-users/:document", correctIsAuth, async (request, response) => {
+    await getAppUserOverviewByAdminController.handle(request, response);
+});
+
+appUserRouter.get("/admin/app-users/:user_info_uuid/documents", correctIsAuth, async (request, response) => {
+    await getDocumentValidationByAdminController.handle(request, response);
+});
+
+appUserRouter.patch("/admin/app-users/document-validation/:user_info_uuid", correctIsAuth, async (request, response) => {
+    await updateDocumentValidationStatusByAdminController.handle(request, response);
+});
 
 export { appUserRouter }

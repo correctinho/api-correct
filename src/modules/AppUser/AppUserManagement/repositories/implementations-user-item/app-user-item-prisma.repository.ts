@@ -464,6 +464,19 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         throw new Error('Method not implemented.');
     }
 
+    async findItemsWithExpiredGracePeriod(referenceDate: Date): Promise<AppUserItemEntity[]> {
+        const expiredItems = await prismaClient.userItem.findMany({
+            where: {
+                status: 'to_be_cancelled',
+                grace_period_end_date: {
+                    not: null,
+                    lte: newDateF(referenceDate)
+                }
+            }
+        });
+        return expiredItems.map(item => this.mapToDomain(item));
+    }
+
     async findAllUserItems(userInfoId: string): Promise<AppUserItemEntity[]> {
         const userItemsData = await prismaClient.userItem.findMany({
             where: {

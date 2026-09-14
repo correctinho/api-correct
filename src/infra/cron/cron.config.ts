@@ -1,4 +1,4 @@
-import { expireSubscriptionsJob } from '../../modules/CronJobs/Subscriptions';
+import { expireSubscriptionsJob, processGracePeriodJob } from '../../modules/CronJobs/Subscriptions';
 import { generateEmployerInvoicesJob } from '../../modules/CronJobs/Invoices/GenerateInvoicesJob';
 import { prismaClient } from '../databases/prisma.config';
 import { CronManager } from './CronManager'; // Ajuste o caminho
@@ -20,6 +20,9 @@ export function setupCronJobs(): void {
 
   // Job 1: Expirar Assinaturas Vencidas de usúarios de aplicativo
   cronManager.registerJob(expireSubscriptionsJob);
+
+  // Job 1.5: Processar cancelamentos agendados de UserItems (Fim de Ciclo)
+  cronManager.registerJob(processGracePeriodJob);
 
   // Job 2: Geração de faturas para empregadores (Billing loop)
   cronManager.registerJob(generateEmployerInvoicesJob);
