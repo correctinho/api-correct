@@ -9,27 +9,38 @@ import { newDateF } from "../../../../utils/date";
 
 
 export class CorrectAdminPrismaRepository implements ICorrectAdminRepository {
-    async create(data: CorrectAdminEntity): Promise<void> {
-      const [correctAdmin, correctAccount] = await prismaClient.$transaction([
-        prismaClient.correctAdmin.create({
+    async createCorrectUser(data: CorrectAdminEntity): Promise<void> {
+        await prismaClient.correctAdmin.create({
             data: {
                 name: data.name,
                 email: data.email,
                 userName: data.userName,
                 password: data.password,
-                isAdmin: data.isAdmin,
-
+                isAdmin: false
             }
-        }),
-        prismaClient.correctAccount.create({
-          data:{
-            uuid: randomUUID(),
-            balance: 0,
-            status:'active',
-            created_at: newDateF(new Date())
-          }
         })
-      ])
+    }
+    async create(data: CorrectAdminEntity): Promise<void> {
+        const [correctAdmin, correctAccount] = await prismaClient.$transaction([
+            prismaClient.correctAdmin.create({
+                data: {
+                    name: data.name,
+                    email: data.email,
+                    userName: data.userName,
+                    password: data.password,
+                    isAdmin: data.isAdmin,
+
+                }
+            }),
+            prismaClient.correctAccount.create({
+                data: {
+                    uuid: randomUUID(),
+                    balance: 0,
+                    status: 'active',
+                    created_at: newDateF(new Date())
+                }
+            })
+        ])
     }
 
     async update(data: CorrectAdminEntity): Promise<void> {
@@ -52,7 +63,7 @@ export class CorrectAdminPrismaRepository implements ICorrectAdminRepository {
             }
         })
 
-        if(!admin) return null
+        if (!admin) return null
 
         return {
             uuid: new Uuid(admin.uuid),
@@ -94,7 +105,7 @@ export class CorrectAdminPrismaRepository implements ICorrectAdminRepository {
             }
         })
 
-        if(!admin) return null
+        if (!admin) return null
 
         return {
             uuid: new Uuid(admin.uuid),

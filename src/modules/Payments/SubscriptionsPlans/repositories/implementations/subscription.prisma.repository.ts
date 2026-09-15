@@ -1,4 +1,4 @@
-import { PrismaClient, SubscriptionStatus, UserItemEventType } from "@prisma/client";
+import { PrismaClient, SubscriptionStatus, UserItemEventType, UserItemStatus } from "@prisma/client";
 import { Uuid } from "../../../../../@shared/ValueObjects/uuid.vo";
 import { SubscriptionEntity } from "../../entities/subscription.entity";
 import { ISubscriptionRepository } from "../subscription.repository";
@@ -12,7 +12,7 @@ import { CustomError } from "../../../../../errors/custom.error";
 import { UserItemStatusEnum } from "../../../../AppUser/AppUserManagement/enums/user-item-status.enum";
 
 export class SubscriptionPrismaRepository implements ISubscriptionRepository {
-   
+
     async upsert(entity: SubscriptionEntity): Promise<void> {
         // 1. Obtém os dados formatados da entidade via toJSON()
         const data = entity.toJSON();
@@ -62,7 +62,7 @@ export class SubscriptionPrismaRepository implements ISubscriptionRepository {
 
                 // Datas de Auditoria
                 // created_at: NÃO ATUALIZAR
-                updated_at:  data.updated_at, // Força nova data de atualização
+                updated_at: data.updated_at, // Força nova data de atualização
             },
         });
     }
@@ -134,23 +134,57 @@ export class SubscriptionPrismaRepository implements ISubscriptionRepository {
         return raw.map((sub) => this.mapToDomain(sub));
     }
 
-    async findExpiredActiveSubscriptions(referenceDate: Date): Promise<SubscriptionEntity[]> {
-    // 1. Executa a query no banco via Prisma
-    const expiredSubscriptionsModels = await prismaClient.subscription.findMany({
-      where: {
-        // Condição 1: O status deve ser ATIVO
-        status: SubscriptionStatus.ACTIVE,
-        
-        // Condição 2: A data de término deve existir E ser anterior à data de referência
-        end_date: {
-          not: null, // Garante que não pegaremos assinaturas sem data de fim definida
-          lt: referenceDate, // 'lt' = less than (menor que)
-        },
-      },
-    });
+    async findDetailedByUser(userUuid: Uuid): Promise<any[]> {
+        const raw = await prismaClient.subscription.findMany({
+            where: {
+                user_info_uuid: userUuid.uuid,
+            },
+            include: {
+                SubscriptionPlan: {
+                    include: {
+                        Item: true
+                    }
+                }
+            },
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
+        return raw;
+    }
+    async findActiveByUserItemUuid(userItemUuid: Uuid): Promise<SubscriptionEntity | null> {
+        console.log("useritem uuid: ", userItemUuid)
+        const raw = await prismaClient.subscription.findFirst({
+            where: {
+                user_item_uuid: userItemUuid.uuid,
+                status: SubscriptionStatus.ACTIVE
+            },
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
+        console.log("raw", raw)
+        if (!raw) return null;
+        return this.mapToDomain(raw);
+    }
 
-    return expiredSubscriptionsModels.map(this.mapToDomain);
-  }
+    async findExpiredActiveSubscriptions(referenceDate: Date): Promise<SubscriptionEntity[]> {
+        // 1. Executa a query no banco via Prisma
+        const expiredSubscriptionsModels = await prismaClient.subscription.findMany({
+            where: {
+                // Condição 1: O status deve ser ATIVO
+                status: SubscriptionStatus.ACTIVE,
+
+                // Condição 2: A data de término deve existir E ser anterior à data de referência
+                end_date: {
+                    not: null, // Garante que não pegaremos assinaturas sem data de fim definida
+                    lt: referenceDate, // 'lt' = less than (menor que)
+                },
+            },
+        });
+
+        return expiredSubscriptionsModels.map(this.mapToDomain);
+    }
 
     async updateStatusBulk(uuids: Uuid[], newStatus: string): Promise<void> {
         // 1. Defesa: Se a lista estiver vazia, não faz nada para evitar query inútil no banco.
@@ -180,145 +214,145 @@ export class SubscriptionPrismaRepository implements ISubscriptionRepository {
         // não precisamos retornar nada.
     }
 
-//     async executeCheckoutWithBalance(
-//         subscriptionEntity: SubscriptionEntity,
-//         targetUserItemEntity: AppUserItemEntity,
-//         transactionEntity: TransactionEntity,
-//         termAcceptanceEntity: TermAcceptanceEntity,
-//         hubAccountUuid: Uuid,
-//         priceInCents: number
-//     ): Promise<void> {
-//     // 1. Preparação dos dados (extraindo fora da transação para performance)
-//     const subData = subscriptionEntity.toJSON();
-//     const itemData = targetUserItemEntity.toJSON();
-//     const txData = transactionEntity.toJSON();
-//     const termsData = termAcceptanceEntity.toJSON();
-//     const now = new Date();
+    //     async executeCheckoutWithBalance(
+    //         subscriptionEntity: SubscriptionEntity,
+    //         targetUserItemEntity: AppUserItemEntity,
+    //         transactionEntity: TransactionEntity,
+    //         termAcceptanceEntity: TermAcceptanceEntity,
+    //         hubAccountUuid: Uuid,
+    //         priceInCents: number
+    //     ): Promise<void> {
+    //     // 1. Preparação dos dados (extraindo fora da transação para performance)
+    //     const subData = subscriptionEntity.toJSON();
+    //     const itemData = targetUserItemEntity.toJSON();
+    //     const txData = transactionEntity.toJSON();
+    //     const termsData = termAcceptanceEntity.toJSON();
+    //     const now = new Date();
 
-//     console.log(`[CheckoutBalance] Iniciando transação atômica. User: ${subData.user_info_uuid}, Valor: ${priceInCents}`);
+    //     console.log(`[CheckoutBalance] Iniciando transação atômica. User: ${subData.user_info_uuid}, Valor: ${priceInCents}`);
 
-//     // 2. Início do Bloco Transacional (usando 'tx' em vez de 'prismaClient')
-//     await prismaClient.$transaction(async (tx) => {
+    //     // 2. Início do Bloco Transacional (usando 'tx' em vez de 'prismaClient')
+    //     await prismaClient.$transaction(async (tx) => {
 
-//         // A) DÉBITO (Com Trava Otimista: só debita se tiver saldo >= priceInCents)
-//         const debitResult = await tx.userItem.updateMany({
-//             where: {
-//                 uuid: hubAccountUuid.uuid,
-//                 balance: { gte: priceInCents }
-//             },
-//             data: {
-//                 balance: { decrement: priceInCents },
-//                 updated_at: newDateF(new Date())
-//             }
-//         });
+    //         // A) DÉBITO (Com Trava Otimista: só debita se tiver saldo >= priceInCents)
+    //         const debitResult = await tx.userItem.updateMany({
+    //             where: {
+    //                 uuid: hubAccountUuid.uuid,
+    //                 balance: { gte: priceInCents }
+    //             },
+    //             data: {
+    //                 balance: { decrement: priceInCents },
+    //                 updated_at: newDateF(new Date())
+    //             }
+    //         });
 
-//         if (debitResult.count === 0) {
-//             // Se count for 0, o saldo era insuficiente no momento exato da escrita.
-//             throw new CustomError("Falha no débito: Saldo insuficiente no momento da transação.", 409);
-//         }
-//         console.log('[CheckoutBalance] PASSO A (Débito): Sucesso.');
+    //         if (debitResult.count === 0) {
+    //             // Se count for 0, o saldo era insuficiente no momento exato da escrita.
+    //             throw new CustomError("Falha no débito: Saldo insuficiente no momento da transação.", 409);
+    //         }
+    //         console.log('[CheckoutBalance] PASSO A (Débito): Sucesso.');
 
-//         // B) UPSERT DO USER ITEM (O Benefício)
-//         await tx.userItem.upsert({
-//             where: { uuid: itemData.uuid },
-//             create: {
-//                 uuid: itemData.uuid,
-//                 user_info_uuid: itemData.user_info_uuid,
-//                 business_info_uuid: itemData.business_info_uuid,
-//                 item_uuid: itemData.item_uuid,
-//                 item_name: itemData.item_name,
-//                 //item_category: itemData.item_category,
-//                 //item_type: itemData.item_type,
-//                 balance: itemData.balance,
-//                 status: itemData.status as UserItemStatusEnum,
-//                 group_uuid: itemData.group_uuid,
-//                 //img_url: itemData.img_url,
-//                 created_at: itemData.created_at,
-//                 updated_at: itemData.updated_at,
-//             },
-//             update: {
-//                 // Reativação: força status para o da entidade (ACTIVE) e limpa bloqueios
-//                 status: itemData.status as UserItemStatusEnum,
-//                 updated_at: itemData.updated_at,
-//                 blocked_at: null, block_reason: null,
-//                 cancelled_at: null, cancel_reason: null,
-//                 cancelling_request_at: null, grace_period_end_date: null
-//             }
-//         });
-//         console.log('[CheckoutBalance] PASSO B (UserItem Upsert): Sucesso.');
+    //         // B) UPSERT DO USER ITEM (O Benefício)
+    //         await tx.userItem.upsert({
+    //             where: { uuid: itemData.uuid },
+    //             create: {
+    //                 uuid: itemData.uuid,
+    //                 user_info_uuid: itemData.user_info_uuid,
+    //                 business_info_uuid: itemData.business_info_uuid,
+    //                 item_uuid: itemData.item_uuid,
+    //                 item_name: itemData.item_name,
+    //                 //item_category: itemData.item_category,
+    //                 //item_type: itemData.item_type,
+    //                 balance: itemData.balance,
+    //                 status: itemData.status as UserItemStatusEnum,
+    //                 group_uuid: itemData.group_uuid,
+    //                 //img_url: itemData.img_url,
+    //                 created_at: itemData.created_at,
+    //                 updated_at: itemData.updated_at,
+    //             },
+    //             update: {
+    //                 // Reativação: força status para o da entidade (ACTIVE) e limpa bloqueios
+    //                 status: itemData.status as UserItemStatusEnum,
+    //                 updated_at: itemData.updated_at,
+    //                 blocked_at: null, block_reason: null,
+    //                 cancelled_at: null, cancel_reason: null,
+    //                 cancelling_request_at: null, grace_period_end_date: null
+    //             }
+    //         });
+    //         console.log('[CheckoutBalance] PASSO B (UserItem Upsert): Sucesso.');
 
-//         // C) CRIAR ASSINATURA (Já Ativa)
-//         await tx.subscription.create({
-//             data: {
-//                 uuid: subData.uuid,
-//                 subscription_plan_uuid: subData.subscription_plan_uuid,
-//                 user_info_uuid: subData.user_info_uuid,
-//                 user_item_uuid: subData.user_item_uuid,
-//                 status: subData.status as SubscriptionStatus,
-//                 start_date: subData.start_date,
-//                 end_date: subData.end_date,
-//                 created_at: subData.created_at,
-//                 updated_at: subData.updated_at,
-//             }
-//         });
-//         console.log('[CheckoutBalance] PASSO C (Assinatura): Sucesso.');
+    //         // C) CRIAR ASSINATURA (Já Ativa)
+    //         await tx.subscription.create({
+    //             data: {
+    //                 uuid: subData.uuid,
+    //                 subscription_plan_uuid: subData.subscription_plan_uuid,
+    //                 user_info_uuid: subData.user_info_uuid,
+    //                 user_item_uuid: subData.user_item_uuid,
+    //                 status: subData.status as SubscriptionStatus,
+    //                 start_date: subData.start_date,
+    //                 end_date: subData.end_date,
+    //                 created_at: subData.created_at,
+    //                 updated_at: subData.updated_at,
+    //             }
+    //         });
+    //         console.log('[CheckoutBalance] PASSO C (Assinatura): Sucesso.');
 
-//         // D) REGISTRAR HISTÓRICO FINANCEIRO (Sucesso)
-//         await tx.transactions.create({
-//             data: {
-//                     uuid: txData.uuid,
-//                     // Relacionamentos
-//                     user_item_uuid: hubAccountUuid.uuid, // A origem do dinheiro
-//                     subscription_uuid: subData.uuid,
-                    
-//                     // Valores Monetários
-//                     original_price: txData.original_price,
-//                     discount_percentage: txData.discount_percentage,
-//                     net_price: txData.net_price,
-                    
-//                     // Taxas (opcionais, mas mapeamos se existirem no txData)
-//                     fee_percentage: txData.fee_percentage,
-//                     fee_amount: txData.fee_amount,
-//                     platform_net_fee_amount: txData.platform_net_fee_amount,
-//                     cashback: txData.cashback,
+    //         // D) REGISTRAR HISTÓRICO FINANCEIRO (Sucesso)
+    //         await tx.transactions.create({
+    //             data: {
+    //                     uuid: txData.uuid,
+    //                     // Relacionamentos
+    //                     user_item_uuid: hubAccountUuid.uuid, // A origem do dinheiro
+    //                     subscription_uuid: subData.uuid,
 
-//                     // --- CAMPO OBRIGATÓRIO FALTANTE ---
-//                     // Em assinaturas B2C, este valor é 0.
-//                     partner_credit_amount: txData.partner_credit_amount ?? 0, 
-//                     // ----------------------------------
+    //                     // Valores Monetários
+    //                     original_price: txData.original_price,
+    //                     discount_percentage: txData.discount_percentage,
+    //                     net_price: txData.net_price,
 
-//                     // Metadados
-//                     transaction_type: txData.transaction_type,
-//                     status: txData.status,
-//                     description: txData.description,
-                    
-//                     // Datas
-//                     paid_at: now.toISOString(), // Como é sucesso imediato, a data de pagamento é agora
-//                     created_at: txData.created_at,
-//                     updated_at: txData.updated_at
-//                 }
-//         });
-//         console.log('[CheckoutBalance] PASSO D (Transação): Sucesso.');
+    //                     // Taxas (opcionais, mas mapeamos se existirem no txData)
+    //                     fee_percentage: txData.fee_percentage,
+    //                     fee_amount: txData.fee_amount,
+    //                     platform_net_fee_amount: txData.platform_net_fee_amount,
+    //                     cashback: txData.cashback,
 
-//         // E) REGISTRAR ACEITE DOS TERMOS (Vinculado à transação)
-//         await tx.termAcceptance.create({
-//             data: {
-//                 uuid: termsData.uuid,
-//                 app_user_info_uuid: termsData.app_user_info_uuid.uuid,
-//                 company_user_uuid: null,
-//                 terms_uuid: termsData.terms_uuid.uuid,
-//                 transaction_uuid: txData.uuid, // Vínculo crucial
-//                 accepted_at: termsData.accepted_at,
-//                 ip_address: termsData.ip_address,
-//                 user_agent: termsData.user_agent,
-//             }
-//         });
-//         console.log('[CheckoutBalance] PASSO E (Termos): Sucesso.');
+    //                     // --- CAMPO OBRIGATÓRIO FALTANTE ---
+    //                     // Em assinaturas B2C, este valor é 0.
+    //                     partner_credit_amount: txData.partner_credit_amount ?? 0, 
+    //                     // ----------------------------------
 
-//     }); // Fim do bloco da transação
+    //                     // Metadados
+    //                     transaction_type: txData.transaction_type,
+    //                     status: txData.status,
+    //                     description: txData.description,
 
-//     console.log('[CheckoutBalance] Transação atômica finalizada com sucesso!');
-// }
+    //                     // Datas
+    //                     paid_at: now.toISOString(), // Como é sucesso imediato, a data de pagamento é agora
+    //                     created_at: txData.created_at,
+    //                     updated_at: txData.updated_at
+    //                 }
+    //         });
+    //         console.log('[CheckoutBalance] PASSO D (Transação): Sucesso.');
+
+    //         // E) REGISTRAR ACEITE DOS TERMOS (Vinculado à transação)
+    //         await tx.termAcceptance.create({
+    //             data: {
+    //                 uuid: termsData.uuid,
+    //                 app_user_info_uuid: termsData.app_user_info_uuid.uuid,
+    //                 company_user_uuid: null,
+    //                 terms_uuid: termsData.terms_uuid.uuid,
+    //                 transaction_uuid: txData.uuid, // Vínculo crucial
+    //                 accepted_at: termsData.accepted_at,
+    //                 ip_address: termsData.ip_address,
+    //                 user_agent: termsData.user_agent,
+    //             }
+    //         });
+    //         console.log('[CheckoutBalance] PASSO E (Termos): Sucesso.');
+
+    //     }); // Fim do bloco da transação
+
+    //     console.log('[CheckoutBalance] Transação atômica finalizada com sucesso!');
+    // }
     async executeCheckoutWithBalance(
         subscriptionEntity: SubscriptionEntity,
         targetUserItemEntity: AppUserItemEntity,
@@ -340,7 +374,7 @@ export class SubscriptionPrismaRepository implements ISubscriptionRepository {
             // ==================================================================================
             // PASSO A: DÉBITO COM REGISTRO DE HISTÓRICO
             // ==================================================================================
-            
+
             // A.1. Buscar saldo atual (Leitura com trava implícita pela transação)
             const sourceItem = await tx.userItem.findUnique({
                 where: { uuid: hubAccountUuid.uuid }
@@ -381,7 +415,7 @@ export class SubscriptionPrismaRepository implements ISubscriptionRepository {
                     item_uuid: itemData.item_uuid,
                     item_name: itemData.item_name,
                     balance: itemData.balance,
-                    status: itemData.status, 
+                    status: itemData.status,
                     group_uuid: itemData.group_uuid,
                     created_at: itemData.created_at,
                     updated_at: itemData.updated_at,
@@ -445,7 +479,7 @@ export class SubscriptionPrismaRepository implements ISubscriptionRepository {
             // ==================================================================================
             // 1. Buscar conta Admin
             const adminItem = await tx.correctAccount.findUnique({
-                where: { uuid: adminUserItemUuid}
+                where: { uuid: adminUserItemUuid }
             });
 
             if (!adminItem) {
@@ -521,50 +555,50 @@ export class SubscriptionPrismaRepository implements ISubscriptionRepository {
         newSubStatus: SubscriptionStatus,
         newItemStatus: UserItemStatusEnum, // Use o Enum que seu Prisma espera
         reason: string,
-        date: Date
+        date: Date,
+        gracePeriodEndDate: Date | null
     ): Promise<void> {
-    await prismaClient.$transaction(async (tx) => {
-        
-        // A) Desativar a Assinatura
-        await tx.subscription.update({
-            where: { uuid: subscriptionUuid },
-            data: {
-                status: newSubStatus,
-                updated_at: date
+        await prismaClient.$transaction(async (tx) => {
 
-            }
-        });
+            // A) Desativar a Assinatura
+            await tx.subscription.update({
+                where: { uuid: subscriptionUuid },
+                data: {
+                    status: newSubStatus,
+                    updated_at: date
 
-        // B) Desativar o Benefício (UserItem)
-        // Isso impede o uso imediato e (dependendo do status) esconde do app
-        await tx.userItem.update({
-            where: { uuid: userItemUuid },
-            data: {
-                status: newItemStatus as any, // Cast para o Enum do Prisma
-                updated_at: newDateF(date),
-                cancelled_at: newDateF(date),
-                cancel_reason: reason,
-                // Se for BLOQUEIO, usaria:
-                // blocked_at: date,
-                // block_reason: reason
-            }
-        });
+                }
+            });
 
-        // C) Opcional: Gerar Histórico no UserItemHistory
-        // É boa prática registrar que o item mudou de status
-        await tx.userItemHistory.create({
-            data: {
-                user_item_uuid: userItemUuid,
-                event_type: 'OTHER', // Ou crie um enum STATUS_CHANGE
-                amount: 0,
-                balance_before: 0, // Buscar se necessário, mas para cancelamento de acesso não afeta saldo monetário direto se não houver estorno
-                balance_after: 0,
-                created_at: date,
-                // description: `Status alterado para ${newItemStatus}: ${reason}`
-            }
+            // B) Desativar o Benefício (UserItem)
+            // Isso impede o uso imediato e (dependendo do status) esconde do app
+            await tx.userItem.update({
+                where: { uuid: userItemUuid },
+                data: {
+                    status: newItemStatus as UserItemStatus, // Cast para o Enum nativo do Prisma
+                    cancelled_at: null, // Será preenchido pelo Cron Job quando a carência expirar, a menos que seja cancelamento imediato
+                    cancel_reason: reason,
+                    cancelling_request_at: newDateF(date),
+                    grace_period_end_date: gracePeriodEndDate ? newDateF(gracePeriodEndDate) : null,
+                    updated_at: newDateF(date)
+                }
+            });
+
+            // C) Opcional: Gerar Histórico no UserItemHistory
+            // É boa prática registrar que o item mudou de status
+            await tx.userItemHistory.create({
+                data: {
+                    user_item_uuid: userItemUuid,
+                    event_type: 'OTHER', // Ou crie um enum STATUS_CHANGE
+                    amount: 0,
+                    balance_before: 0, // Buscar se necessário, mas para cancelamento de acesso não afeta saldo monetário direto se não houver estorno
+                    balance_after: 0,
+                    created_at: date,
+                    // description: `Status alterado para ${newItemStatus}: ${reason}`
+                }
+            });
         });
-    });
-}
+    }
     // Helper privado para hidratar a entidade (Mapper inline)
     private mapToDomain(raw: any): SubscriptionEntity {
         return SubscriptionEntity.hydrate({

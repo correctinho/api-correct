@@ -186,16 +186,35 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
       });
     });
   }
-  // async findAll(): Promise<(BenefitsEntity)[]> {
-  //   const r = await prismaClient.item.findMany({
-  //     include: {
-  //       SubscriptionPlan: {
-  //         select: { uuid: true }
-  //       }
-  //     }
-  //   });
-
   //   return r as BenefitsEntity[] | []
   // }
 
+  async findProgramsByPayerType(payerType: 'USER' | 'EMPLOYER'): Promise<BenefitsEntity[]> {
+    const itemsFromDb = await prismaClient.item.findMany({
+      where: {
+        item_type: 'programa',
+        SubscriptionPlan: {
+          some: {
+            payer_type: payerType,
+            is_active: true
+          }
+        }
+      }
+    });
+
+    return itemsFromDb.map((item) => {
+      return new BenefitsEntity({
+        uuid: new Uuid(item.uuid),
+        name: item.name,
+        description: item.description,
+        img_url: item.img_url ?? undefined,
+        item_type: item.item_type,
+        item_category: item.item_category,
+        parent_uuid: item.parent_uuid ? new Uuid(item.parent_uuid) : null,
+        business_info_uuid: item.business_info_uuid ? new Uuid(item.business_info_uuid) : null,
+        created_at: item.created_at,
+        updated_at: item.updated_at ?? undefined
+      });
+    });
+  }
 }

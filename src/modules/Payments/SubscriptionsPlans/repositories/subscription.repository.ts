@@ -8,12 +8,12 @@ import { SubscriptionEntity } from "../entities/subscription.entity";
 import { UserItemStatusEnum } from "../../../AppUser/AppUserManagement/enums/user-item-status.enum";
 
 export interface ISubscriptionRepository extends RepositoryInterface<SubscriptionEntity> {
-  // Útil para verificar se o usuário já não tem esse plano ativo antes de deixar comprar de novo
   findActiveByUserAndPlan(userUuid: Uuid, planUuid: Uuid): Promise<SubscriptionEntity | null>;
   findActiveByBusinessAndPlan(businessUuid: Uuid, planUuid: Uuid): Promise<SubscriptionEntity | null>
+  findActiveByUserItemUuid(userItemUuid: Uuid): Promise<SubscriptionEntity | null>;
   upsert(entity: SubscriptionEntity): Promise<void>;
-  // Busca todas as assinaturas ativas de um usuário
   findActiveByUser(userUuid: Uuid): Promise<SubscriptionEntity[]>;
+  findDetailedByUser(userUuid: Uuid): Promise<any[]>;
   findExpiredActiveSubscriptions(referenceDate: Date): Promise<SubscriptionEntity[]>;
   updateStatusBulk(uuids: Uuid[], newStatus: string): Promise<void>;
   executeCheckoutWithBalance(
@@ -31,6 +31,7 @@ export interface ISubscriptionRepository extends RepositoryInterface<Subscriptio
           newSubStatus: SubscriptionStatus,
           newItemStatus: UserItemStatusEnum, // Use o Enum que seu Prisma espera
           reason: string,
-          date: Date
+          date: Date,
+          gracePeriodEndDate: Date | null
       ): Promise<void>
 }

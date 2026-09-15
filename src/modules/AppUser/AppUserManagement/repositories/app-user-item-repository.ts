@@ -45,4 +45,5 @@ findAllActiveByBusinessAndItem(
         itemUuid: string
     ): Promise<AppUserItemEntity[]>;
 findManyByUuids(uuids: string[]): Promise<AppUserItemEntity[]>
+findItemsWithExpiredGracePeriod(referenceDate: Date): Promise<AppUserItemEntity[]>
 }
