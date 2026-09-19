@@ -7,7 +7,7 @@ export class ListTransactionsController {
 
   async handle(request: Request, response: Response): Promise<Response> {
     try {
-      const { page, limit, status, start_date, end_date, search } = request.query;
+      const { page, limit, status, start_date, end_date, search, partner_name } = request.query;
 
       const result = await this.listTransactionsUsecase.execute({
         page: page ? Number(page) : undefined,
@@ -16,6 +16,7 @@ export class ListTransactionsController {
         start_date: start_date ? String(start_date) : undefined,
         end_date: end_date ? String(end_date) : undefined,
         search: search ? String(search) : undefined,
+        partner_name: partner_name ? String(partner_name) : undefined,
       });
       return response.status(200).json(result);
     } catch (error: any) {

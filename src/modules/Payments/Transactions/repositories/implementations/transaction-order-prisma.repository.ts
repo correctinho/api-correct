@@ -9,6 +9,7 @@ import {
   BenefitGroupSnapshot,
   ExecuteTeiTransferDTO,
   ITransactionOrderRepository,
+  PartnerSalesPaginatedResult,
   ProcessAppUserPixCreditPaymentResult,
   ProcessPaymentByBusinessParams,
   ProcessPaymentByBusinessResult,
@@ -2072,5 +2073,186 @@ export class TransactionOrderPrismaRepository
         }
       })
     ]);
+  }
+
+  async refundPartnerSale(
+    transactionEntity: TransactionEntity,
+    reason: string
+  ): Promise<{ success: boolean; netRefundedToUser: number }> {
+    const transactionId = transactionEntity.uuid.uuid;
+    const favoredBusinessInfoId = transactionEntity.favored_business_info_uuid?.uuid;
+    const userItemId = transactionEntity.user_item_uuid?.uuid;
+    const partnerAmountToDebit = Math.round(transactionEntity.partner_credit_amount * 100);
+    const platformFeeToDebit = Math.round(transactionEntity.platform_net_fee_amount * 100);
+    const cashbackToDeduct = Math.round(transactionEntity.cashback * 100);
+    const originalPrice = Math.round(transactionEntity.original_price * 100);
+    const netRefundToUser = originalPrice - cashbackToDeduct;
+
+    if (!favoredBusinessInfoId || !userItemId) {
+      throw new CustomError("Transaction is missing necessary relationships for refund", 400);
+    }
+
+    const result = await prismaClient.$transaction(async (tx) => {
+      // 1. Busca BusinessAccount
+      const businessAccount = await tx.businessAccount.findFirst({
+        where: { business_info_uuid: favoredBusinessInfoId },
+        select: { uuid: true, balance: true }
+      });
+      if (!businessAccount) throw new CustomError("BusinessAccount not found", 404);
+
+      // 1.5 Busca PartnerCredit atrelado à transação
+      const partnerCredit = await tx.partnerCredit.findFirst({
+        where: { original_transaction_uuid: transactionId }
+      });
+
+      let debitPartnerBalance = true;
+
+      if (partnerCredit && partnerCredit.status === 'PENDING') {
+        // Se o crédito ainda está pendente, não debitamos o saldo real, apenas cancelamos o crédito.
+        debitPartnerBalance = false;
+        
+        await tx.partnerCredit.update({
+          where: { uuid: partnerCredit.uuid },
+          data: { status: 'CANCELLED' }
+        });
+      }
+
+      // 2. Busca CorrectAccount
+      const correctAccount = await tx.correctAccount.findFirst({
+        select: { uuid: true, balance: true }
+      });
+      if (!correctAccount) throw new CustomError("CorrectAccount not found", 500);
+
+      // 3. Busca UserItem
+      const userItem = await tx.userItem.findUnique({
+        where: { uuid: userItemId },
+        select: { uuid: true, balance: true }
+      });
+      if (!userItem) throw new CustomError("UserItem not found", 404);
+
+      if (debitPartnerBalance) {
+        if (businessAccount.balance < partnerAmountToDebit) {
+          throw new CustomError("Saldo insuficiente na conta do parceiro para realizar o estorno.", 400);
+        }
+
+        // Debita Parceiro
+        await tx.businessAccount.update({
+          where: { uuid: businessAccount.uuid },
+          data: { balance: { decrement: partnerAmountToDebit } }
+        });
+        await tx.businessAccountHistory.create({
+          data: {
+            business_account_uuid: businessAccount.uuid,
+            event_type: 'REFUND_ISSUED',
+            amount: -partnerAmountToDebit,
+            balance_before: businessAccount.balance,
+            balance_after: businessAccount.balance - partnerAmountToDebit,
+            related_transaction_uuid: transactionId
+          }
+        });
+      }
+
+      // Debita Correct
+      await tx.correctAccount.update({
+        where: { uuid: correctAccount.uuid },
+        data: { balance: { decrement: platformFeeToDebit } }
+      });
+      await tx.correctAccountHistory.create({
+        data: {
+          correct_account_uuid: correctAccount.uuid,
+          event_type: 'OTHER',
+          amount: -platformFeeToDebit,
+          balance_before: correctAccount.balance,
+          balance_after: correctAccount.balance - platformFeeToDebit,
+          related_transaction_uuid: transactionId
+        }
+      });
+
+      // Credita Usuário
+      await tx.userItem.update({
+        where: { uuid: userItem.uuid },
+        data: { balance: { increment: netRefundToUser } }
+      });
+      await tx.userItemHistory.create({
+        data: {
+          user_item_uuid: userItem.uuid,
+          event_type: 'REFUND_RECEIVED',
+          amount: netRefundToUser,
+          balance_before: userItem.balance,
+          balance_after: userItem.balance + netRefundToUser,
+          related_transaction_uuid: transactionId
+        }
+      });
+
+      // Atualiza Transação para cancelada
+      await tx.transactions.update({
+        where: { uuid: transactionId },
+        data: {
+          status: 'cancelled',
+          updated_at: newDateF(new Date())
+        }
+      });
+
+      return {
+        success: true,
+        netRefundedToUser: netRefundToUser
+      };
+    });
+
+    return result;
+  }
+  async findPartnerSalesPaginated(
+    businessInfoUuid: string,
+    page: number,
+    limit: number
+  ): Promise<PartnerSalesPaginatedResult> {
+    const skip = (page - 1) * limit;
+    const whereClause = {
+      favored_business_info_uuid: businessInfoUuid,
+    };
+
+    const [totalCount, transactions] = await prismaClient.$transaction([
+      prismaClient.transactions.count({ where: whereClause }),
+      prismaClient.transactions.findMany({
+        where: whereClause,
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          UserItem: { include: { UserInfo: true } },
+          PartnerUser: true,
+        },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    const formattedData = transactions.map((tx) => {
+      let payerName = 'Cliente';
+      if (tx.UserItem?.UserInfo?.full_name) {
+        payerName = tx.UserItem.UserInfo.full_name;
+      }
+
+      let operatorName = null;
+      if (tx.PartnerUser?.name) {
+        operatorName = tx.PartnerUser.name;
+      }
+
+      return {
+        uuid: tx.uuid,
+        amount: tx.net_price,
+        status: tx.status,
+        created_at: tx.created_at,
+        paid_at: tx.paid_at,
+        payerName,
+        operatorName,
+      };
+    });
+
+    return {
+      data: formattedData,
+      totalCount,
+      totalPages,
+    };
   }
 }

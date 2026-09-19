@@ -14,11 +14,13 @@
     "test:benefits": "jest --config jest-e2e.config.ts routes/__tests__/benefit.routes.e2e-spec.ts --runInBand --watch",
     "test": "jest --config jest.unit.config.ts --watch",
     "test:e2e": "jest --config jest-e2e.config.ts --runInBand --watch",
+    "test:e2e:new": "jest --config jest-e2e-new.config.ts --runInBand --watch",
     "tsc": "npx tsc",
     "generate": "npx prisma generate",
     "build": "npm run generate && npm run tsc",
     "vercel-build": "npm run build",
-    "postinstall": "npm run generate"
+    "postinstall": "npm run generate",
+    "seed:sales": "ts-node src/scripts/seed-partner-sales.ts"
   },
   "devDependencies": {
     "@swc/cli": "^0.4.0",

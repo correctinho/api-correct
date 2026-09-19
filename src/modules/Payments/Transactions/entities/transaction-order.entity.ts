@@ -119,7 +119,7 @@ export class TransactionEntity {
     this._description = props.description ?? null;
     this._status = props.status ?? TransactionStatus.pending;
     this._transaction_type = props.transaction_type;
-    this._paid_at = newDateF(new Date());
+    this._paid_at = props.paid_at ?? null;
     this._item_uuid = props.item_uuid;
     this._favored_partner_user_uuid = props.favored_partner_user_uuid ?? null;
 
@@ -461,6 +461,33 @@ export class TransactionEntity {
 
   changeDescription(description: string): void {
     this._description = description;
+    this.validate();
+  }
+
+  canBeRefunded(maxDays: number = 7): boolean {
+    if (this._status !== TransactionStatus.success) {
+      return false;
+    }
+    if (!this._paid_at) {
+      return false;
+    }
+    
+    // Calcula a diferença de dias
+    const paidDate = new Date(this._paid_at);
+    const currentDate = new Date();
+    
+    const diffTime = Math.abs(currentDate.getTime() - paidDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    
+    return diffDays <= maxDays;
+  }
+
+  refundTransaction(): void {
+    if (this._status !== TransactionStatus.success) {
+      throw new CustomError(`Cannot refund a transaction with status ${this._status}`, 400);
+    }
+    this._status = TransactionStatus.cancelled;
+    this._updated_at = newDateF(new Date());
     this.validate();
   }
 
