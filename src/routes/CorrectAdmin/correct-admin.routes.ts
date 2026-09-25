@@ -5,7 +5,7 @@ import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/corre
 import { findCorrectAdminController } from "../../modules/CorrectAdmin/useCases/find-correct-admin";
 import { createCorrectSellerController } from "../../modules/CorrectAdmin/useCases/create-correct-seller-by-admin";
 import { getCorrectAdminAccount } from "../../modules/Payments/Accounts/usecases/correctAdmin/get-correct-admin-account";
-import { listPartnerController, listEmployerController, getEmployerDetailsController, getBusinessDetailController, approveBusinessController, resendAccessController } from "../../modules/business/presentation/controllers";
+import { listPartnerController, listEmployerController, getEmployerDetailsController, getBusinessDetailController, approveBusinessController, resendAccessController, markContractSignedController, manualPaymentController, generateContractPdfController } from "../../modules/business/presentation/controllers";
 
 import { ListTransactionsPrismaRepository } from "../../modules/Payments/Transactions/infra/databases/prisma/repositories/list-transactions.prisma.repository";
 import { ListTransactionsUsecase } from "../../modules/Payments/Transactions/application/usecases/list-transactions.usecase";
@@ -113,6 +113,23 @@ correctAdminRouter.patch("/admin/partners/:uuid/fees", correctIsAuth, async (req
 // dashboard stats
 correctAdminRouter.get("/admin/dashboard/stats", correctIsAuth, async (request, response) => {
   await getDashboardStatsController.handle(request, response)
+})
+
+
+// mark contract signed
+correctAdminRouter.patch("/admin/business/:uuid/contract-signed", correctIsAuth, async (request, response) => {
+  await markContractSignedController.handle(request, response)
+})
+
+// manual payment
+correctAdminRouter.patch("/admin/business/:uuid/manual-payment", correctIsAuth, async (request, response) => {
+  await manualPaymentController.handle(request, response)
+})
+
+
+// generate contract pdf
+correctAdminRouter.get("/admin/business/:uuid/contract-pdf", correctIsAuth, async (request, response) => {
+  await generateContractPdfController.handle(request, response)
 })
 
 export { correctAdminRouter }

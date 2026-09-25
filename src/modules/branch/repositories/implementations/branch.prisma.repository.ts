@@ -79,7 +79,7 @@ export class BranchPrismaRepository implements IBranchRepository {
   async getByID(uuid: string): Promise<BranchEntity | null> {
     const branchData = await prismaClient.branchInfo.findUnique({
       where: { uuid: uuid },
-      include: { BranchItem: { include: { Item: { select: { uuid: true, name: true } } } } }
+      include: { BranchItem: { include: { Item: { select: { uuid: true, name: true, description: true, item_type: true } } } } }
     });
 
     if (!branchData) {
@@ -94,6 +94,7 @@ export class BranchPrismaRepository implements IBranchRepository {
       market_place_tax: branchData.market_place_tax,
       benefits_name: branchData.BranchItem.map(r => r.Item.name),
       benefits_uuid: branchData.BranchItem.map(r => r.Item.uuid),
+      items: branchData.BranchItem.map(r => r.Item),
       created_at: branchData.created_at,
       updated_at: branchData.updated_at
     };
@@ -124,11 +125,23 @@ export class BranchPrismaRepository implements IBranchRepository {
     }
 
     const r = await prismaClient.branchInfo.findMany({
-      where
+      where,
+      include: { BranchItem: { include: { Item: { select: { uuid: true, name: true, description: true, item_type: true } } } } }
     });
 
     if (r.length > 0) {
-      return r as BranchEntity[];
+      return r.map(branchData => BranchEntity.hydrate({
+        uuid: branchData.uuid,
+        name: branchData.name,
+        admin_tax: branchData.admin_tax,
+        marketing_tax: branchData.marketing_tax,
+        market_place_tax: branchData.market_place_tax,
+        benefits_name: branchData.BranchItem.map(b => b.Item.name),
+        benefits_uuid: branchData.BranchItem.map(b => b.Item.uuid),
+        items: branchData.BranchItem.map(b => b.Item),
+        created_at: branchData.created_at,
+        updated_at: branchData.updated_at
+      }));
     }
 
     return [];

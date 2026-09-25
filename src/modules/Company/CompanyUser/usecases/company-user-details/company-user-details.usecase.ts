@@ -1,13 +1,15 @@
 import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
-import { CustomError } from '../../../../../errors/custom.error';
 import { IProductRepository } from '../../../../Ecommerce/Products/repositories/product.repository';
 import { IServiceRequestRepository } from '../../../../ServiceScheduling/repositories/IServiceRequestRepository';
-import { ICompanyUserRepository } from '../../repositories/company-user.repository';
+import { ICompanyDataRepository } from '../../../CompanyData/repositories/company-data.repository';
+import { IBusinessContractRepository } from '../../../../Terms/repositories/business-contract.repository';
 
 export class CompanyUserDetailsUsecase {
     constructor(
         private serviceRequestRepository: IServiceRequestRepository,
-        private productsRepository: IProductRepository
+        private productsRepository: IProductRepository,
+        private companyDataRepository: ICompanyDataRepository,
+        private contractRepository: IBusinessContractRepository
     ) {}
 
     async execute(businessInfoUuid: string) {
@@ -17,13 +19,21 @@ export class CompanyUserDetailsUsecase {
 
         //get user service scheduling notifications
 
-        const [pendingRequestsCount, hasSchedulingFeature] = await Promise.all([
+        const [pendingRequestsCount, hasSchedulingFeature, companyData] = await Promise.all([
             this.serviceRequestRepository.countPendingByBusiness(
                 new Uuid(businessInfoUuid)
             ),
-            this.productsRepository.hasBookableServices(new Uuid(businessInfoUuid))
-            // Outros contadores futuros poderiam vir aqui
+            this.productsRepository.hasBookableServices(new Uuid(businessInfoUuid)),
+            this.companyDataRepository.findById(businessInfoUuid)
         ]);
+
+        let business_status = companyData?.status;
+        if (business_status === 'active' || business_status === 'pending_approval') {
+            const contract = await this.contractRepository.findPendingByBusiness(businessInfoUuid);
+            if (contract) {
+                business_status = 'pending_contract';
+            }
+        }
 
         return {
             dashboard_state: {
@@ -32,7 +42,8 @@ export class CompanyUserDetailsUsecase {
                 },
                 features: {
                     has_scheduling: hasSchedulingFeature
-                }
+                },
+                business_status
             },
         };
     }

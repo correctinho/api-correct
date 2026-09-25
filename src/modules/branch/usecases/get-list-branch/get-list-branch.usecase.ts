@@ -9,11 +9,12 @@ export class GetListBranchUsecase {
         return branch.map(item => ({
             uuid: item.uuid,
             name: item.name,
-            marketing_tax: item.marketing_tax / 10000,
-            admin_tax: item.admin_tax / 10000,
-            market_place_tax: item.market_place_tax  / 10000,
+            marketing_tax: item.marketing_tax,
+            admin_tax: item.admin_tax,
+            market_place_tax: item.market_place_tax,
             created_at: item.created_at,
             updated_at: item.updated_at,
+            items: item.items,
         }));
     }
 }

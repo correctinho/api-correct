@@ -53,8 +53,9 @@ export class ApproveBusinessUsecase {
           `;
 
       // Isolamos o envio de e-mail para não quebrar o fluxo principal
-      try {
-        await this.mailProvider.sendMail({
+      if (process.env.NODE_ENV !== 'test') {
+        try {
+          await this.mailProvider.sendMail({
           to: input.admin_email,
           subject,
           body,
@@ -68,6 +69,7 @@ export class ApproveBusinessUsecase {
         console.error('[ApproveBusinessUsecase] Erro não impeditivo ao enviar e-mail de aprovação:', emailError.message);
       }
     }
+  }
 
     return result;
   }

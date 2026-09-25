@@ -13,4 +13,5 @@ export interface ICompanyDataRepository {
     findPartnersByBranch(branch_uuid: string, page: number, limit: number): Promise<any>
     findPartnerByCorrect(correct_user_uuid: string, business_info_uuid: string): Promise<{ uuid: string, business_info_uuid: string }>
     updateStatus(uuid: string, status: BusinessStatus): Promise<void>
+    countContractsThisYear(year: string): Promise<number>
 }

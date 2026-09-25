@@ -3,11 +3,15 @@ import { ICompanyUserRepository } from '../../repositories/company-user.reposito
 import { IServiceRequestRepository } from '../../../../ServiceScheduling/repositories/IServiceRequestRepository';
 import { CompanyUserDetailsUsecase } from './company-user-details.usecase';
 import { IProductRepository } from '../../../../Ecommerce/Products/repositories/product.repository';
+import { ICompanyDataRepository } from '../../../CompanyData/repositories/company-data.repository';
+import { IBusinessContractRepository } from '../../../../Terms/repositories/business-contract.repository';
 
 export class CompanyUserDetailsController {
     constructor(
         private serviceRequestRepository: IServiceRequestRepository,
-        private productsRepository: IProductRepository
+        private productsRepository: IProductRepository,
+        private companyDataRepository: ICompanyDataRepository,
+        private contractRepository: IBusinessContractRepository
     ) { }
 
     async handle(req: Request, res: Response) {
@@ -31,7 +35,9 @@ export class CompanyUserDetailsController {
 
             const usecase = new CompanyUserDetailsUsecase(
                 this.serviceRequestRepository,
-                this.productsRepository
+                this.productsRepository,
+                this.companyDataRepository,
+                this.contractRepository
             );
             const additionalData = await usecase.execute(
                 companyUser.businessInfoUuid

@@ -16,6 +16,14 @@ export type PartnerConfigProps = {
   use_marketing: boolean;
   market_place_tax: number;
   use_market_place: boolean;
+  pending_admin_tax?: number;
+  pending_marketing_tax?: number;
+  pending_use_marketing?: boolean;
+  pending_market_place_tax?: number;
+  pending_use_market_place?: boolean;
+  use_correct_fidelity?: boolean;
+  use_special_products?: boolean;
+  use_employer_platform?: boolean;
   title?: string;
   phone?: string;
   description?: string;
@@ -43,6 +51,14 @@ export class PartnerConfigEntity {
   private _use_marketing: boolean;
   private _market_place_tax?: number;
   private _use_market_place: boolean;
+  private _pending_admin_tax?: number;
+  private _pending_marketing_tax?: number;
+  private _pending_use_marketing?: boolean;
+  private _pending_market_place_tax?: number;
+  private _pending_use_market_place?: boolean;
+  private _use_correct_fidelity: boolean;
+  private _use_special_products: boolean;
+  private _use_employer_platform: boolean;
   private _title?: string;
   private _phone?: string;
   private _description?: string;
@@ -65,6 +81,14 @@ export class PartnerConfigEntity {
     this._use_marketing = props.use_marketing ?? false;
     this._market_place_tax = props.market_place_tax; // Recebe o valor já escalado
     this._use_market_place = props.use_market_place ?? false;
+    this._pending_admin_tax = props.pending_admin_tax;
+    this._pending_marketing_tax = props.pending_marketing_tax;
+    this._pending_use_marketing = props.pending_use_marketing;
+    this._pending_market_place_tax = props.pending_market_place_tax;
+    this._pending_use_market_place = props.pending_use_market_place;
+    this._use_correct_fidelity = props.use_correct_fidelity ?? false;
+    this._use_special_products = props.use_special_products ?? false;
+    this._use_employer_platform = props.use_employer_platform ?? false;
     this._title = props.title ?? null;
     this._phone = props.phone;
     this._sales_type = props.sales_type;
@@ -117,6 +141,18 @@ export class PartnerConfigEntity {
 
   get use_market_place(): boolean {
     return this._use_market_place;
+  }
+
+  get use_correct_fidelity(): boolean {
+    return this._use_correct_fidelity;
+  }
+
+  get use_special_products(): boolean {
+    return this._use_special_products;
+  }
+
+  get use_employer_platform(): boolean {
+    return this._use_employer_platform;
   }
 
   get title(): string {
@@ -296,6 +332,19 @@ export class PartnerConfigEntity {
     }
   }
 
+  
+  get pending_admin_tax(): number | undefined { return this._pending_admin_tax; }
+  get pending_marketing_tax(): number | undefined { return this._pending_marketing_tax; }
+  get pending_use_marketing(): boolean | undefined { return this._pending_use_marketing; }
+  get pending_market_place_tax(): number | undefined { return this._pending_market_place_tax; }
+  get pending_use_market_place(): boolean | undefined { return this._pending_use_market_place; }
+
+  changePendingAdminTax(val: number) { this._pending_admin_tax = val; }
+  changePendingMarketingTax(val: number) { this._pending_marketing_tax = val; }
+  changePendingUseMarketing(val: boolean) { this._pending_use_marketing = val; }
+  changePendingMarketPlaceTax(val: number) { this._pending_market_place_tax = val; }
+  changePendingUseMarketPlace(val: boolean) { this._pending_use_market_place = val; }
+
   public toJSON() {
     return {
       uuid: this._uuid.uuid,
@@ -308,6 +357,14 @@ export class PartnerConfigEntity {
       use_marketing: this._use_marketing,
       market_place_tax: this._market_place_tax, // Retorna o inteiro escalado (12000)
       use_market_place: this._use_market_place,
+      pending_admin_tax: this._pending_admin_tax,
+      pending_marketing_tax: this._pending_marketing_tax,
+      pending_use_marketing: this._pending_use_marketing,
+      pending_market_place_tax: this._pending_market_place_tax,
+      pending_use_market_place: this._pending_use_market_place,
+      use_correct_fidelity: this._use_correct_fidelity,
+      use_special_products: this._use_special_products,
+      use_employer_platform: this._use_employer_platform,
       title: this._title,
       phone: this._phone,
       description: this._description,

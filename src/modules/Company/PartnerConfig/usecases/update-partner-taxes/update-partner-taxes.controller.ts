@@ -1,26 +1,47 @@
-import { Request, Response } from 'express';
-import { UpdatePartnerTaxesUsecase } from './update-partner-taxes.usecase';
+import { Request, Response } from "express";
+import { UpdatePartnerTaxesUsecase } from "./update-partner-taxes.usecase";
+import { IPartnerConfigRepository } from "../../repositories/partner-config.repository";
+import { ICompanyDataRepository } from "../../../CompanyData/repositories/company-data.repository";
+import { IBusinessContractRepository } from "../../../../Terms/repositories/business-contract.repository";
+import { GenerateBusinessContractUsecase } from "../../../../Terms/usecase/generate-business-contract/generate-business-contract.usecase";
 
 export class UpdatePartnerTaxesController {
-  constructor(private usecase: UpdatePartnerTaxesUsecase) {}
+  constructor(
+    private repository: IPartnerConfigRepository,
+    private businessInfoRepository: ICompanyDataRepository,
+    private businessContractRepository: IBusinessContractRepository,
+    private generateContractUsecase: GenerateBusinessContractUsecase
+  ) {}
 
   async handle(req: Request, res: Response) {
     try {
-      const business_info_uuid = req.params.uuid;
+      const { uuid } = req.params;
       const { admin_tax, marketing_tax, market_place_tax, cashback_tax } = req.body;
 
-      await this.usecase.execute({
-        business_info_uuid,
-        admin_tax: Number(admin_tax),
-        marketing_tax: Number(marketing_tax),
-        market_place_tax: Number(market_place_tax),
-        cashback_tax: Number(cashback_tax)
+      if (!uuid) {
+        return res.status(400).json({ error: "UUID do parceiro é obrigatório." });
+      }
+
+      const usecase = new UpdatePartnerTaxesUsecase(
+        this.repository,
+        this.businessInfoRepository,
+        this.businessContractRepository,
+        this.generateContractUsecase
+      );
+
+      await usecase.execute({
+        business_info_uuid: uuid,
+        admin_tax,
+        marketing_tax,
+        market_place_tax,
+        cashback_tax,
       });
 
       return res.status(204).send();
-    } catch (error: any) {
-      return res.status(error.statusCode || 500).json({
-        error: error.message || "Internal Server Error",
+    } catch (err: any) {
+      console.error("[UpdatePartnerTaxesController] Error:", err);
+      return res.status(err.statusCode || 500).json({
+        error: err.message,
       });
     }
   }

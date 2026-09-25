@@ -5,7 +5,8 @@ export type BranchProps = {
   uuid?: string;
   name: string;
   benefits_uuid?: string[];
-  benefits_name?: string[]
+  benefits_name?: string[];
+  items?: { uuid: string; name: string; description: string; item_type: string }[];
   marketing_tax: number;
   admin_tax: number;
   market_place_tax: number;
@@ -28,7 +29,8 @@ export class BranchEntity {
   private _uuid: string;
   private _name: string;
   private _benefits_uuid: string[];
-  private _benefits_name: string[]
+  private _benefits_name: string[];
+  private _items: { uuid: string; name: string; description: string; item_type: string }[];
   private _marketing_tax: number;
   private _admin_tax: number;
   private _market_place_tax: number;
@@ -40,6 +42,7 @@ export class BranchEntity {
     this._name = props.name;
     this._benefits_uuid = props.benefits_uuid || [];
     this._benefits_name = props.benefits_name || [];
+    this._items = props.items || [];
     this._marketing_tax = props.marketing_tax;
     this._admin_tax = props.admin_tax;
     this._market_place_tax = props.market_place_tax;
@@ -62,6 +65,10 @@ export class BranchEntity {
 
   get benefits_name(): string[] {
     return this._benefits_name
+  }
+
+  get items(): { uuid: string; name: string; description: string; item_type: string }[] {
+    return this._items;
   }
 
   get marketing_tax(): number {

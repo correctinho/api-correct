@@ -5,6 +5,8 @@ import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/corre
 import { businessRegisterByCorrectController } from "../../modules/Company/BusinessFirstRegister/usecases/business-first-register-by-correct";
 import { generateOnboardingPixController } from "../../modules/Company/onboarding/usecases/generate-onboarding-pix";
 import { checkBusinessStatusController } from "../../modules/Company/BusinessFirstRegister/usecases/check-business-status";
+import { getPublicContractController } from "../../modules/Company/BusinessFirstRegister/usecases/get-public-contract";
+import { signPublicContractController } from "../../modules/Company/BusinessFirstRegister/usecases/sign-public-contract";
 // import { deleteCompanyDataController } from "../../modules/Company/CompanyData/usecases/delete-company-data";
 
 export const businessRegisterRouter = Router()
@@ -27,4 +29,14 @@ businessRegisterRouter.post('/business/:uuid/onboarding-pix', async (request, re
 //check business status
 businessRegisterRouter.get('/business/check/:document', async (request, response) => {
     await checkBusinessStatusController.handle(request, response)
+})
+
+// get public contract
+businessRegisterRouter.get('/business/:uuid/contract', async (request, response) => {
+    await getPublicContractController.handle(request, response)
+})
+
+// sign public contract
+businessRegisterRouter.post('/business/:uuid/sign-contract', async (request, response) => {
+    await signPublicContractController.handle(request, response)
 })

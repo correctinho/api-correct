@@ -1,5 +1,3 @@
-// src/modules/Terms/usecase/generate-business-contract/dto/generate-business-contract.dto.ts
-
 export interface InputGenerateBusinessContractDTO {
     business_info_uuid: string;
 }
@@ -9,13 +7,31 @@ export interface OutputGenerateBusinessContractDTO {
     status: string;
 }
 
-// Dados que o repositório precisa devolver para o UseCase conseguir montar o HTML
 export interface BusinessContractDataProps {
     uuid: string;
     corporate_reason: string;
-    fantasy_name: string;
+    fantasy_name: string | null;
     document: string;
+    legal_representative_name: string | null;
+    legal_representative_cpf: string | null;
+    address: {
+        line1: string;
+        line2: string;
+        line3: string | null;
+        neighborhood: string;
+        city: string;
+        state: string;
+        postal_code: string;
+    } | null;
+    use_marketing: boolean;
+    use_market_place: boolean;
+    use_correct_fidelity: boolean;
     admin_tax: number;
     marketing_tax: number;
     market_place_tax: number;
+    programs: {
+        uuid: string;
+        name: string;
+        checked: string;
+    }[];
 }

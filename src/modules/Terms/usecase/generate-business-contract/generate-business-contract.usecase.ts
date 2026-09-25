@@ -8,34 +8,65 @@ export class GenerateBusinessContractUsecase {
     ) { }
 
     async execute(input: InputGenerateBusinessContractDTO): Promise<OutputGenerateBusinessContractDTO> {
-        // 1. Busca os dados da empresa e as taxas que ela vai pagar
         const businessData = await this.repository.getBusinessData(input.business_info_uuid);
         if (!businessData) {
             throw new CustomError("Empresa não encontrada para geração de contrato.", 404);
         }
 
-        // 2. Busca o template do contrato global (B2B_BUSINESS_MSA)
         const activeTerm = await this.repository.getActiveB2BTerm();
         if (!activeTerm) {
             throw new CustomError("Nenhum Termo de Serviço base ativo encontrado para B2B.", 500);
         }
 
-        // 3. O motor de renderização (Template Interpolation)
-        // Aqui trocamos as tags {{NOME}} no HTML pelos dados reais vindos do banco
-        let renderedHtml = activeTerm.content;
+        const Handlebars = require('handlebars');
+        const template = Handlebars.compile(activeTerm.content);
 
-        renderedHtml = renderedHtml.replace(/{{RAZAO_SOCIAL}}/g, businessData.corporate_reason || '');
-        renderedHtml = renderedHtml.replace(/{{NOME_FANTASIA}}/g, businessData.fantasy_name || '');
-        renderedHtml = renderedHtml.replace(/{{CNPJ}}/g, businessData.document || '');
-        renderedHtml = renderedHtml.replace(/{{TAXA_ADM}}/g, businessData.admin_tax.toString());
-        renderedHtml = renderedHtml.replace(/{{TAXA_MKT}}/g, businessData.marketing_tax.toString());
-        renderedHtml = renderedHtml.replace(/{{TAXA_MKT_PLACE}}/g, businessData.market_place_tax.toString());
+        const isPJ = businessData.document.replace(/\D/g, '').length === 14;
+        
+        const enderecoCompleto = businessData.address 
+            ? `${businessData.address.line1}, nº ${businessData.address.line2}, ${businessData.address.neighborhood}, ${businessData.address.city} - ${businessData.address.state}`
+            : '';
 
-        // Adiciona a data atual de geração
-        const today = new Date().toLocaleDateString('pt-BR');
-        renderedHtml = renderedHtml.replace(/{{DATA_GERACAO}}/g, today);
+                        const formatCpfCnpj = (value: string) => {
+            const clean = value.replace(/\D/g, '');
+            if (clean.length === 11) {
+                return clean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+            } else if (clean.length === 14) {
+                return clean.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+            }
+            return value;
+        };
 
-        // 4. Salva o rascunho na nova tabela como PENDING
+        const formatTax = (tax: number) => {
+            if (!tax || tax === 0) return 'Isento';
+            return tax.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + '%';
+        };
+
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        const dataAtual = new Date();
+        const dataExtenso = `Campo Grande - MS, ${dataAtual.getDate()} de ${meses[dataAtual.getMonth()]} de ${dataAtual.getFullYear()}`;
+
+        const renderedHtml = template({
+            NUMERO_CONTRATO: businessData.uuid.substring(0, 8).toUpperCase(),
+            RAZAO_SOCIAL: businessData.corporate_reason,
+            TIPO_DOCUMENTO: isPJ ? 'CNPJ' : 'CPF',
+            DOCUMENTO: formatCpfCnpj(businessData.document),
+            ENDERECO_COMPLETO: enderecoCompleto,
+            IS_PJ: isPJ,
+            NOME_RESPONSAVEL: businessData.legal_representative_name || '',
+            CPF_RESPONSAVEL: businessData.legal_representative_cpf ? formatCpfCnpj(businessData.legal_representative_cpf) : '',
+            
+            CHECK_VITRINE: businessData.use_marketing ? 'X' : ' ',
+            CHECK_VENDAS_ONLINE: businessData.use_market_place ? 'X' : ' ',
+            CHECK_FIDELITY: businessData.use_correct_fidelity ? 'X' : ' ',
+            
+            DATA_EXTENSO: dataExtenso,
+            TAXA_ADESAO: 'R$ 0,00 (Isento)',
+            TAXA_ADMINISTRACAO: formatTax(businessData.admin_tax / 10000),
+            
+            PROGRAMAS: businessData.programs
+        });
+
         const contract = await this.repository.savePendingContract({
             business_info_uuid: businessData.uuid,
             terms_uuid: activeTerm.uuid,

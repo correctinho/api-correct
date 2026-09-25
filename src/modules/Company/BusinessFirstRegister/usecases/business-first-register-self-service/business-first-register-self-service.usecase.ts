@@ -20,7 +20,12 @@ export class CreateBusinessRegisterSelfServiceUsecase {
   ) { }
 
   async execute(data: InputBusinessFirstRegisterDTO): Promise<OutputBusinessFirstRegisterDTO> {
-    const register = await BusinessRegisterEntity.create(data as any);
+    const currentYear = new Date().getFullYear().toString();
+    const count = await this.companyDataRepository.countContractsThisYear(currentYear);
+    const contractNumberStr = String(count + 1).padStart(4, '0');
+    const contract_number = `C${currentYear}-${contractNumberStr}`;
+
+    const register = await BusinessRegisterEntity.create({ ...data, contract_number } as any);
     const findBusiness = await this.companyDataRepository.findByDocument(register.document);
     if (findBusiness) throw new CustomError("Empresa já registrada", 409);
     const findByEmail = await this.companyDataRepository.findByEmail(register.email);
@@ -34,6 +39,9 @@ export class CreateBusinessRegisterSelfServiceUsecase {
         items_uuid: ["placeholder-uuid-temporario"],
         admin_tax: 0, marketing_tax: 0, use_marketing: data.partnerConfig.use_marketing,
         market_place_tax: 0, use_market_place: data.partnerConfig.use_market_place,
+        use_correct_fidelity: data.partnerConfig.use_correct_fidelity,
+        use_special_products: data.partnerConfig.use_special_products,
+        use_employer_platform: data.partnerConfig.use_employer_platform,
         title: data.partnerConfig.title ? data.partnerConfig.title : null
       };
       const partnerConfigEntity = PartnerConfigEntity.create(partneConfigData);
@@ -55,7 +63,9 @@ export class CreateBusinessRegisterSelfServiceUsecase {
       }
       partnerConfigEntity.changeAdminTax(mainBranchRawData.admin_tax);
 
-      partnerConfigEntity.changeItemsUuid(mainBranchDetails.benefits_uuid);
+      const selectedPrograms = data.partnerConfig.selected_programs || [];
+      const combinedPrograms = Array.from(new Set([...mainBranchDetails.benefits_uuid, ...selectedPrograms]));
+      partnerConfigEntity.changeItemsUuid(combinedPrograms);
 
       const response = await this.businessRegisterRepository.saveSelfServicePartner(register, partnerConfigEntity);
 
@@ -83,6 +93,10 @@ export class CreateBusinessRegisterSelfServiceUsecase {
   }
 
   private async sendNotifications(register: BusinessRegisterEntity): Promise<void> {
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
     const senderAddress = process.env.MAIL_ACCOUNT_NOREPLY_USER;
     const adminAlertEmail = process.env.ADMIN_ALERT_EMAIL; // <-- Crie isso no seu .env
 

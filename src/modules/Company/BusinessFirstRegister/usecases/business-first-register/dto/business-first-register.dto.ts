@@ -23,12 +23,18 @@ export interface InputBusinessFirstRegisterDTO {
   email: string
   branches_uuid: string[]
   main_branch: string
+  legal_representative_name?: string
+  legal_representative_cpf?: string
   correct_user_uuid?: string
   partnerConfig: {
     main_branch: string,
     partner_category: string[]
     use_marketing: boolean,
     use_market_place: boolean,
+    use_correct_fidelity?: boolean,
+    use_special_products?: boolean,
+    use_employer_platform?: boolean,
+    selected_programs?: string[],
     title?: string
   }
   referred_by_code?: string;
