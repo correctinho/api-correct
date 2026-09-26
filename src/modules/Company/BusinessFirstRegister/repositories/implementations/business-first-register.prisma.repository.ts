@@ -42,6 +42,9 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
           email: data.email,
           business_type: data.business_type,
           employer_branch: data.employer_branch,
+          contract_number: data.contract_number,
+          legal_representative_name: data.legal_representative_name,
+          legal_representative_cpf: data.legal_representative_cpf,
           created_at: newDateF(new Date())
         }
       }),
@@ -135,6 +138,9 @@ export class BusinessRegisterPrismaRepository implements IBusinessFirstRegisterR
           phone_2: data.phone_2,
           email: data.email,
           business_type: data.business_type,
+          contract_number: data.contract_number,
+          legal_representative_name: data.legal_representative_name,
+          legal_representative_cpf: data.legal_representative_cpf,
           created_at: newDateF(new Date())
         }
       }),

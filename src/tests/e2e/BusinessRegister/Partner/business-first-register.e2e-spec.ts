@@ -112,6 +112,8 @@ describe('E2E - Partner First Register', () => {
             phone_1: "11999999999",
             business_type: "comercio",
             branches_uuid: [branchId],
+            legal_representative_name: "Fulano Representante",
+            legal_representative_cpf: "12345678901",
             partnerConfig: {
                 main_branch: branchId,
                 partner_category: ["comercio"],
@@ -138,6 +140,10 @@ describe('E2E - Partner First Register', () => {
         expect(businessInfo?.contract_number).toBeDefined();
         expect(businessInfo?.contract_number).toMatch(/^C202[0-9]-\d{4}$/);
         expect(businessInfo?.status).toBe('pending_contract');
+
+        // Assegura que o representante legal foi salvo
+        expect(businessInfo?.legal_representative_name).toBe("Fulano Representante");
+        expect(businessInfo?.legal_representative_cpf).toBe("12345678901");
 
         const config = businessInfo?.PartnerConfig[0];
         expect(config).toBeTruthy();
@@ -175,6 +181,8 @@ describe('E2E - Partner First Register', () => {
             phone_1: "11999999999",
             business_type: "comercio",
             branches_uuid: [branchId],
+            legal_representative_name: "Fulano Representante",
+            legal_representative_cpf: "12345678901",
             partnerConfig: {
                 main_branch: uuidV4(), // Invalid branch ID
                 partner_category: ["comercio"],
