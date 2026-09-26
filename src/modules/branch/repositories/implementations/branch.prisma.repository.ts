@@ -126,7 +126,8 @@ export class BranchPrismaRepository implements IBranchRepository {
 
     const r = await prismaClient.branchInfo.findMany({
       where,
-      include: { BranchItem: { include: { Item: { select: { uuid: true, name: true, description: true, item_type: true } } } } }
+      include: { BranchItem: { include: { Item: { select: { uuid: true, name: true, description: true, item_type: true } } } } },
+      orderBy: { name: 'asc' }
     });
 
     if (r.length > 0) {
@@ -151,7 +152,8 @@ export class BranchPrismaRepository implements IBranchRepository {
     const r = await prismaClient.branchInfo.findMany({
       where: {
         BusinessinfoBranch: { some: {} }
-      }
+      },
+      orderBy: { name: 'asc' }
     });
 
     if (r.length > 0) {

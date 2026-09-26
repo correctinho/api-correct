@@ -9,6 +9,7 @@ export interface OutputGenerateBusinessContractDTO {
 
 export interface BusinessContractDataProps {
     uuid: string;
+    contract_number: string | null;
     corporate_reason: string;
     fantasy_name: string | null;
     document: string;

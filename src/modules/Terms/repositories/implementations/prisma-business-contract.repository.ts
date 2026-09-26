@@ -74,6 +74,7 @@ export class BusinessContractPrismaRepository implements IBusinessContractReposi
 
         return {
             uuid: business.uuid,
+            contract_number: business.contract_number,
             corporate_reason: business.corporate_reason,
             fantasy_name: business.fantasy_name,
             document: business.document,

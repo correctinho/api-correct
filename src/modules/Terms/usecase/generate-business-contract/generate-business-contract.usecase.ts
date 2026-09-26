@@ -47,7 +47,7 @@ export class GenerateBusinessContractUsecase {
         const dataExtenso = `Campo Grande - MS, ${dataAtual.getDate()} de ${meses[dataAtual.getMonth()]} de ${dataAtual.getFullYear()}`;
 
         const renderedHtml = template({
-            NUMERO_CONTRATO: businessData.uuid.substring(0, 8).toUpperCase(),
+            NUMERO_CONTRATO: businessData.contract_number || businessData.uuid.substring(0, 8).toUpperCase(),
             RAZAO_SOCIAL: businessData.corporate_reason,
             TIPO_DOCUMENTO: isPJ ? 'CNPJ' : 'CPF',
             DOCUMENTO: formatCpfCnpj(businessData.document),

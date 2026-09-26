@@ -301,8 +301,8 @@ export class PartnerConfigEntity {
       }
     });
 
-    if (!this._items_uuid || !Array.isArray(this._items_uuid) || this._items_uuid.length === 0) {
-      throw new CustomError('Items UUID is required and must be a non-empty array', 400);
+    if (!this._items_uuid || !Array.isArray(this._items_uuid)) {
+      throw new CustomError('Items UUID is required and must be an array', 400);
     }
     if (this._admin_tax < 0) {
       throw new CustomError('Admin tax must be a positive number', 400);
