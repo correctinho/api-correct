@@ -5,36 +5,56 @@ import { app } from '../../../../app';
 
 describe('E2E - Partner First Register', () => {
     let branchId: string;
-    let defaultItemId: string;
-    let selectedItemId: string;
+    let unselectedProgramId: string;
+    let selectedProgramId: string;
+    let structuralProductId: string;
+    let structuralGratuitoId: string;
 
     beforeAll(async () => {
         branchId = uuidV4();
-        defaultItemId = uuidV4();
-        selectedItemId = uuidV4();
+        unselectedProgramId = uuidV4();
+        selectedProgramId = uuidV4();
+        structuralProductId = uuidV4();
+        structuralGratuitoId = uuidV4();
         
         await prismaClient.item.createMany({
             data: [
                 {
-                    uuid: defaultItemId,
-                    name: 'Item Padrao do Ramo',
-                    description: 'Item Teste Default',
+                    uuid: unselectedProgramId,
+                    name: 'Programa Não Selecionado',
+                    description: 'Programa que o parceiro vai ignorar',
                     item_type: 'programa',
                     item_category: 'pre_pago',
                     created_at: new Date().toISOString()
                 },
                 {
-                    uuid: selectedItemId,
-                    name: 'Item Selecionado Livre',
-                    description: 'Item Teste Selecionado',
+                    uuid: selectedProgramId,
+                    name: 'Programa Selecionado',
+                    description: 'Programa que o parceiro escolheu',
                     item_type: 'programa',
+                    item_category: 'pre_pago',
+                    created_at: new Date().toISOString()
+                },
+                {
+                    uuid: structuralProductId,
+                    name: 'Cartão Correct',
+                    description: 'Produto que é débito do sistema',
+                    item_type: 'produto',
+                    item_category: 'pre_pago',
+                    created_at: new Date().toISOString()
+                },
+                {
+                    uuid: structuralGratuitoId,
+                    name: 'Gratuito Estrutural',
+                    description: 'Item gratuito do ramo',
+                    item_type: 'gratuito',
                     item_category: 'pre_pago',
                     created_at: new Date().toISOString()
                 }
             ]
         });
 
-        // Criar ramo para teste
+        // Criar ramo para teste e relacionar TODOS os 4 itens a este ramo
         await prismaClient.branchInfo.create({
             data: {
                 uuid: branchId,
@@ -44,10 +64,12 @@ describe('E2E - Partner First Register', () => {
                 admin_tax: 100,
                 created_at: new Date().toISOString(),
                 BranchItem: {
-                    create: {
-                        item_uuid: defaultItemId,
-                        created_at: new Date().toISOString()
-                    }
+                    create: [
+                        { item_uuid: unselectedProgramId, created_at: new Date().toISOString() },
+                        { item_uuid: selectedProgramId, created_at: new Date().toISOString() },
+                        { item_uuid: structuralProductId, created_at: new Date().toISOString() },
+                        { item_uuid: structuralGratuitoId, created_at: new Date().toISOString() }
+                    ]
                 }
             }
         });
@@ -89,7 +111,7 @@ describe('E2E - Partner First Register', () => {
             where: { uuid: branchId }
         });
         await prismaClient.item.deleteMany({
-            where: { uuid: { in: [defaultItemId, selectedItemId] } }
+            where: { uuid: { in: [unselectedProgramId, selectedProgramId, structuralProductId, structuralGratuitoId] } }
         });
     });
 
@@ -122,8 +144,8 @@ describe('E2E - Partner First Register', () => {
                 use_correct_fidelity: true,
                 use_special_products: true,
                 use_employer_platform: false,
-                // Passamos o defaultItemId tambem para forcar e testar a deduplicacao do Set() no backend
-                selected_programs: [selectedItemId, defaultItemId]
+                // O usuario seleciona apenas 1 programa! Os produtos e gratuitos devem vir automaticamente.
+                selected_programs: [selectedProgramId]
             }
         };
 
@@ -153,12 +175,18 @@ describe('E2E - Partner First Register', () => {
         expect(config?.marketing_tax).toBe(200); // Porque use_marketing eh true
         expect(config?.market_place_tax).toBe(0); // Porque use_market_place eh false
 
-        // 2. Garantia dos Itens (Programas Selecionados vs Padroes) e Deduplicacao
-        expect(config?.items_uuid).toContain(defaultItemId);
-        expect(config?.items_uuid).toContain(selectedItemId);
-        expect(config?.items_uuid.length).toBe(2); // Garante que nao houve duplicacao do defaultItemId
+        // 2. Garantia dos Itens (Programas Selecionados vs Estruturais Automáticos)
+        expect(config?.items_uuid).toContain(selectedProgramId);
+        expect(config?.items_uuid).toContain(structuralProductId);
+        expect(config?.items_uuid).toContain(structuralGratuitoId);
+        
+        // 3. Garantia de que o programa NAO selecionado não entrou
+        expect(config?.items_uuid).not.toContain(unselectedProgramId);
+        
+        // Teremos exatamente 3 itens
+        expect(config?.items_uuid.length).toBe(3);
 
-        // 3. Integridade do Relacionamento
+        // 4. Integridade do Relacionamento
         expect(config?.main_branch).toBe(branchId);
     });
 
@@ -188,7 +216,7 @@ describe('E2E - Partner First Register', () => {
                 partner_category: ["comercio"],
                 use_marketing: true,
                 use_market_place: false,
-                selected_programs: [selectedItemId]
+                selected_programs: [selectedProgramId]
             }
         };
 

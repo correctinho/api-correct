@@ -64,7 +64,7 @@ export class CreateBusinessRegisterSelfServiceUsecase {
       partnerConfigEntity.changeAdminTax(mainBranchRawData.admin_tax);
 
       const structuralItems = mainBranchDetails.items
-        ? mainBranchDetails.items.filter(item => item.item_type !== 'programa' && item.item_type !== 'produto').map(item => item.uuid)
+        ? mainBranchDetails.items.filter(item => item.item_type !== 'programa').map(item => item.uuid)
         : [];
       
       const selectedPrograms = data.partnerConfig.selected_programs || [];
