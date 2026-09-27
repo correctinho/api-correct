@@ -15,7 +15,8 @@ export class CreateBusinessRegisterController {
 
   async handle(req: Request, res: Response) {
     try {
-      const data = req.body
+      const data = req.body;
+      console.log('[CONTROLLER] /business/register/correct - RECEIVED DATA:', data.legal_representative_name, data.legal_representative_cpf);
       if (req?.correctAdmin) data.correct_user_uuid = req.correctAdmin.correctAdminId
 
       const businessRegisterUsecase = new CreateBusinessRegisterUsecase(

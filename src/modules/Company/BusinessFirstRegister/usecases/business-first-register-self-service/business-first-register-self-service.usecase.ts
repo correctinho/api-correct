@@ -63,9 +63,13 @@ export class CreateBusinessRegisterSelfServiceUsecase {
       }
       partnerConfigEntity.changeAdminTax(mainBranchRawData.admin_tax);
 
+      const structuralItems = mainBranchDetails.items
+        ? mainBranchDetails.items.filter(item => item.item_type !== 'programa' && item.item_type !== 'produto').map(item => item.uuid)
+        : [];
+      
       const selectedPrograms = data.partnerConfig.selected_programs || [];
-      const combinedPrograms = Array.from(new Set([...mainBranchDetails.benefits_uuid, ...selectedPrograms]));
-      partnerConfigEntity.changeItemsUuid(combinedPrograms);
+      const combinedPrograms = Array.from(new Set([...structuralItems, ...selectedPrograms]));
+      partnerConfigEntity.changeItemsUuid(combinedPrograms.length > 0 ? combinedPrograms : []);
 
       const response = await this.businessRegisterRepository.saveSelfServicePartner(register, partnerConfigEntity);
 
