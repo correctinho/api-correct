@@ -4,6 +4,7 @@ import { prismaClient } from '../../../../infra/databases/prisma.config';
 import { newDateF } from '../../../../utils/date';
 import { CompanyAdminJWToken } from '../../../../infra/shared/crypto/token/CompanyAdmin/jwt.token';
 import { app } from '../../../../app';
+import { TransactionStatus } from '@prisma/client';
 
 describe('E2E - Process Payment By Partner', () => {
   let sellerToken: string;
@@ -17,18 +18,18 @@ describe('E2E - Process Payment By Partner', () => {
   let sellerAccountId: string;
   let buyerWithBalanceAccountId: string;
   let buyerWithoutBalanceAccountId: string;
-  
+
   let correctAccountId: string;
 
   beforeAll(async () => {
     sellerBusinessInfoId = uuidV4();
     buyerWithBalanceInfoId = uuidV4();
     buyerWithoutBalanceInfoId = uuidV4();
-    
+
     sellerAccountId = uuidV4();
     buyerWithBalanceAccountId = uuidV4();
     buyerWithoutBalanceAccountId = uuidV4();
-    
+
     const sellerUserId = uuidV4();
     const buyerWithBalanceUserId = uuidV4();
     const buyerWithoutBalanceUserId = uuidV4();
@@ -198,7 +199,7 @@ describe('E2E - Process Payment By Partner', () => {
       uuid: { uuid: buyerWithBalanceUserId },
       business_info_uuid: { uuid: buyerWithBalanceInfoId }
     } as any);
-    
+
     buyerWithoutBalanceToken = companyAdminJWT.create({
       uuid: { uuid: buyerWithoutBalanceUserId },
       business_info_uuid: { uuid: buyerWithoutBalanceInfoId }
@@ -213,7 +214,7 @@ describe('E2E - Process Payment By Partner', () => {
         uuid: transactionId,
         favored_business_info_uuid: sellerBusinessInfoId,
         transaction_type: 'POS_PAYMENT',
-        status: status,
+        status: status as TransactionStatus,
         original_price: net_price,
         net_price: net_price,
         partner_credit_amount: net_price - fee,
@@ -234,7 +235,7 @@ describe('E2E - Process Payment By Partner', () => {
       .post('/pos-transaction/business/processing')
       .set('Authorization', `Bearer ${buyerWithBalanceToken}`)
       .send({});
-      
+
     expect(response.status).toBe(400);
     expect(response.body.error).toBe("Dados da transação ou do pagador estão ausentes.");
   });
@@ -244,7 +245,7 @@ describe('E2E - Process Payment By Partner', () => {
       .post('/pos-transaction/business/processing')
       .set('Authorization', `Bearer ${buyerWithBalanceToken}`)
       .send({ transactionId: uuidV4() });
-      
+
     expect(response.status).toBe(404);
     expect(response.body.error).toBe("Transação não encontrada.");
   });
@@ -255,7 +256,7 @@ describe('E2E - Process Payment By Partner', () => {
       .post('/pos-transaction/business/processing')
       .set('Authorization', `Bearer ${buyerWithBalanceToken}`)
       .send({ transactionId: txId });
-      
+
     expect(response.status).toBe(400);
     expect(response.body.error).toBe("Esta cobrança foi cancelada pelo estabelecimento e não pode mais ser paga.");
   });
@@ -266,7 +267,7 @@ describe('E2E - Process Payment By Partner', () => {
       .post('/pos-transaction/business/processing')
       .set('Authorization', `Bearer ${buyerWithBalanceToken}`)
       .send({ transactionId: txId });
-      
+
     expect(response.status).toBe(400);
     expect(response.body.error).toBe("Esta cobrança já foi paga anteriormente.");
   });
@@ -277,7 +278,7 @@ describe('E2E - Process Payment By Partner', () => {
       .post('/pos-transaction/business/processing')
       .set('Authorization', `Bearer ${buyerWithoutBalanceToken}`)
       .send({ transactionId: txId });
-      
+
     expect(response.status).toBe(402);
     expect(response.body.error).toBe("Saldo total (líquido + créditos) insuficiente para esta compra.");
   });
@@ -286,7 +287,7 @@ describe('E2E - Process Payment By Partner', () => {
     const net_price = 1500; // 15.00
     const fee_amount = 150; // 1.50 (10% fee)
     const txId = await createMockTransaction('pending', net_price, fee_amount);
-    
+
     // Pegar o saldo antes
     const buyerAccBefore = await prismaClient.businessAccount.findUnique({ where: { uuid: buyerWithBalanceAccountId } });
     const sellerAccBefore = await prismaClient.businessAccount.findUnique({ where: { uuid: sellerAccountId } });
@@ -296,7 +297,7 @@ describe('E2E - Process Payment By Partner', () => {
       .post('/pos-transaction/business/processing')
       .set('Authorization', `Bearer ${buyerWithBalanceToken}`)
       .send({ transactionId: txId });
-      
+
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
     expect(response.body.netAmountPaid).toBe(15);
@@ -329,7 +330,7 @@ describe('E2E - Process Payment By Partner', () => {
     expect(buyerHistory).toBeDefined();
     expect(buyerHistory?.event_type).toBe('PAYOUT_PROCESSED');
     expect(buyerHistory?.amount).toBe(-net_price);
-    
+
     // 6. Histórico do Vendedor
     const sellerHistory = await prismaClient.businessAccountHistory.findFirst({
       where: { related_transaction_uuid: txId, business_account_uuid: sellerAccountId }
@@ -355,7 +356,7 @@ describe('E2E - Process Payment By Partner', () => {
       .post('/pos-transaction/business/processing')
       .set('Authorization', `Bearer ${buyerWithBalanceToken}`)
       .send({ transactionId: txDb!.uuid });
-      
+
     expect(response.status).toBe(400);
     expect(response.body.error).toBe("Esta cobrança já foi paga anteriormente.");
   });
