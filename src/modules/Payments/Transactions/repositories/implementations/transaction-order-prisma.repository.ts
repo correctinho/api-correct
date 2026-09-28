@@ -1821,6 +1821,9 @@ export class TransactionOrderPrismaRepository
         ? new Uuid(transactionData.favored_partner_user_uuid)
         : null,
       paid_at: transactionData.paid_at,
+      payer_business_info_uuid: transactionData.payer_business_info_uuid
+        ? new Uuid(transactionData.payer_business_info_uuid)
+        : null,
       created_at: transactionData.created_at,
       updated_at: transactionData.updated_at,
     };
@@ -2120,13 +2123,14 @@ export class TransactionOrderPrismaRepository
     const transactionId = transactionEntity.uuid.uuid;
     const favoredBusinessInfoId = transactionEntity.favored_business_info_uuid?.uuid;
     const userItemId = transactionEntity.user_item_uuid?.uuid;
+    const payerBusinessInfoId = transactionEntity.payer_business_info_uuid?.uuid;
     const partnerAmountToDebit = Math.round(transactionEntity.partner_credit_amount * 100);
     const platformFeeToDebit = Math.round(transactionEntity.platform_net_fee_amount * 100);
     const cashbackToDeduct = Math.round(transactionEntity.cashback * 100);
     const originalPrice = Math.round(transactionEntity.original_price * 100);
     const netRefundToUser = originalPrice - cashbackToDeduct;
 
-    if (!favoredBusinessInfoId || !userItemId) {
+    if (!favoredBusinessInfoId || (!userItemId && !payerBusinessInfoId)) {
       throw new CustomError("Transaction is missing necessary relationships for refund", 400);
     }
 
@@ -2161,12 +2165,23 @@ export class TransactionOrderPrismaRepository
       });
       if (!correctAccount) throw new CustomError("CorrectAccount not found", 500);
 
-      // 3. Busca UserItem
-      const userItem = await tx.userItem.findUnique({
-        where: { uuid: userItemId },
-        select: { uuid: true, balance: true }
-      });
-      if (!userItem) throw new CustomError("UserItem not found", 404);
+      // 3. Busca UserItem ou payerBusinessAccount
+      let userItem = null;
+      let payerBusinessAccount = null;
+
+      if (userItemId) {
+        userItem = await tx.userItem.findUnique({
+          where: { uuid: userItemId },
+          select: { uuid: true, balance: true }
+        });
+        if (!userItem) throw new CustomError("UserItem not found", 404);
+      } else if (payerBusinessInfoId) {
+        payerBusinessAccount = await tx.businessAccount.findFirst({
+          where: { business_info_uuid: payerBusinessInfoId },
+          select: { uuid: true, balance: true }
+        });
+        if (!payerBusinessAccount) throw new CustomError("Payer BusinessAccount not found", 404);
+      }
 
       if (debitPartnerBalance) {
         if (businessAccount.balance < partnerAmountToDebit) {
@@ -2206,21 +2221,38 @@ export class TransactionOrderPrismaRepository
         }
       });
 
-      // Credita Usuário
-      await tx.userItem.update({
-        where: { uuid: userItem.uuid },
-        data: { balance: { increment: netRefundToUser } }
-      });
-      await tx.userItemHistory.create({
-        data: {
-          user_item_uuid: userItem.uuid,
-          event_type: 'REFUND_RECEIVED',
-          amount: netRefundToUser,
-          balance_before: userItem.balance,
-          balance_after: userItem.balance + netRefundToUser,
-          related_transaction_uuid: transactionId
-        }
-      });
+      // Credita Usuário ou Parceiro Comprador
+      if (userItem) {
+        await tx.userItem.update({
+          where: { uuid: userItem.uuid },
+          data: { balance: { increment: netRefundToUser } }
+        });
+        await tx.userItemHistory.create({
+          data: {
+            user_item_uuid: userItem.uuid,
+            event_type: 'REFUND_RECEIVED',
+            amount: netRefundToUser,
+            balance_before: userItem.balance,
+            balance_after: userItem.balance + netRefundToUser,
+            related_transaction_uuid: transactionId
+          }
+        });
+      } else if (payerBusinessAccount) {
+        await tx.businessAccount.update({
+          where: { uuid: payerBusinessAccount.uuid },
+          data: { balance: { increment: netRefundToUser } }
+        });
+        await tx.businessAccountHistory.create({
+          data: {
+            business_account_uuid: payerBusinessAccount.uuid,
+            event_type: 'OTHER',
+            amount: netRefundToUser,
+            balance_before: payerBusinessAccount.balance,
+            balance_after: payerBusinessAccount.balance + netRefundToUser,
+            related_transaction_uuid: transactionId
+          }
+        });
+      }
 
       // Atualiza Transação para cancelada
       await tx.transactions.update({

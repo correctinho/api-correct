@@ -522,8 +522,8 @@ export class TransactionEntity {
     // This logic might need refinement based on when exactly fields become mandatory
     if (this._status === 'success') { // Example: Check on success
       // Source must be defined on success
-      if (!this._user_item_uuid) {
-        throw new CustomError("Source user item (user_item_uuid) is required for a successful transaction", 400);
+      if (!this._user_item_uuid && !this._payer_business_info_uuid) {
+        throw new CustomError("Source (user_item_uuid or payer_business_info_uuid) is required for a successful transaction", 400);
       }
 
       const hasUserRecipient = !!this._favored_user_uuid;

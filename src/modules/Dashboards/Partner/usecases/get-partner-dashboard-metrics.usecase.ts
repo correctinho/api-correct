@@ -117,6 +117,7 @@ export class GetPartnerDashboardUseCase {
             kpis: {
                 currentMonth: {
                     totalRevenue: currentRevenue / 100,
+                    netRevenue: currentMonthMetrics.netRevenue / 100,
                     transactionCount: currentTxCount,
                     averageTicket: Number((averageTicket / 100).toFixed(2))
                 },
@@ -126,6 +127,7 @@ export class GetPartnerDashboardUseCase {
                 },
                 today: {
                     totalRevenue: todayMetrics.totalRevenue / 100,
+                    netRevenue: todayMetrics.netRevenue / 100,
                     transactionCount: todayMetrics.transactionCount
                 }
             },

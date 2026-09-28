@@ -1,6 +1,7 @@
 export interface DashboardKPIs {
   currentMonth: {
     totalRevenue: number;
+    netRevenue: number;
     transactionCount: number;
     averageTicket: number;
   };
@@ -10,6 +11,7 @@ export interface DashboardKPIs {
   };
   today: {
     totalRevenue: number;
+    netRevenue: number;
     transactionCount: number;
   };
 }

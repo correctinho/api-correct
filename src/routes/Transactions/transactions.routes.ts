@@ -27,12 +27,13 @@ import { getAdminTransactionDetailsController } from "../../modules/Payments/Tra
 
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
 import { getPartnerSalesController } from "../../modules/Payments/Transactions/useCases/get-partner-sales";
+import { requireRole } from "../../infra/shared/middlewares/CompanyAdmin/role.middleware";
 
 const transactionsRouter = Router()
 
 
 // Create POS transaction order by partner - TESTED
-transactionsRouter.post("/pos-transaction", companyIsAuth, async (request, response) => {
+transactionsRouter.post("/pos-transaction", companyIsAuth, requireRole(['sales', 'finances']), async (request, response) => {
   await posTransactionController.handle(request, response)
 })
 
@@ -53,7 +54,7 @@ transactionsRouter.get("/pos-transaction/business/:transactionId", companyIsAuth
 })
 
 //Process payment by partner with business account
-transactionsRouter.post("/pos-transaction/business/processing", companyIsAuth, async (request, response) => {
+transactionsRouter.post("/pos-transaction/business/processing", companyIsAuth, requireRole(['finances']), async (request, response) => {
   await processPaymentByPartnerController.handle(request, response)
 })
 
@@ -94,7 +95,7 @@ transactionsRouter.get("/app-user/offline-tokens", appUserIsAuth, async (request
   await getTokensOffline.handle(request, response)
 })
 //Process POS Offline Token transaction
-transactionsRouter.post("/app-user/transation/offline-token", companyIsAuth, async (request, response) => {
+transactionsRouter.post("/app-user/transation/offline-token", companyIsAuth, requireRole(['sales', 'finances']), async (request, response) => {
   await processOfflineTokenController.handle(request, response)
 })
 
@@ -102,6 +103,7 @@ transactionsRouter.post("/app-user/transation/offline-token", companyIsAuth, asy
 transactionsRouter.patch(
   '/transactions/:transaction_uuid/cancel',
   companyIsAuth,
+  requireRole(['finances']),
   (request, response) => {
     return cancelPOSTransactionController.handle(request, response);
   }
@@ -126,6 +128,7 @@ transactionsRouter.post('/tei/transfer/internal', appUserIsAuth, async (request,
 transactionsRouter.get(
   '/business/sales',
   companyIsAuth,
+  requireRole(['sales', 'finances']),
   (request, response) => {
     return getPartnerSalesController.handle(request, response);
   }
@@ -135,6 +138,7 @@ transactionsRouter.get(
 transactionsRouter.post(
   '/business/sales/:transaction_uuid/cancel',
   companyIsAuth,
+  requireRole(['finances']),
   (request, response) => {
     return cancelPartnerSaleController.handle(request, response);
   }

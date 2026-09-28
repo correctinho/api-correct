@@ -13,6 +13,7 @@ import { getPartnersByCategory } from "../../modules/Company/PartnerConfig/useca
 import { setDefinitionsByBusinessAdminController } from "../../modules/Company/PartnerConfig/usecases/set-definitions-by-business-admin";
 import { filterPartnersByAppUser } from "../../modules/Company/PartnerConfig/usecases/filter-partners-by-appuser";
 import { getPartnerConfigByBusinessAdminController } from "../../modules/Company/PartnerConfig/usecases/get-partner-config";
+import { requireRole } from "../../infra/shared/middlewares/CompanyAdmin/role.middleware";
 
 export const companyDataRouter = Router()
 
@@ -22,7 +23,7 @@ companyDataRouter.put('/business/info/correct', correctIsAuth, async (request, r
 })
 
 //update company data by Company admin TESTED
-companyDataRouter.put('/business/info/company', companyIsAuth, async (request, response) => {
+companyDataRouter.put('/business/info/company', companyIsAuth, requireRole([]), async (request, response) => {
   await updateBusinessInfo.handle(request, response)
 })
 
@@ -73,6 +74,6 @@ companyDataRouter.get("/partner/config", companyIsAuth, async (request, response
 })
 
 //update partner config preferences by partner - TESTED
-companyDataRouter.put("/partner/config", companyIsAuth, async (request, response) => {
+companyDataRouter.put("/partner/config", companyIsAuth, requireRole(['marketing']), async (request, response) => {
   await setDefinitionsByBusinessAdminController.handle(request, response)
 })

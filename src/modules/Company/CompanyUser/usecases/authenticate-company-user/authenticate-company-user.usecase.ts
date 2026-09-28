@@ -27,25 +27,19 @@ export class AuthenticateCompanyUserUsecase {
   async execute({ business_document, user_name, password, email, required_business_type }: AuthenticateCompanyUserRequest) {
 
     if (!business_document || !password) throw new CustomError("Credenciais incorretas", 401);
-    console.log("1")
     const findBusinessInfo = await this.companyDataRepository.findByDocument(business_document);
-    console.log("2", findBusinessInfo)
     if (!findBusinessInfo) throw new CustomError("Credenciais incorretas", 401);
 
     const allowedPartnerTypes = ['comercio', 'autonomo_comercio', 'empregador_comercio'];
     if (required_business_type === 'comercio' && !allowedPartnerTypes.includes(findBusinessInfo.business_type)) {
       throw new CustomError("Este usuário não tem permissão para acessar o portal de Parceiros", 403);
     }
-    console.log("3")
     const allowedEmployerTypes = ['empregador', 'empregador_comercio'];
-    console.log("4")
     if (required_business_type === 'empregador' && !allowedEmployerTypes.includes(findBusinessInfo.business_type)) {
       throw new CustomError("Este usuário não tem permissão para acessar o portal de Empregadores", 403);
     }
-    console.log("5")
     const isEmail = z.string().email().safeParse(email);
     let findUser: any;
-    console.log("6")
     // 1. Busca o usuário
     if (isEmail.success && email) {
       findUser = await this.companyUserRepository.findByBusinessIdAndEmail(findBusinessInfo.uuid, email);
@@ -53,13 +47,9 @@ export class AuthenticateCompanyUserUsecase {
       if (!user_name) throw new CustomError("Credenciais incorretas", 401);
       findUser = await this.companyUserRepository.findByBusinessIdAndUsername(findBusinessInfo.uuid, user_name);
     }
-    console.log("7", findUser)
     if (!findUser) throw new CustomError("Credenciais incorretas", 401);
-    console.log("8")
     // 2. Validações básicas antes do Redis
     if (findUser.status === "inactive") throw new CustomError("Usuário não está autorizado a acessar", 401);
-    console.log("9", findUser)
-    console.log("10")
 
     // 3. Lógica de Rate Limiting
     const redisKey = `login_lock:company_user:${findUser.uuid}`;

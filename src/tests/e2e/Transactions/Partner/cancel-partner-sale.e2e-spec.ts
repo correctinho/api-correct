@@ -175,6 +175,10 @@ describe('E2E - Refund Partner Sales (Cancelamentos)', () => {
         await prismaClient.businessAccount.deleteMany({ where: { business_info_uuid: businessInfoId } });
         await prismaClient.businessUser.deleteMany({ where: { business_info_uuid: businessInfoId } });
         await prismaClient.businessInfo.deleteMany({ where: { uuid: businessInfoId } });
+        
+        await prismaClient.businessAccount.deleteMany({ where: { BusinessInfo: { fantasy_name: 'Comprador B2B' } } });
+        await prismaClient.businessInfo.deleteMany({ where: { fantasy_name: 'Comprador B2B' } });
+
         await prismaClient.address.deleteMany({ where: { postal_code: '00000000' } });
         await prismaClient.correctAdmin.deleteMany({ where: { userName: 'correct-admin' } });
     });
@@ -434,6 +438,94 @@ describe('E2E - Refund Partner Sales (Cancelamentos)', () => {
             where: { related_transaction_uuid: newTxId, event_type: 'REFUND_ISSUED' }
         });
         expect(partnerHistory).toBeNull();
+    });
+
+    it('should successfully refund a B2B transaction by partner without user_item_uuid', async () => {
+        // 1. Create a new B2B transaction
+        const newTxId = uuidV4();
+        const payerBusinessInfoId = uuidV4();
+        const payerBusinessAccountId = uuidV4();
+
+        await prismaClient.businessInfo.create({
+            data: {
+                uuid: payerBusinessInfoId,
+                fantasy_name: 'Comprador B2B',
+                document: `b2b-${Date.now()}`,
+                business_type: 'comercio',
+                status: 'active',
+                email: `comprador-${Date.now()}@b2b.com`,
+                classification: 'Comércio',
+                colaborators_number: 1,
+                address_uuid: (await prismaClient.address.findFirst()).uuid,
+                phone_1: '11999999999',
+                created_at: newDateF(new Date()),
+                BusinessAccount: {
+                    create: {
+                        uuid: payerBusinessAccountId,
+                        balance: 5000,
+                        status: 'active',
+                        created_at: newDateF(new Date())
+                    }
+                }
+            }
+        });
+
+        await prismaClient.transactions.create({
+            data: {
+                uuid: newTxId,
+                BusinessInfo: { connect: { uuid: businessInfoId } },
+                PayerBusiness: { connect: { uuid: payerBusinessInfoId } },
+                transaction_type: 'POS_PAYMENT',
+                status: 'success',
+                original_price: 3000,
+                net_price: 3000,
+                platform_net_fee_amount: 300,
+                cashback: 0,
+                partner_credit_amount: 2700,
+                paid_at: newDateF(new Date()),
+                created_at: newDateF(new Date()),
+                updated_at: newDateF(new Date())
+            }
+        });
+
+        // Ensure Seller BusinessAccount has enough balance
+        await prismaClient.businessAccount.updateMany({
+            where: { business_info_uuid: businessInfoId },
+            data: { balance: 10000 }
+        });
+
+        // 2. ACT
+        const response = await request(app)
+            .post(`/business/sales/${newTxId}/cancel`)
+            .set('Authorization', `Bearer ${partnerAdminToken}`)
+            .send({ reason: 'Cancelamento B2B' });
+
+        // 3. ASSERT API
+        expect(response.status).toBe(200);
+        expect(response.body.status).toBe('cancelled');
+
+        // 4. ASSERT DATABASE
+        // O Parceiro vendedor (businessInfoId) deve ter perdido o valor que recebeu (2700)
+        const sellerAccount = await prismaClient.businessAccount.findFirst({ where: { business_info_uuid: businessInfoId }});
+        expect(sellerAccount?.balance).toBe(10000 - 2700);
+
+        // O Parceiro comprador (payerBusinessInfoId) deve ter recebido o dinheiro de volta (3000)
+        const buyerAccount = await prismaClient.businessAccount.findUnique({ where: { uuid: payerBusinessAccountId }});
+        expect(buyerAccount?.balance).toBe(5000 + 3000);
+
+        // Deve existir o historico "OTHER" recebido no BusinessAccountHistory do comprador
+        const buyerHistory = await prismaClient.businessAccountHistory.findFirst({
+            where: { related_transaction_uuid: newTxId, business_account_uuid: payerBusinessAccountId, event_type: 'OTHER' }
+        });
+        expect(buyerHistory).toBeDefined();
+        expect(buyerHistory?.amount).toBe(3000);
+        
+        // Limpeza dos dados
+        await prismaClient.transactions.deleteMany({ where: { uuid: newTxId } });
+        await prismaClient.businessAccountHistory.deleteMany({ where: { related_transaction_uuid: newTxId } });
+        await prismaClient.businessAccountHistory.deleteMany({ where: { business_account_uuid: payerBusinessAccountId } });
+        await prismaClient.businessAccount.deleteMany({ where: { uuid: payerBusinessAccountId } });
+        await prismaClient.businessInfo.deleteMany({ where: { uuid: payerBusinessInfoId } });
     });
 });
 

@@ -3,6 +3,7 @@ import { TransactionEntity } from "../../../Payments/Transactions/entities/trans
 // DTOs auxiliares para retorno das métricas agregadas
 export interface DashboardAggregateResult {
   totalRevenue: number;
+  netRevenue: number;
   transactionCount: number;
 }
 
