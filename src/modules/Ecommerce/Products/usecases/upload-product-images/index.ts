@@ -1,9 +1,9 @@
-import { SupabaseStorage } from "../../../../../infra/providers/storage/implementations/supabase/supabase.storage"
+import { CloudflareR2Storage } from "../../../../../infra/providers/storage/implementations/cloudflare-r2/cloudflare-r2.storage"
 import { CompanyUserPrismaRepository } from "../../../../Company/CompanyUser/repositories/implementations/company-user.prisma.repository"
 import { ProductPrismaRepository } from "../../repositories/implementations/product-prisma.repository"
 import { UploadProductImagesController } from "./upload-product-images.controller"
 
-const supabaseStorage = new SupabaseStorage()
+const supabaseStorage = new CloudflareR2Storage()
 const productRepository = new ProductPrismaRepository()
 const businessUserRepository = new CompanyUserPrismaRepository()
 

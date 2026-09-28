@@ -18,4 +18,13 @@ export type OutputGetPartnerConfigDTO = {
   sales_type: string
   cashback_tax: number
   created_at: string
+  dispatch_address?: {
+    line1: string;
+    line2: string;
+    line3?: string | null;
+    neighborhood: string;
+    postal_code: string;
+    city?: string | null;
+    state?: string | null;
+  } | null
 }

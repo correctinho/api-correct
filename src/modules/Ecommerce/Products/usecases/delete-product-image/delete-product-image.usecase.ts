@@ -12,17 +12,24 @@ export class DeleteProductImagesUsecase {
         private readonly companyUserRepository: ICompanyUserRepository,
         private readonly storage: IStorage
     ) { }
+    
     private getPathFromUrl(url: string): string {
         try {
             const urlObject = new URL(url);
-            // A lógica exata aqui depende da estrutura da sua URL do Supabase.
-            // Geralmente, o path é tudo após o nome do bucket.
-            // Ex: https://<...>.supabase.co/storage/v1/object/public/products/path/to/file.webp
-            // Precisamos extrair "products/path/to/file.webp"
-            const pathSegments = urlObject.pathname.split('/public/');
-            if (pathSegments.length > 1) {
-                return pathSegments[1];
+            
+            // 1. Tenta identificar se é uma URL antiga do Supabase
+            const supabasePathSegments = urlObject.pathname.split('/public/');
+            if (supabasePathSegments.length > 1) {
+                return supabasePathSegments[1];
             }
+            
+            // 2. Se for uma URL do Cloudflare R2 (https://dominio.com/pasta/arquivo.webp)
+            const pathname = urlObject.pathname.startsWith('/') ? urlObject.pathname.substring(1) : urlObject.pathname;
+            
+            if (pathname) {
+                return pathname;
+            }
+
             throw new Error("Formato de URL de storage inválido.");
         } catch (error) {
             console.error("Erro ao extrair caminho da URL:", url, error);
@@ -47,39 +54,49 @@ export class DeleteProductImagesUsecase {
         }
 
         const historyEntries: ProductHistoryEntity[] = [];
-        const remainingImages = [...product.image_urls];
+        let remainingImages = [...product.image_urls];
 
         // 1. Deletar as imagens do storage e preparar os registros de histórico
         for (const url of input.urlsToDelete) {
-            const pathToDelete = this.getPathFromUrl(url);
             
-            try {
-                await this.storage.delete(pathToDelete);
+            // Queremos deletar todas as variações da imagem (large, medium, thumb)
+            // A URL recebida normalmente termina com '_large.webp'. Vamos extrair a base:
+            let baseUrl = url;
+            if (url.endsWith('_large.webp')) baseUrl = url.replace('_large.webp', '');
+            else if (url.endsWith('_medium.webp')) baseUrl = url.replace('_medium.webp', '');
+            else if (url.endsWith('_thumb.webp')) baseUrl = url.replace('_thumb.webp', '');
+            else if (url.endsWith('.webp')) baseUrl = url.replace('.webp', '');
+            
+            // Encontra todas as URLs nas imagens do produto que comecem com essa base
+            const urlsToDelete = remainingImages.filter(img => img.startsWith(baseUrl));
+            
+            for (const variationUrl of urlsToDelete) {
+                const pathToDelete = this.getPathFromUrl(variationUrl);
+                
+                try {
+                    await this.storage.delete(pathToDelete);
 
-                // Remove a URL da lista de imagens restantes
-                const index = remainingImages.indexOf(url);
-                if (index > -1) {
-                    remainingImages.splice(index, 1);
+                    // Remove a URL da lista de imagens restantes
+                    remainingImages = remainingImages.filter(img => img !== variationUrl);
+
+                    // Cria o registro de histórico para esta deleção
+                    historyEntries.push(ProductHistoryEntity.create({
+                        product_uuid: product.uuid,
+                        changed_by_uuid: new Uuid(input.businessUserId),
+                        field_changed: 'image_deleted',
+                        old_value: variationUrl, // Registra a URL que foi deletada
+                        new_value: null,
+                    }));
+
+                } catch (storageError) {
+                    console.error(`Falha ao deletar a imagem ${pathToDelete} do storage.`, storageError);
+                    // Decide se deve continuar ou parar. Por segurança, paramos.
+                    throw new CustomError(`Erro ao processar a deleção da imagem: ${variationUrl}.`, 500);
                 }
-
-                // Cria o registro de histórico para esta deleção
-                historyEntries.push(ProductHistoryEntity.create({
-                    product_uuid: product.uuid,
-                    changed_by_uuid: new Uuid(input.businessUserId),
-                    field_changed: 'image_deleted',
-                    old_value: url, // Registra a URL que foi deletada
-                    new_value: null,
-                }));
-
-            } catch (storageError) {
-                console.error(`Falha ao deletar a imagem ${pathToDelete} do storage.`, storageError);
-                // Decide se deve continuar ou parar. Por segurança, paramos.
-                throw new CustomError(`Erro ao processar a deleção da imagem: ${url}.`, 500);
             }
         }
 
         if (historyEntries.length === 0) {
-            // Nenhuma imagem foi realmente deletada (talvez as URLs não existissem no produto)
             return {
                 productId: product.uuid.uuid,
                 message: "Nenhuma imagem foi alterada.",

@@ -1577,13 +1577,19 @@ export class TransactionOrderPrismaRepository
       const transactionJson = transaction.toJSON();
       let amountToPayInCents = transactionJson.net_price;
       const cashbackAmountToCreditPayer = transactionJson.cashback || 0; // O Cashback total da compra
+      
+      const partnerCreditAmount = transactionJson.partner_credit_amount; // O que o parceiro Vendedor recebe
+      const platformNetFeeAmount = transactionJson.platform_net_fee_amount; // O que a plataforma recebe
+
       let totalPaidFromCredits = 0;
       let totalPaidFromLiquid = 0;
+      
+      let remainingSellerCreditToCreate = partnerCreditAmount; // Limite de recebíveis que o vendedor vai ganhar
 
       const payerAccountJson = payerAccount.toJSON();
       let currentPayerBalance = payerAccountJson.balance; // Foto inicial do saldo pagador
 
-      // --- PASSO 2: BUSCAR A CONTA DO VENDEDOR ---
+      // --- PASSO 2: BUSCAR A CONTA DO VENDEDOR E DA CORRECT ---
       const sellerAccount = await tx.businessAccount.findFirst({
         where: { business_info_uuid: sellerBusinessInfoId },
       });
@@ -1592,6 +1598,11 @@ export class TransactionOrderPrismaRepository
           'Conta do parceiro vendedor não encontrada.',
           404
         );
+      }
+
+      const correctAccount = await tx.correctAccount.findFirst();
+      if (!correctAccount) {
+        throw new CustomError('Conta da plataforma Correct não encontrada.', 500);
       }
 
       // --- PASSO 3: LÓGICA DE CONSUMO DE CRÉDITOS (FIFO) ---
@@ -1622,17 +1633,21 @@ export class TransactionOrderPrismaRepository
           new Date()
         );
 
-        // 4. Cria o novo crédito para o vendedor (transferência do recebível)
-        await tx.partnerCredit.create({
-          data: {
-            business_account_uuid: sellerAccount.uuid,
-            original_transaction_uuid: transactionJson.uuid,
-            balance: spendAmount,
-            spent_amount: 0,
-            status: 'PENDING',
-            availability_date: newSettlementDate,
-          },
-        });
+        // 4. Cria o novo crédito para o vendedor (apenas até o limite do que ele tem direito)
+        const sellerCreditAmountToCreate = Math.min(spendAmount, remainingSellerCreditToCreate);
+        if (sellerCreditAmountToCreate > 0) {
+          await tx.partnerCredit.create({
+            data: {
+              business_account_uuid: sellerAccount.uuid,
+              original_transaction_uuid: transactionJson.uuid,
+              balance: sellerCreditAmountToCreate,
+              spent_amount: 0,
+              status: 'PENDING',
+              availability_date: newSettlementDate,
+            },
+          });
+          remainingSellerCreditToCreate -= sellerCreditAmountToCreate;
+        }
 
         // 5. Registra o gasto do crédito para fins de auditoria
         await tx.partnerCreditSpend.create({
@@ -1663,12 +1678,6 @@ export class TransactionOrderPrismaRepository
           throw new CustomError("Saldo líquido do parceiro ficou negativo durante a liquidação. Transação abortada.", 402);
         }
 
-        // 2. Credita no saldo líquido do vendedor
-        const updatedSellerAccount = await tx.businessAccount.update({
-          where: { uuid: sellerAccount.uuid },
-          data: { balance: { increment: totalPaidFromLiquid } },
-        });
-
         // 3. Cria históricos para a movimentação de saldo líquido (B2B pagador)
         await tx.businessAccountHistory.create({
           data: {
@@ -1683,13 +1692,24 @@ export class TransactionOrderPrismaRepository
 
         // 4. Atualiza a foto do saldo na memória para o próximo passo
         currentPayerBalance = updatedPayerAccount.balance;
+      }
 
-        // 5. Histórico de crédito para o vendedor
+      // --- PASSO 5: DISTRIBUIÇÃO LÍQUIDA PARA VENDEDOR E PLATAFORMA ---
+      // O Vendedor recebe em líquido aquilo que não foi coberto por PartnerCredits.
+      // E a Correct recebe sua taxa de plataforma em líquido.
+      
+      const sellerLiquidToReceive = remainingSellerCreditToCreate;
+      if (sellerLiquidToReceive > 0) {
+        const updatedSellerAccount = await tx.businessAccount.update({
+          where: { uuid: sellerAccount.uuid },
+          data: { balance: { increment: sellerLiquidToReceive } },
+        });
+
         await tx.businessAccountHistory.create({
           data: {
             business_account_uuid: sellerAccount.uuid,
             event_type: 'PAYMENT_RECEIVED',
-            amount: totalPaidFromLiquid,
+            amount: sellerLiquidToReceive,
             balance_before: sellerAccount.balance,
             balance_after: updatedSellerAccount.balance,
             related_transaction_uuid: transactionJson.uuid,
@@ -1697,7 +1717,25 @@ export class TransactionOrderPrismaRepository
         });
       }
 
-      // --- PASSO 5: CRÉDITO DE CASHBACK (NOVO!) ---
+      if (platformNetFeeAmount > 0) {
+        const updatedCorrectAccount = await tx.correctAccount.update({
+          where: { uuid: correctAccount.uuid },
+          data: { balance: { increment: platformNetFeeAmount } },
+        });
+
+        await tx.correctAccountHistory.create({
+          data: {
+            correct_account_uuid: correctAccount.uuid,
+            event_type: CorrectAccountEventType.PLATFORM_FEE_COLLECTED,
+            amount: platformNetFeeAmount,
+            balance_before: correctAccount.balance,
+            balance_after: updatedCorrectAccount.balance,
+            related_transaction_uuid: transactionJson.uuid,
+          },
+        });
+      }
+
+      // --- PASSO 6: CRÉDITO DE CASHBACK (NOVO!) ---
       if (cashbackAmountToCreditPayer > 0) {
         // 1. Adiciona o dinheiro na conta da empresa pagadora
         const updatedPayerAccountWithCashback = await tx.businessAccount.update({
@@ -1718,7 +1756,7 @@ export class TransactionOrderPrismaRepository
         });
       }
 
-      // --- PASSO 6: FINALIZAÇÃO DA TRANSAÇÃO ORIGINAL ---
+      // --- PASSO 7: FINALIZAÇÃO DA TRANSAÇÃO ORIGINAL ---
       await tx.transactions.update({
         where: { uuid: transactionJson.uuid },
         data: {
@@ -1729,7 +1767,7 @@ export class TransactionOrderPrismaRepository
         },
       });
 
-      // --- PASSO 7: RETORNO PARA O USE CASE ---
+      // --- PASSO 8: RETORNO PARA O USE CASE ---
       const finalPayerAccountState = await tx.businessAccount.findUnique({
         where: { uuid: payerAccountJson.uuid },
       });

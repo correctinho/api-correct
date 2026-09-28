@@ -13,6 +13,7 @@ import { uploadProducImageController } from "../../modules/Ecommerce/Products/us
 import multer from "multer";
 import uploadConfig from '../../infra/shared/multer/multer.csv.memory.config'
 import { deleteProductController } from "../../modules/Ecommerce/Products/usecases/delete-product";
+import { deleteProductImagesController } from "../../modules/Ecommerce/Products/usecases/delete-product-image";
 import { updateProduct } from "../../modules/Ecommerce/Products/usecases/update-product";
 import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
 import { createCategoryController } from "../../modules/Ecommerce/Categories/usecases/createCategory";
@@ -88,7 +89,7 @@ ecommerceRouter.put('/ecommerce/product/:productId', companyIsAuth, async (reque
 
 //delete product images
 ecommerceRouter.patch('/ecommerce/product/:productId/images/delete', companyIsAuth, async (request, response) => {
-  await deleteProductController.handle(request, response)
+  await deleteProductImagesController.handle(request, response)
 })
 
 //add item to cart by appuser

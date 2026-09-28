@@ -1,5 +1,5 @@
 import { IStorage } from './infra/providers/storage/storage';
-import { SupabaseStorage } from './infra/providers/storage/implementations/supabase/supabase.storage';
+import { CloudflareR2Storage } from './infra/providers/storage/implementations/cloudflare-r2/cloudflare-r2.storage';
 // Importe outras classes de serviço que você queira gerenciar aqui
 
 /**
@@ -11,7 +11,7 @@ class AppContainer {
 
     constructor() {
         // Em um ambiente normal (não-teste), ele cria a instância real.
-        this.storage = new SupabaseStorage();
+        this.storage = new CloudflareR2Storage();
     }
 
     /**

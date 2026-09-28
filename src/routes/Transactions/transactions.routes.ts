@@ -4,6 +4,8 @@ import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/compa
 import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
 import { processPaymentByAppUserController } from "../../modules/Payments/Transactions/useCases/process-payment-by-app-user";
 import { getPOSTransactionByAppUserController } from "../../modules/Payments/Transactions/useCases/get-pos-transaction-by-appuser";
+import { getPOSTransactionByPartnerController } from "../../modules/Payments/Transactions/useCases/get-pos-transaction-by-partner";
+
 import { getAvailablePaymentMethodsByCartController } from "../../modules/Payments/Transactions/useCases/get-available-payment-methods-by-cart";
 import { geTransactionReceiptController } from "../../modules/Payments/Transactions/useCases/get-transaction-receipt";
 import { generateReceiptPDFController } from "../../modules/Payments/Transactions/useCases/get-transaction-receipt/generate-receipt-pdf";
@@ -42,6 +44,12 @@ transactionsRouter.get("/pos-transaction/app-user", appUserIsAuth, async (reques
 //Process payment by app user with pre paid benefit
 transactionsRouter.post("/pos-transaction/processing", appUserIsAuth, async (request, response) => {
   await processPaymentByAppUserController.handle(request, response)
+})
+
+
+// Get POS transaction details by partner
+transactionsRouter.get("/pos-transaction/business/:transactionId", companyIsAuth, async (request, response) => {
+  await getPOSTransactionByPartnerController.handle(request, response)
 })
 
 //Process payment by partner with business account

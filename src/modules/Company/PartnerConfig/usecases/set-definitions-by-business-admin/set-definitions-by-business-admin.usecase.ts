@@ -30,8 +30,8 @@ export class SetDefinitionsByBusinessAdminUsecase {
     const partnerConfig = await this.partnerConfigRepository.findByPartnerId(data.business_info_uuid)
     if (!partnerConfig) throw new CustomError("Partner Config not found", 404)
 
-    //now lets call the entity class
-    const entity = new PartnerConfigEntity(partnerConfig)
+    // Entity is already hydrated by the repository
+    const entity = partnerConfig;
 
     //with the values that came from the client, we will set on the entity
     entity.changeTitle(data.title ? data.title : entity.title)
@@ -56,8 +56,8 @@ export class SetDefinitionsByBusinessAdminUsecase {
           existingAddress.changePostalCode(data.dispatch_address.postal_code);
           if (data.dispatch_address.city) existingAddress.changeCity(data.dispatch_address.city);
           if (data.dispatch_address.state) existingAddress.changeState(data.dispatch_address.state);
-          existingAddress.changeLatitude(geo.lat);
-          existingAddress.changeLongitude(geo.long);
+          existingAddress.changeLatitude(geo?.lat || null);
+          existingAddress.changeLongitude(geo?.long || null);
 
           await this.companyAddressRepository.update(existingAddress);
         }
@@ -71,8 +71,8 @@ export class SetDefinitionsByBusinessAdminUsecase {
           city: data.dispatch_address.city || null,
           state: data.dispatch_address.state || null,
           country: "Brasil",
-          latitude: geo.lat,
-          longitude: geo.long
+          latitude: geo?.lat || null,
+          longitude: geo?.long || null
         });
         await this.companyAddressRepository.save(newAddress);
         entity.changeDispatchAddressUuid(newAddress.uuid);

@@ -62,8 +62,9 @@ export class CreateDocumentsValidationUsecase {
                 // Gera um nome de arquivo único para evitar colisões
                 const filename = `${userInfo.uuid.uuid}-${Date.now()}-${documentType}.${file.originalname.split('.').pop()}`;
                 const uploadResult = await this.storageProvider.upload(
-                    { ...file, originalname: filename }, // Sobrescreve o originalname para o upload com o nome único
-                    folder
+                    { ...file, originalname: filename },
+                    folder,
+                    true // isPrivate = true para garantir que vá para o Bucket correto
                 );
 
                 if (uploadResult.error || !uploadResult.data?.url) {

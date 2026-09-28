@@ -1,5 +1,5 @@
 import { FakeStorage } from "../../../../../../infra/providers/storage/implementations/fake/fake.storage";
-import { SupabaseStorage } from "../../../../../../infra/providers/storage/implementations/supabase/supabase.storage";
+import { CloudflareR2Storage } from "../../../../../../infra/providers/storage/implementations/cloudflare-r2/cloudflare-r2.storage";
 import { DocumentValidationPrismaRepository } from "../../../repositories/implementations-document-validation/app-user-document-validation-prisma.repository";
 import { AppUserAuthPrismaRepository } from "../../../repositories/implementations-user-auth/app-user-auth-prisma.repository";
 import { AppUserInfoPrismaRepository } from "../../../repositories/implementations-user-info/app-user-info-prisma.repository";
