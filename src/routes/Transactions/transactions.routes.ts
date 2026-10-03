@@ -103,7 +103,7 @@ transactionsRouter.post("/app-user/transation/offline-token", companyIsAuth, req
 transactionsRouter.patch(
   '/transactions/:transaction_uuid/cancel',
   companyIsAuth,
-  requireRole(['finances']),
+  requireRole(['sales', 'finances']),
   (request, response) => {
     return cancelPOSTransactionController.handle(request, response);
   }
