@@ -21,11 +21,11 @@ declare module 'express' {
 
 export class CreateDocumentsValidationController {
     constructor(
-            private userAuthRepository: IAppUserAuthRepository,
-            private userInfoRepository: IAppUserInfoRepository,
-            private documentsValidationRepository: IAppUserDocumentValidationRepository,
-            private storageProvider: IStorage,
-        ) {}
+        private userAuthRepository: IAppUserAuthRepository,
+        private userInfoRepository: IAppUserInfoRepository,
+        private documentsValidationRepository: IAppUserDocumentValidationRepository,
+        private storageProvider: IStorage,
+    ) { }
 
     async handle(req: Request, res: Response): Promise<Response> {
         try {
@@ -48,11 +48,10 @@ export class CreateDocumentsValidationController {
             )
             // Executa o use case
             const result = await usecase.execute(input);
-            
+
             return res.status(201).json(result);
 
         } catch (err: any) {
-            console.error("[CreateDocumentsValidationController ERROR]:", err);
             return res.status(err.statusCode || 500).json({
                 error: err.message || "An unexpected error occurred."
             });
