@@ -16,6 +16,8 @@ describe('GET /admin/recharge-orders (1)', () => {
         await prismaClient.correctAdmin.create({
             data: {
                 uuid: correctAdminId,
+                name: 'Test Admin',
+                password: 'password123',
                 userName: 'Test Admin',
                 email: `admin-${correctAdminId}@correct.com`,
                 isAdmin: true
@@ -49,8 +51,9 @@ describe('GET /admin/recharge-orders (1)', () => {
                 phone_1: '11999999999',
                 email: `test-${businessId}@business.com`,
                 business_type: 'empregador',
-                address_uuid: address.uuid,
-                fantasy_name: 'Test Business'
+                Address: { connect: { uuid: address.uuid } },
+                fantasy_name: 'Test Business',
+                created_at: new Date().toISOString()
             }
         });
 
@@ -59,8 +62,10 @@ describe('GET /admin/recharge-orders (1)', () => {
             data: {
                 uuid: itemId,
                 name: 'Item Teste',
-                category: 'pre_pago',
-                type: 'beneficio'
+                item_category: 'pre_pago',
+                description: 'Description',
+                item_type: 'produto',
+                created_at: new Date().toISOString()
             }
         });
 
