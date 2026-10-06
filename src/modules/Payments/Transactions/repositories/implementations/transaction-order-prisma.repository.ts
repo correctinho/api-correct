@@ -535,6 +535,7 @@ export class TransactionOrderPrismaRepository
       paid_at: transactionPix.paid_at,
       provider_tx_id: transactionPix.provider_tx_id,
       pix_e2e_id: transactionPix.pix_e2e_id,
+      payer_business_info_uuid: transactionPix.payer_business_info_uuid ? new Uuid(transactionPix.payer_business_info_uuid) : null,
       subscription_uuid: transactionPix.subscription_uuid ? new Uuid(transactionPix.subscription_uuid) : null,
       created_at: transactionPix.created_at,
       updated_at: transactionPix.updated_at,

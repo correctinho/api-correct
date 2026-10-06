@@ -148,7 +148,7 @@ export class ActivateUserItemByEmployerUsecase {
             employeeItemEntity.activateStatus();
             employeeItemEntity.changeGroupUuid(targetGroup.uuid);
             employeeItemEntity.changeGroupValue(targetGroup.value);
-            employeeItemEntity.changeBalance(targetGroup.value); // O getter já retorna em Reais
+            employeeItemEntity.changeBalance(input.custom_value !== undefined ? input.custom_value : targetGroup.value); // O getter já retorna em Reais
             await this.appUserItemRepository.update(employeeItemEntity);
         } else {
             // Se o item NÃO EXISTE (primeira vez), criamos a entidade do zero.
@@ -159,7 +159,7 @@ export class ActivateUserItemByEmployerUsecase {
                 group_uuid: targetGroup.uuid,
                 item_name: employerItem.Item.name, // Nome do benefício
                 item_category: employerItem.Item.item_category as ItemCategory, // Categoria do benefício
-                balance: targetGroup.value, // O getter do targetGroup retorna em Reais
+                balance: input.custom_value !== undefined ? input.custom_value : targetGroup.value, // O getter do targetGroup retorna em Reais
                 status: 'active' as UserItemStatus,
                 group_name: targetGroup.group_name,
                 group_value: targetGroup.value,

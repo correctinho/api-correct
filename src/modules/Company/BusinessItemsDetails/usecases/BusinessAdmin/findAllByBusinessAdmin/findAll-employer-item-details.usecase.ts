@@ -22,7 +22,15 @@ export class FindAllEmployerItemDetailsBusinessAdminUsecase {
     //     uuid: item.Item.uuid
     //   }
     // }));
-    return itemDetails as OutputFindEmployerItemDetailsDTO[]
+    const mappedItems = itemDetails.map(item => ({
+      ...item,
+      BenefitGroups: (item.BenefitGroups || []).map(bg => ({
+        ...bg,
+        value: bg.value / 100
+      }))
+    }));
+
+    return mappedItems as any;
 
   }
 

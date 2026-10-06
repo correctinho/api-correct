@@ -39,10 +39,11 @@ export class GetSingleUserByBusinessAdminUsecase {
       company_owner: isRelatedToBusiness.company_owner,
       status: employee.status,
       is_employee: employee.is_employee,
+      is_authenticated: employee.is_authenticated,
       function: isRelatedToBusiness.function,
       marital_status: employee.marital_status,
       dependents_quantity: isRelatedToBusiness.dependents_quantity,
-      user_document_validation_uuid: employee.user_document_validation_uuid ? employee.user_document_validation_uuid: null,
+      user_document_validation_uuid: employee.user_document_validation_uuid ? employee.user_document_validation_uuid : null,
       created_at: employee.created_at,
       updated_at: employee.updated_at
     }
@@ -51,5 +52,5 @@ export class GetSingleUserByBusinessAdminUsecase {
   private processDocument(document: string) {
     const onlyNumbers = document.replace(/\D/g, '');
     return onlyNumbers
-}
+  }
 }

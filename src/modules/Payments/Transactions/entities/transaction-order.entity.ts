@@ -534,7 +534,9 @@ export class TransactionEntity {
         throw new CustomError("Transaction cannot have both a user and a business recipient", 400);
       }
       if (!hasUserRecipient && !hasBusinessRecipient) {
-        throw new CustomError("Successful transaction must have either a user or a business recipient", 400);
+        if (this._transaction_type !== 'COMPANY_PRE_PAID_RECHARGE' && this._transaction_type !== 'ONBOARDING_PIX') {
+          throw new CustomError("Successful transaction must have either a user or a business recipient", 400);
+        }
       }
 
       // Validate type against recipient

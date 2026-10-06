@@ -13,17 +13,23 @@ export interface MulterFile {
 
 const storage = multer.memoryStorage();
 
-const fileFilter = (req: Request, file: MulterFile, cb: FileFilterCallback) => {
-
-
-  // Aceitar apenas arquivos de imagem JPEG e PNG
+const imageFilter = (req: Request, file: MulterFile, cb: FileFilterCallback) => {
   if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
-    cb(null, true); // Aceitar o arquivo
+    cb(null, true);
   } else {
-    cb(new CustomError('Formato de arquivo não suportado. Apenas JPEG e PNG são permitidos.', 400) as any, false); // Rejeitar o arquivo
+    cb(new CustomError('Formato de arquivo não suportado. Apenas JPEG e PNG são permitidos.', 400) as any, false);
   }
 };
 
-const uploadImage = multer({ storage, fileFilter });
+const documentFilter = (req: Request, file: MulterFile, cb: FileFilterCallback) => {
+  if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png' || file.mimetype === 'application/pdf') {
+    cb(null, true);
+  } else {
+    cb(new CustomError('Formato de arquivo não suportado. Apenas JPEG, PNG e PDF são permitidos.', 400) as any, false);
+  }
+};
 
-export { uploadImage };
+const uploadImage = multer({ storage, fileFilter: imageFilter });
+const uploadDocument = multer({ storage, fileFilter: documentFilter });
+
+export { uploadImage, uploadDocument };

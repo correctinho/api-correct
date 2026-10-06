@@ -1,19 +1,22 @@
 import { Request, Response } from "express";
 import { IBusinessOrderRepository } from "../../../repositories/business-order-repository";
 import { ListBusinessOrdersUseCase } from "./list-business-orders.usecase";
+import { IStorage } from "../../../../../../infra/providers/storage/storage";
 
 export class ListBusinessOrdersByBusinessController {
     constructor(
-        private businessOrderRepository: IBusinessOrderRepository
+        private businessOrderRepository: IBusinessOrderRepository,
+        private storageProvider: IStorage
     ) { }
 
     async handle(req: Request, res: Response) {
         try {
             const business_info_uuid = req.companyUser.businessInfoUuid;
             const item_uuid = req.params.item_uuid;
-            
+
             const usecase = new ListBusinessOrdersUseCase(
-                this.businessOrderRepository
+                this.businessOrderRepository,
+                this.storageProvider
             );
 
             const result = await usecase.execute(

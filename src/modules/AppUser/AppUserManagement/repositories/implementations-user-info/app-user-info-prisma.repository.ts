@@ -932,7 +932,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
                         full_name: true,
                         UserItem: {
                             where: {
-                                status: 'active'
+                                status: { in: ['active', 'inactive', 'blocked', 'to_be_cancelled'] }
                             },
                             select: {
                                 uuid: true,

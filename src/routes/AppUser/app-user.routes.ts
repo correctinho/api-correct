@@ -1,3 +1,4 @@
+import { createMassRegistrationController } from "../../modules/AppUser/AppUserManagement/usecases/UserInfo/create-mass-registration";
 import { Router, request, response } from "express";
 import uploadConfig from '../../infra/shared/multer/multer.csv.memory.config'
 import multer from 'multer'
@@ -176,5 +177,9 @@ appUserRouter.get("/admin/app-users/:user_info_uuid/documents", correctIsAuth, a
 appUserRouter.patch("/admin/app-users/document-validation/:user_info_uuid", correctIsAuth, async (request, response) => {
     await updateDocumentValidationStatusByAdminController.handle(request, response);
 });
+
+appUserRouter.post("/app-user/mass-registration", companyIsAuth, upload.single("file"), async (request, response) => {
+    await createMassRegistrationController.handle(request, response)
+})
 
 export { appUserRouter }

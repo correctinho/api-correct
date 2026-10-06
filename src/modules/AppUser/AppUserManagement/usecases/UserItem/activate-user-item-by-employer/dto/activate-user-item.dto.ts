@@ -5,6 +5,7 @@ export type InputActivateUserItemByEmployer = {
   user_info_uuid: string
   item_uuid: string
   group_uuid: string
+  custom_value?: number
 }
 
 export type OutputActivateUserItemByEmployer = {

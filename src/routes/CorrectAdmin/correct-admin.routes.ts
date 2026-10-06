@@ -1,3 +1,11 @@
+import { updateMassRegistrationController } from "../../modules/CorrectAdmin/useCases/mass-registration-requests/update-mass-registration";
+import uploadConfig from '../../infra/shared/multer/multer.csv.memory.config';
+import multer = require('multer');
+
+const upload = multer(uploadConfig.upload());
+import { downloadMassRegistrationController } from "../../modules/CorrectAdmin/useCases/mass-registration-requests/download-mass-registration";
+import { listMassRegistrationsController } from "../../modules/CorrectAdmin/useCases/mass-registration-requests/list-mass-registrations";
+import { processMassRegistrationController } from "../../modules/CorrectAdmin/useCases/mass-registration-requests/process-mass-registration";
 import { Router } from "express";
 import { createCorrectAdminController } from "../../modules/CorrectAdmin/useCases/create-correct-admin";
 import { authAdminController } from "../../modules/CorrectAdmin/useCases/authenticate-admin";
@@ -130,6 +138,28 @@ correctAdminRouter.patch("/admin/business/:uuid/manual-payment", correctIsAuth, 
 // generate contract pdf
 correctAdminRouter.get("/admin/business/:uuid/contract-pdf", correctIsAuth, async (request, response) => {
   await generateContractPdfController.handle(request, response)
+})
+
+
+// list mass registrations
+correctAdminRouter.get("/admin/mass-registrations", correctIsAuth, async (request, response) => {
+  await listMassRegistrationsController.handle(request, response)
+})
+
+// process mass registration
+correctAdminRouter.post("/admin/mass-registrations/:uuid/process", correctIsAuth, async (request, response) => {
+  await processMassRegistrationController.handle(request, response)
+})
+
+
+// download mass registration
+correctAdminRouter.get("/admin/mass-registrations/:uuid/download", correctIsAuth, async (request, response) => {
+  await downloadMassRegistrationController.handle(request, response)
+})
+
+// update mass registration file
+correctAdminRouter.put("/admin/mass-registrations/:uuid", correctIsAuth, upload.single("file"), async (request, response) => {
+  await updateMassRegistrationController.handle(request, response)
 })
 
 export { correctAdminRouter }

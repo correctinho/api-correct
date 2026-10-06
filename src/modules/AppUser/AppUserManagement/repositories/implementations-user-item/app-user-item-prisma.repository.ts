@@ -373,7 +373,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
                 business_info_uuid: entity.business_info_uuid.uuid,
                 item_uuid: entity.item_uuid.uuid,
                 item_name: entity.item_name,
-                balance: entity.balance,
+                balance: entity.toJSON().balance,
                 group_uuid: entity.group_uuid.uuid,
                 status: entity.status,
                 blocked_at: entity.blocked_at,
@@ -562,21 +562,24 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         business_info_uuid: string,
         item_uuid: string,
         user_uuids: string[]
-    ): Promise<void> {
-        await prismaClient.userItem.updateMany({
+    ): Promise<number> {
+        const result = await prismaClient.userItem.updateMany({
             where: {
                 business_info_uuid: business_info_uuid,
                 item_uuid: item_uuid,
                 user_info_uuid: {
                     in: user_uuids
                 },
-                status: 'inactive' // Só ativa quem está inativo (segurança)
+                status: {
+                    in: ['inactive', 'blocked'] // Permite ativar inativos ou bloqueados (Opção A)
+                }
             },
             data: {
                 status: 'active',
                 updated_at: newDateF(new Date())
             }
         });
+        return result.count;
     }
 
     async findAllByItemAndBusinessPaginated(
@@ -593,6 +596,14 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
 
         if (params.status && params.status !== 'all') {
             whereClause.status = params.status;
+        }
+
+        if (params.search) {
+            whereClause.OR = [
+                { UserInfo: { full_name: { contains: params.search, mode: 'insensitive' } } },
+                { UserInfo: { document: { contains: params.search } } },
+                { UserInfo: { Employee: { some: { company_internal_code: { contains: params.search, mode: 'insensitive' }, business_info_uuid: params.business_info_uuid } } } }
+            ];
         }
 
         // 2. Executa a Transação
@@ -612,16 +623,18 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
                     }
                 },
                 include: {
+                    UserInfo: {
+                        include: {
+                            Employee: {
+                                where: {
+                                    business_info_uuid: params.business_info_uuid
+                                }
+                            }
+                        }
+                    },
                     // CORREÇÃO DO ERRO: Adicionado 'Item: true'
                     // Sem isso, o mapToDomain falha ao tentar ler item_category
                     Item: true,
-
-                    UserInfo: {
-                        select: {
-                            full_name: true,
-                            document: true
-                        }
-                    },
                     BenefitGroups: {
                         select: {
                             group_name: true
@@ -669,7 +682,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
                 UserInfo: item.UserInfo,
                 BenefitGroups: item.BenefitGroups
 
-            } as AppUserItemWithDetails;
+            } as unknown as AppUserItemWithDetails;
         });
 
         return { items, total };
