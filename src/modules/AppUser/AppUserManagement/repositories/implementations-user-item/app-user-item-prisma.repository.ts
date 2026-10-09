@@ -582,13 +582,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
                 }
             });
 
-            require('fs').appendFileSync('/home/jseren/syscorrect/api-correct/debug_update.log', JSON.stringify({
-                event: 'FIND_MANY_EXECUTED',
-                business_info_uuid,
-                item_uuid,
-                user_uuids,
-                foundCount: itemsToActivate.length
-            }) + '\n');
+
             if (itemsToActivate.length === 0) return 0;
 
             let updatedCount = 0;
@@ -613,15 +607,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
                     }
                 }
                 
-                require('fs').appendFileSync('/home/jseren/syscorrect/api-correct/debug_update.log', JSON.stringify({
-                    uuid: item.uuid,
-                    isPostpaid,
-                    reqUser,
-                    oldBalance: item.balance,
-                    newBalance,
-                    groupValue,
-                    itemCategory: item.Item?.item_category
-                }) + '\n');
+
 
                 await tx.userItem.update({
                     where: { uuid: item.uuid },
