@@ -44,6 +44,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
             Employee: user.Employee.map((emp) => ({
                 uuid: emp.uuid,
                 business_info_uuid: emp.business_info_uuid,
+                status: emp.status,
                 internal_company_code: emp.company_internal_code ?? null,
                 salary: emp.salary,
                 company_owner: emp.company_owner ?? false,
@@ -707,6 +708,7 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
             Employee: user.Employee.map((emp) => ({
                 uuid: emp.uuid,
                 business_info_uuid: emp.business_info_uuid,
+                status: emp.status,
                 internal_company_code: emp.company_internal_code ?? null,
                 salary: emp.salary,
                 company_owner: emp.company_owner ?? false,
@@ -946,5 +948,51 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
         });
 
         return employees as unknown as OutputGetSimpleEmployeesDTO[];
+    }
+
+    async dismissEmployee(employee_uuid: string, business_info_uuid: string): Promise<void> {
+        await prismaClient.$transaction(async (tx) => {
+            // 1. Get Employee
+            const employee = await tx.employee.findFirst({
+                where: { user_info_uuid: employee_uuid, business_info_uuid: business_info_uuid },
+                include: { UserInfo: { include: { UserItem: true } } }
+            });
+
+            if (!employee) throw new Error("Employee not found");
+            if (employee.business_info_uuid !== business_info_uuid) throw new Error("Unauthorized");
+
+            // 2. Update Employee status and fired_at
+            await tx.employee.update({
+                where: { uuid: employee.uuid },
+                data: { status: 'inactive', fired_at: new Date().toISOString() }
+            });
+
+            // 3. Update UserItems
+            const userItems = employee.UserInfo.UserItem.filter(i => i.business_info_uuid === business_info_uuid);
+            
+            for (const item of userItems) {
+                const itemDetails = await tx.item.findUnique({ where: { uuid: item.item_uuid } });
+                
+                if (itemDetails?.item_category === 'pos_pago') {
+                    await tx.userItem.update({
+                        where: { uuid: item.uuid },
+                        data: {
+                            status: 'cancelled',
+                            cancelled_at: new Date().toISOString(),
+                            cancel_reason: 'Desligamento da empresa',
+                            group_uuid: null
+                        }
+                    });
+                } else {
+                    // pre_pago
+                    await tx.userItem.update({
+                        where: { uuid: item.uuid },
+                        data: {
+                            group_uuid: null
+                        }
+                    });
+                }
+            }
+        });
     }
 }

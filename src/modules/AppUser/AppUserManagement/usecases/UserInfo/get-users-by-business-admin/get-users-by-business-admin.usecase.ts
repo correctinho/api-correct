@@ -30,7 +30,7 @@ export class GetUsersByBusinessAdminUsecase {
         phone: employee.UserInfo.phone,
         salary: employee.salary,
         company_owner: employee.company_owner,
-        status: employee.UserInfo.status,
+        status: employee.status,
         function: employee.job_title,
         marital_status: employee.UserInfo.marital_status,
         dependents_quantity: employee.dependents_quantity,

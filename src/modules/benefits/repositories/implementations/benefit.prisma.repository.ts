@@ -160,6 +160,40 @@ export class BenefitPrismaRepository implements IBenefitsRepository {
     });
   }
 
+    async findCatalog(business_info_uuid?: string): Promise<BenefitsEntity[]> {
+    const whereClause: any = business_info_uuid ? {
+      OR: [
+        { business_info_uuid: null },
+        { business_info_uuid }
+      ]
+    } : { business_info_uuid: null };
+
+    const itemsFromDb = await prismaClient.item.findMany({
+      where: whereClause,
+      include: {
+        SubscriptionPlan: {
+          select: { uuid: true }
+        }
+      }
+    });
+
+    return itemsFromDb.map((item) => {
+      return new BenefitsEntity({
+        uuid: new Uuid(item.uuid),
+        name: item.name,
+        description: item.description,
+        img_url: item.img_url ?? undefined,
+        item_type: item.item_type,
+        item_category: item.item_category,
+        business_info_uuid: item.business_info_uuid ? new Uuid(item.business_info_uuid) : null,
+        parent_uuid: item.parent_uuid ? new Uuid(item.parent_uuid) : null,
+        has_subscription: item.SubscriptionPlan ? true : false,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      });
+    });
+  }
+
   async findAll(): Promise<BenefitsEntity[]> {
     const itemsFromDb = await prismaClient.item.findMany({
       include: {

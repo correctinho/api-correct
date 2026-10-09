@@ -20,7 +20,8 @@ export type CompanyUserProps = {
   permissions: Permissions[],
   status: Status,
   business_type?: BusinessTypeOptions | null,
-  fantasy_name?: string | null,
+  fantasy_name?: string | null
+  corporate_reason?: string | null,
   password_reset_token?: string | null
   password_reset_expires_at?: Date | null
 }
@@ -38,6 +39,7 @@ export class CompanyUserEntity {
   private _permissions: Permissions[]
   private _status: Status
   private _fantasy_name?: string | null
+  private _corporate_reason?: string | null
   private _created_at?: string;
   private _updated_at?: string;
   private _business_type?: BusinessTypeOptions | null
@@ -63,6 +65,7 @@ export class CompanyUserEntity {
     this._password_reset_expires_at = props.password_reset_expires_at
     this._business_type = props.business_type;
     this._fantasy_name = props.fantasy_name;
+    this._corporate_reason = props.corporate_reason;
 
     this._created_at = newDateF(new Date());
     this._updated_at = newDateF(new Date());
@@ -82,6 +85,7 @@ export class CompanyUserEntity {
   get permissions(): Permissions[] { return this._permissions; }
   get status(): Status { return this._status; }
   get fantasy_name(): string | null | undefined { return this._fantasy_name; }
+  get corporate_reason(): string | null | undefined { return this._corporate_reason; }
   get created_at(): string | undefined { return this._created_at; }
   get updated_at(): string | undefined { return this._updated_at; }
 

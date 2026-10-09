@@ -20,6 +20,8 @@ export class CompanyUserPrismaRepository implements ICompanyUserRepository {
       status: user.status,
       permissions: user.permissions,
       fantasy_name: user.BusinessInfo?.fantasy_name || null,
+      corporate_reason: user.BusinessInfo?.corporate_reason || null,
+      business_type: user.BusinessInfo?.business_type || null,
       created_at: user.created_at,
       updated_at: user.updated_at,
       // Mapeando os campos de reset
@@ -47,7 +49,7 @@ export class CompanyUserPrismaRepository implements ICompanyUserRepository {
   }
 
   async findById(id: string): Promise<CompanyUserEntity | null> {
-    const companyUser = await prismaClient.businessUser.findUnique({ where: { uuid: id }, include: { BusinessInfo: { select: { fantasy_name: true } } } })
+    const companyUser = await prismaClient.businessUser.findUnique({ where: { uuid: id }, include: { BusinessInfo: { select: { fantasy_name: true, corporate_reason: true } } } })
     if (!companyUser) return null
     return this.mapPrismaToEntity(companyUser);
   }

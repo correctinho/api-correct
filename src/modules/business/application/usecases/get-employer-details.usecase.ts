@@ -36,6 +36,7 @@ class OutputMapper {
     return {
       uuid: employerDB.uuid,
       fantasy_name: employerDB.fantasy_name,
+      corporate_reason: employerDB.corporate_reason,
       document: employerDB.document,
       email: employerDB.email,
       phone_1: employerDB.phone_1,

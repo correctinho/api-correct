@@ -1,3 +1,4 @@
+import { dismissEmployeeController } from "../../modules/AppUser/AppUserManagement/usecases/UserInfo/dismiss-employee";
 import { createMassRegistrationController } from "../../modules/AppUser/AppUserManagement/usecases/UserInfo/create-mass-registration";
 import { Router, request, response } from "express";
 import uploadConfig from '../../infra/shared/multer/multer.csv.memory.config'
@@ -113,6 +114,12 @@ appUserRouter.get("/app-user/business-admin", companyIsAuth, async (request, res
 appUserRouter.post("/app-user/business-admin", companyIsAuth, async (request, response) => {
   await createUserInfoByEmployerController.handle(request, response)
 })
+
+//Dismiss employee by business admin
+appUserRouter.post("/app-user/business-admin/:employee_uuid/dismiss", companyIsAuth, async (request, response) => {
+  await dismissEmployeeController.handle(request, response)
+})
+
 
 //**********User Address*********** */
 

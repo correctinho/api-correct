@@ -37,7 +37,7 @@ export class GetSingleUserByBusinessAdminUsecase {
       phone: employee.phone,
       salary: isRelatedToBusiness.salary,
       company_owner: isRelatedToBusiness.company_owner,
-      status: employee.status,
+      status: isRelatedToBusiness.status,
       is_employee: employee.is_employee,
       is_authenticated: employee.is_authenticated,
       function: isRelatedToBusiness.function,

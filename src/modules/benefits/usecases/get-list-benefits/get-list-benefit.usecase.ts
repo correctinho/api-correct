@@ -7,7 +7,7 @@ export class GetListBenefitUsecase {
 
     async execute(input: InputListCustomerDTO): Promise<OutputListBenefitDTO> {
 
-        const benefit = await this.benefitsRepository.findAll();
+        const benefit = await this.benefitsRepository.findCatalog(input.business_info_uuid);
 
         return OutputMapper.toOutput(benefit);
     }

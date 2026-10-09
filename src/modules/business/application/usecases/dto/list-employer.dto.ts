@@ -7,6 +7,7 @@ export interface ListEmployerInputDto {
 
 export interface EmployerEntity {
   uuid: string;
+  company_name: string;
   fantasy_name: string;
   document: string;
   email: string;

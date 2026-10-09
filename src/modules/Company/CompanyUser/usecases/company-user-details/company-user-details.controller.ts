@@ -29,6 +29,7 @@ export class CompanyUserDetailsController {
                 permissions: companyUser.permissions,
                 status: companyUser.status,
                 fantasy_name: companyUser.fantasy_name,
+                corporate_reason: companyUser.corporate_reason,
                 created_at: companyUser.created_at,
                 updated_at: companyUser.updated_at,
             };

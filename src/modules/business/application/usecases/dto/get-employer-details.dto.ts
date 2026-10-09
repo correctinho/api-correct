@@ -9,6 +9,7 @@ export interface EmployerBenefitDto {
 export interface GetEmployerDetailsOutputDto {
   uuid: string;
   fantasy_name: string;
+  corporate_reason: string;
   document: string;
   email: string;
   phone_1: string;

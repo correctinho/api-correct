@@ -5,7 +5,7 @@ import { ListEmployerInputDto, ListEmployerOutputDto } from '../../../../applica
 export class ListEmployerPrismaRepository implements IListEmployerRepository {
   async findAllEmployers(data: ListEmployerInputDto): Promise<ListEmployerOutputDto> {
     const { status, search, page = 1, limit = 10 } = data;
-    
+
     const skip = (page - 1) * limit;
     const take = limit;
 
@@ -16,16 +16,15 @@ export class ListEmployerPrismaRepository implements IListEmployerRepository {
     if (status) {
       where.status = status;
     }
-    
+
     if (search) {
       const isDocument = search.replace(/\D/g, '').length > 0;
-      
+
       where.OR = [
         {
-          fantasy_name: {
-            contains: search,
-            mode: 'insensitive',
-          }
+          fantasy_name: { contains: search, mode: 'insensitive' }
+        }, {
+          company_name: { contains: search, mode: 'insensitive' }
         }
       ];
 
@@ -48,6 +47,7 @@ export class ListEmployerPrismaRepository implements IListEmployerRepository {
         },
         select: {
           uuid: true,
+          corporate_reason: true,
           fantasy_name: true,
           document: true,
           email: true,

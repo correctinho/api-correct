@@ -1,7 +1,7 @@
 import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo"
 import { ItemCategory, ItemType } from "@prisma/client";
 
-export interface InputListCustomerDTO { }
+export interface InputListCustomerDTO { business_info_uuid?: string }
 type Benefit = {
     uuid: string
     name: string

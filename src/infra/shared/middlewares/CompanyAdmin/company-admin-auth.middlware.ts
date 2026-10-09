@@ -34,6 +34,7 @@ export const companyIsAuth = async (req: Request, res: Response, next: NextFunct
       permissions: [''],
       status: '',
       fantasy_name: '',
+      corporate_reason: '',
       created_at: '',
       updated_at: ''
     }
@@ -55,6 +56,7 @@ export const companyIsAuth = async (req: Request, res: Response, next: NextFunct
       permissions: user.permissions,
       status: user.status,
       fantasy_name: user.fantasy_name,
+      corporate_reason: user.corporate_reason,
       created_at: user.created_at,
       updated_at: user.updated_at ? user.updated_at : null,
     }
