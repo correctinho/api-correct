@@ -88,7 +88,11 @@ export class BusinessItemsDetailsEntity {
     this.validate()
   }
   private updateCycleStartDay(endDay: number) {
-    this._cycle_start_day = endDay + 1;
+    if (endDay >= 31) {
+      this._cycle_start_day = 1;
+    } else {
+      this._cycle_start_day = endDay + 1;
+    }
     this.validate()
   }
 

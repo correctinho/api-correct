@@ -37,7 +37,7 @@ export interface IAppUserItemRepository extends RepositoryInterface<AppUserItemE
   activateManyByBusinessAndItem(
     business_info_uuid: string,
     item_uuid: string,
-    user_uuids: string[]
+    users: { user_info_uuid: string, custom_value?: number }[]
 ): Promise<number>
   findAllByItemAndBusinessPaginated(
         params: InputListCollaboratorsRepoDTO

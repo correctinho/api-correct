@@ -37,7 +37,7 @@ export class CreateCustomizedBenefitUsecase {
       business_info_uuid: benefit.business_info_uuid,
       cycle_end_day: input.cycle_end_day,
       is_active: false,
-      cycle_start_day: input.cycle_end_day + 1
+      cycle_start_day: input.cycle_end_day >= 31 ? 1 : input.cycle_end_day + 1
     }
 
     //check if business custom benefit already exists

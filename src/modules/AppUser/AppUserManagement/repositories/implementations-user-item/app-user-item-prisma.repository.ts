@@ -561,25 +561,82 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
     async activateManyByBusinessAndItem(
         business_info_uuid: string,
         item_uuid: string,
-        user_uuids: string[]
+        users: { user_info_uuid: string, custom_value?: number }[]
     ): Promise<number> {
-        const result = await prismaClient.userItem.updateMany({
-            where: {
-                business_info_uuid: business_info_uuid,
-                item_uuid: item_uuid,
-                user_info_uuid: {
-                    in: user_uuids
+        const user_uuids = users.map(u => u.user_info_uuid);
+        return await prismaClient.$transaction(async (tx) => {
+            const itemsToActivate = await tx.userItem.findMany({
+                where: {
+                    business_info_uuid: business_info_uuid,
+                    item_uuid: item_uuid,
+                    user_info_uuid: {
+                        in: user_uuids
+                    },
+                    status: {
+                        in: ['inactive', 'blocked', 'active']
+                    }
                 },
-                status: {
-                    in: ['inactive', 'blocked'] // Permite ativar inativos ou bloqueados (Opção A)
+                include: {
+                    Item: true,
+                    BenefitGroups: true
                 }
-            },
-            data: {
-                status: 'active',
-                updated_at: newDateF(new Date())
+            });
+
+            require('fs').appendFileSync('/home/jseren/syscorrect/api-correct/debug_update.log', JSON.stringify({
+                event: 'FIND_MANY_EXECUTED',
+                business_info_uuid,
+                item_uuid,
+                user_uuids,
+                foundCount: itemsToActivate.length
+            }) + '\n');
+            if (itemsToActivate.length === 0) return 0;
+
+            let updatedCount = 0;
+
+            for (const item of itemsToActivate) {
+                const isPostpaid = item.Item?.item_category === 'pos_pago';
+                const groupValue = item.BenefitGroups?.value || 0;
+                const reqUser = users.find(u => u.user_info_uuid === item.user_info_uuid);
+                
+                // Regra de segurança: Usuários pré-pagos que já estão ativos NÃO devem ser afetados
+                if (!isPostpaid && item.status === 'active') {
+                    continue;
+                }
+                
+                // Se for pos_pago, pega o custom_value (em reais -> x100), senão o groupValue.
+                let newBalance = item.balance;
+                if (isPostpaid) {
+                    if (reqUser && reqUser.custom_value !== undefined) {
+                        newBalance = Math.round(reqUser.custom_value * 100);
+                    } else {
+                        newBalance = groupValue;
+                    }
+                }
+                
+                require('fs').appendFileSync('/home/jseren/syscorrect/api-correct/debug_update.log', JSON.stringify({
+                    uuid: item.uuid,
+                    isPostpaid,
+                    reqUser,
+                    oldBalance: item.balance,
+                    newBalance,
+                    groupValue,
+                    itemCategory: item.Item?.item_category
+                }) + '\n');
+
+                await tx.userItem.update({
+                    where: { uuid: item.uuid },
+                    data: {
+                        status: 'active',
+                        balance: newBalance,
+                        updated_at: newDateF(new Date())
+                    }
+                });
+
+                updatedCount++;
             }
+
+            return updatedCount;
         });
-        return result.count;
     }
 
     async findAllByItemAndBusinessPaginated(
@@ -637,7 +694,8 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
                     Item: true,
                     BenefitGroups: {
                         select: {
-                            group_name: true
+                            group_name: true,
+                            value: true
                         }
                     }
                 }

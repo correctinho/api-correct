@@ -11,15 +11,17 @@ export class ActivateUserItemsBatchController{
         try{
             const business_info_uuid = req.companyUser.businessInfoUuid
 
-            const { item_uuid, user_info_uuids } = req.body;
+            const { item_uuid, user_info_uuids, users } = req.body;
             const usecase = new ActivateUserItemsBatchUsecase(
                 this.appUserItemRepository
             );
 
-           await usecase.execute({
+            const mappedUsers = users || (user_info_uuids || []).map((id: string) => ({ user_info_uuid: id }));
+
+            await usecase.execute({
                 business_info_uuid,
                 item_uuid,
-                user_info_uuids
+                users: mappedUsers
             });
 
             return res.status(200).send();

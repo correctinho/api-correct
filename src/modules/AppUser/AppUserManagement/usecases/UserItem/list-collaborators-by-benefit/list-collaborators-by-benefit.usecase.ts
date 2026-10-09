@@ -35,6 +35,7 @@ export class ListCollaboratorsByBenefitUsecase {
             
             // Priorizamos o nome que vem do Join (BenefitGroups) se existir, senão usa o da entidade
             group_name: userItem.BenefitGroups?.group_name || userItem.group_name || "Sem Grupo",
+            group_value: userItem.BenefitGroups?.value || 0,
             
             balance: userItem.balance, 
             admitted_at: userItem.created_at 

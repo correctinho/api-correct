@@ -8,6 +8,7 @@ import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-a
 import { findAllUserItemsByUser } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/find-user-items-by-app-user";
 import { activateUserItemByEmployer } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/activate-user-item-by-employer";
 import { getAppUserItemHistoryController } from "../../modules/Payments/Accounts/usecases/account-histories/app-user";
+import { updateUserItemLimitController } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/update-user-item-limit";
 import { activateUserItemsBatchController } from "../../modules/AppUser/AppUserManagement/usecases/UserItem/activate-user-items-batch";
 import { previewRechargeOrderController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPrePaidItemsManagement/preview-recharge-order";
 import { createRechargeOrderController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPrePaidItemsManagement/create-recharge-order";
@@ -40,6 +41,12 @@ appUserItemRouter.patch("/user-item/activate", companyIsAuth, async (request, re
 //ativate user items batch by employer
 appUserItemRouter.patch("/user-item/activate/batch", companyIsAuth, async (request, response) => {
   await activateUserItemsBatchController.handle(request, response)
+})
+
+
+//update user item limit by employer
+appUserItemRouter.patch("/user-item/employer/limit", companyIsAuth, async (request, response) => {
+  await updateUserItemLimitController.handle(request, response)
 })
 
 //block or cancel user item by employer - TESTED

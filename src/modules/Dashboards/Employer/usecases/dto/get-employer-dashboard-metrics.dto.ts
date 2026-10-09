@@ -5,6 +5,7 @@ export interface OutputEmployerDashboardMetricsDTO {
         custom_benefits: number;     // Total de personalizados ativos
         total_lives: number;         // Total de colaboradores vinculados
         estimated_monthly_cost: number; // Valor total em centavos
+        postpaid_current_invoice: number;
     };
     distribution: {
         category: string;
