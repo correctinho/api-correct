@@ -17,6 +17,7 @@ export type OutputGetCompanyDataDTO = {
   branch_name?: string
   employer_branch?: string | null
   items_uuid?: string[]
+  timezone?: string
   created_at: string
   updated_at: string
   Address: {

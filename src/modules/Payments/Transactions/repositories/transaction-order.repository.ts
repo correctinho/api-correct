@@ -45,6 +45,9 @@ export type ApprovedTransactionWithUserOutput = {
     UserInfo?: {
       full_name: string;
       document: string;
+      Employee?: {
+        company_internal_code: string | null;
+      }[];
     } | null;
   } | null;
 };

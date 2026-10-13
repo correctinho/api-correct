@@ -5,6 +5,7 @@ import { BusinessItemsDetailsEntity } from "../../entities/businessItemDetails.e
 import { OutputFindEmployerItemDetailsDTO } from "../../usecases/CorrectAdmin/findItemDetailsByCorrect/dto/find-employer-item.dto";
 import { IBusinessItemDetailsRepository } from "../business-item-details.repository";
 import { randomUUID } from 'crypto'
+import { newDateF } from "../../../../../utils/date";
 
 export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetailsRepository {
   async findItemUuidByUuid(uuid: string): Promise<string | null> {
@@ -140,6 +141,41 @@ export class BusinessItemDetailsPrismaRepository implements IBusinessItemDetails
       })
 
     ])
+
+    try {
+      const item = await prismaClient.item.findUnique({
+        where: { uuid: dataItemEntity.item_uuid },
+        select: { name: true }
+      });
+
+      const employees = await prismaClient.employee.findMany({
+        where: {
+          business_info_uuid: dataItemEntity.business_info_uuid,
+          status: 'active'
+        },
+        select: { user_info_uuid: true }
+      });
+
+      if (employees.length > 0) {
+        const now = newDateF(new Date());
+        await prismaClient.userItem.createMany({
+          data: employees.map((emp) => ({
+            uuid: randomUUID(),
+            user_info_uuid: emp.user_info_uuid,
+            business_info_uuid: dataItemEntity.business_info_uuid,
+            item_uuid: dataItemEntity.item_uuid,
+            item_name: item?.name || benefitGroupEntity.group_name || 'Benefício',
+            balance: benefitGroupEntity.value,
+            group_uuid: benefitGroupEntity.uuid,
+            status: 'inactive',
+            created_at: now
+          })),
+          skipDuplicates: true
+        });
+      }
+    } catch (provisionError) {
+      console.error("Erro ao provisionar userItems para colaboradores existentes:", provisionError);
+    }
 
     return {
       employerItem: {

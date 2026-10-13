@@ -2001,6 +2001,15 @@ export class TransactionOrderPrismaRepository
               select: {
                 full_name: true,
                 document: true,
+                Employee: {
+                  where: {
+                    business_info_uuid: businessInfoUuid,
+                  },
+                  select: {
+                    company_internal_code: true,
+                  },
+                  take: 1,
+                },
               },
             },
           },

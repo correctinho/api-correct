@@ -45,6 +45,7 @@ export class CompanyUserDetailsUsecase {
                 },
                 business_status
             },
+            timezone: companyData?.timezone || 'America/Campo_Grande',
         };
     }
 }

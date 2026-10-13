@@ -16,6 +16,7 @@ import { getBusinessAccountHistoryController } from "../../modules/Payments/Acco
 import { sendCompanyPasswordController } from "../../modules/Company/CompanyUser/usecases/password-recovery/send-forget-password-email";
 import { resetCompanyUserPasswordController } from "../../modules/Company/CompanyUser/usecases/password-recovery/reset-company-user-password";
 import { requireRole } from "../../infra/shared/middlewares/CompanyAdmin/role.middleware";
+import { CompanyAdminJWToken } from "../../infra/shared/crypto/token/CompanyAdmin/jwt.token";
 
 
 export const companyUserRouter = Router()
@@ -33,6 +34,21 @@ companyUserRouter.post('/business/admin/login', async (request, response) => {
 //get user details - TESTED
 companyUserRouter.get('/business/admin/details', companyIsAuth, async (request, response) => {
     await companyUserDetailsController.handle(request, response)
+})
+
+//refresh business user token
+companyUserRouter.post('/business/admin/refresh-token', companyIsAuth, async (request, response) => {
+    try {
+        const companyUser = request.companyUser;
+        const token = new CompanyAdminJWToken().create({
+            uuid: { uuid: companyUser.companyUserId },
+            business_info_uuid: { uuid: companyUser.businessInfoUuid }
+        } as any);
+
+        return response.json({ token });
+    } catch (err: any) {
+        return response.status(500).json({ error: 'Erro ao renovar token' });
+    }
 })
 
 //update company admin by company admin - TESTED

@@ -1,4 +1,5 @@
 import { UserItemEventType, UserItemStatus } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
 import { prismaClient } from '../../../../../infra/databases/prisma.config';
 import {
@@ -628,6 +629,69 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
     async findAllByItemAndBusinessPaginated(
         params: InputListCollaboratorsRepoDTO
     ): Promise<{ items: AppUserItemWithDetails[]; total: number }> {
+
+        // Auto-sync: Garante que todos os colaboradores ativos da empresa possuam registro user_item para este benefício
+        try {
+            const employees = await prismaClient.employee.findMany({
+                where: {
+                    business_info_uuid: params.business_info_uuid,
+                    status: 'active'
+                },
+                select: { user_info_uuid: true }
+            });
+
+            if (employees.length > 0) {
+                const existingUserItems = await prismaClient.userItem.findMany({
+                    where: {
+                        business_info_uuid: params.business_info_uuid,
+                        item_uuid: params.item_uuid,
+                        user_info_uuid: { in: employees.map((e) => e.user_info_uuid) }
+                    },
+                    select: { user_info_uuid: true }
+                });
+
+                const existingSet = new Set(existingUserItems.map((ui) => ui.user_info_uuid));
+                const missingEmployees = employees.filter((e) => !existingSet.has(e.user_info_uuid));
+
+                if (missingEmployees.length > 0) {
+                    const employerItem = await prismaClient.employerItemDetails.findFirst({
+                        where: {
+                            business_info_uuid: params.business_info_uuid,
+                            item_uuid: params.item_uuid
+                        },
+                        include: {
+                            BenefitGroups: {
+                                where: { is_default: true }
+                            },
+                            Item: {
+                                select: { name: true }
+                            }
+                        }
+                    });
+
+                    const defaultGroup = employerItem?.BenefitGroups?.[0];
+                    const itemName = employerItem?.Item?.name || 'Benefício';
+                    const now = newDateF(new Date());
+
+                    await prismaClient.userItem.createMany({
+                        data: missingEmployees.map((emp) => ({
+                            uuid: randomUUID(),
+                            user_info_uuid: emp.user_info_uuid,
+                            business_info_uuid: params.business_info_uuid,
+                            item_uuid: params.item_uuid,
+                            item_name: itemName,
+                            balance: defaultGroup ? defaultGroup.value : 0,
+                            group_uuid: defaultGroup ? defaultGroup.uuid : null,
+                            status: 'inactive' as UserItemStatus,
+                            created_at: now
+                        })),
+                        skipDuplicates: true
+                    });
+                }
+            }
+        } catch (syncError) {
+            console.error('Erro ao sincronizar colaboradores para o benefício:', syncError);
+        }
 
         const skip = (params.page - 1) * params.limit;
 

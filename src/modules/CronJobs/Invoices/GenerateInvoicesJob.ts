@@ -2,25 +2,26 @@ import { ICronJob } from '../../../infra/cron/ICronJob';
 import { prismaClient } from '../../../infra/databases/prisma.config';
 import { PostpaidRolloverUsecase } from '../../Company/BusinessItemsDetails/usecases/BusinessPostPaidItemsManagement/postpaid-rollover/postpaid-rollover.usecase';
 import { TransactionOrderPrismaRepository } from '../../Payments/Transactions/repositories/implementations/transaction-order-prisma.repository';
+import { getPostpaidConsumptionUsecase } from '../../Company/BusinessItemsDetails/usecases/BusinessPostPaidItemsManagement/get-postpaid-consumption';
+import { toZonedTime, format as formatTz } from 'date-fns-tz';
+import { subDays } from 'date-fns';
 
 export class GenerateEmployerInvoicesJob implements ICronJob {
   name = 'GenerateEmployerInvoicesJob';
-  schedule = '0 2 * * *';
+  // Executa diariamente às 06:00 UTC (02:00 em Campo Grande UTC-4, 03:00 em Brasília UTC-3)
+  // Garantindo que a meia-noite já passou em todos os estados do Brasil
+  schedule = '0 6 * * *';
 
   async execute(): Promise<void> {
-    console.log(`[${this.name}] Iniciando job de geração de faturas...`);
-
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-    const yesterdayDay = yesterday.getDate();
+    console.log(`[${this.name}] Iniciando job de fechamento de faturas e rollover de ciclo pós-pago...`);
 
     try {
-      // Busca todas as configurações de pós-pago ativas cujo ciclo encerrou ontem
+      // Busca todas as configurações de benefícios pós-pago ativas
       const details = await prismaClient.employerItemDetails.findMany({
         where: {
-          cycle_end_day: yesterdayDay,
           is_active: true,
+          cycle_end_day: { not: null },
+          cycle_start_day: { not: null },
           Item: {
             item_category: 'pos_pago'
           }
@@ -31,7 +32,7 @@ export class GenerateEmployerInvoicesJob implements ICronJob {
         }
       });
 
-      console.log(`[${this.name}] Encontrados ${details.length} benefícios pós-pago com fechamento no dia ${yesterdayDay}.`);
+      console.log(`[${this.name}] Encontrados ${details.length} benefícios pós-pago ativos para verificação.`);
 
       let generatedCount = 0;
       let rolloverCount = 0;
@@ -39,80 +40,118 @@ export class GenerateEmployerInvoicesJob implements ICronJob {
       for (const detail of details) {
         try {
           const businessInfoUuid = detail.business_info_uuid;
-          const itemUuid = detail.item_uuid;
-          const cycleStartDay = detail.cycle_start_day;
+          const cycleStartDay = detail.cycle_start_day!;
+          const cycleEndDay = detail.cycle_end_day!;
+          const timezone = (detail.BusinessInfo as any).timezone || 'America/Campo_Grande';
+
+          // 1. Determina a data de "ontem" no fuso horário da empresa
+          const nowInTimezone = toZonedTime(new Date(), timezone);
+          const yesterdayInTimezone = subDays(nowInTimezone, 1);
+          const yesterdayDay = yesterdayInTimezone.getDate();
           
-          if (!cycleStartDay) continue;
+          // Quantidade de dias no mês de ontem (para tratar meses com menos de 31 dias)
+          const lastDayOfMonth = new Date(
+            yesterdayInTimezone.getFullYear(),
+            yesterdayInTimezone.getMonth() + 1,
+            0
+          ).getDate();
 
-          // Cálculo correto das datas do ciclo
-          const cycleEndDate = new Date(yesterday);
-          cycleEndDate.setHours(23, 59, 59, 999);
+          const isLastDay = yesterdayDay === lastDayOfMonth;
 
-          const cycleStartDate = new Date(yesterday);
-          if (cycleStartDay <= yesterdayDay) {
-            // Ciclo começou e terminou no mesmo mês (ex: dia 1 a 30)
-            cycleStartDate.setDate(cycleStartDay);
-          } else {
-            // Ciclo começou no mês anterior (ex: dia 20 a 19)
-            cycleStartDate.setMonth(cycleStartDate.getMonth() - 1);
-            cycleStartDate.setDate(cycleStartDay);
+          // Verifica se o ciclo encerrou ontem no fuso local:
+          // Caso 1: O dia bate exatamente (ex: cycleEndDay = 4 e ontem foi dia 4)
+          // Caso 2: Ontem foi o último dia do mês e o cycleEndDay configurado é >= ao último dia (ex: cycleEndDay = 31 em abril, que acaba no dia 30)
+          const didCycleEndYesterday = (cycleEndDay === yesterdayDay) || (isLastDay && cycleEndDay >= yesterdayDay);
+
+          if (!didCycleEndYesterday) {
+            continue;
           }
-          cycleStartDate.setHours(0, 0, 0, 0);
 
-          const dueDate = new Date(yesterday);
+          console.log(`[${this.name}] Processando fechamento de ciclo para ${detail.BusinessInfo.fantasy_name} (${detail.Item.name}) no timezone ${timezone}.`);
+
+          // 2. Calcula as datas de início e fim no fuso horário da empresa
+          const endYear = yesterdayInTimezone.getFullYear();
+          const endMonth = yesterdayInTimezone.getMonth(); // 0 a 11
+
+          let startYear = endYear;
+          let startMonth = endMonth;
+
+          if (cycleStartDay > cycleEndDay) {
+            // Ciclo começou no mês anterior (ex: dia 05 a 04)
+            const prevMonthDate = new Date(endYear, endMonth - 1, 1);
+            startYear = prevMonthDate.getFullYear();
+            startMonth = prevMonthDate.getMonth();
+          }
+
+          const lastDayOfStartMonth = new Date(startYear, startMonth + 1, 0).getDate();
+          const adjustedStartDay = Math.min(cycleStartDay, lastDayOfStartMonth);
+          const adjustedEndDay = yesterdayDay; // O dia que efetivamente encerrou ontem
+
+          const startLocalDate = new Date(startYear, startMonth, adjustedStartDay, 0, 0, 0, 0);
+          const endLocalDate = new Date(endYear, endMonth, adjustedEndDay, 23, 59, 59, 999);
+
+          const startZoned = toZonedTime(startLocalDate, timezone);
+          const endZoned = toZonedTime(endLocalDate, timezone);
+
+          const cycleStartDateIso = formatTz(startZoned, "yyyy-MM-dd'T'00:00:00.000XXX", { timeZone: timezone });
+          const cycleEndDateIso = formatTz(endZoned, "yyyy-MM-dd'T'23:59:59.999XXX", { timeZone: timezone });
+
+          // Vencimento da fatura: 5 dias após o fechamento
+          const dueDate = new Date(yesterdayInTimezone);
           dueDate.setDate(dueDate.getDate() + 5);
           dueDate.setHours(23, 59, 59, 999);
 
-          const referenceMonth = `${String(cycleEndDate.getMonth() + 1).padStart(2, '0')}/${cycleEndDate.getFullYear()}`;
+          const referenceMonth = `${String(endMonth + 1).padStart(2, '0')}/${endYear}`;
 
-          // Agrega as transações usando a MESMA LÓGICA do relatório de consumo do RH (UserItem) e net_price
-          const aggregate = await prismaClient.transactions.aggregate({
-            where: {
-              status: 'success',
-              created_at: {
-                gte: cycleStartDate.toISOString(),
-                lte: cycleEndDate.toISOString(),
-              },
-              UserItem: {
-                business_info_uuid: businessInfoUuid,
-                item_uuid: itemUuid
-              }
-            },
-            _sum: {
-              net_price: true, // Usa o valor real gasto
-            },
+          // 3. USA O MESMO USECASE EXATO QUE A TELA DO RH USA!
+          const consumptionResult = await getPostpaidConsumptionUsecase.execute({
+            employer_item_details_uuid: detail.uuid,
+            business_info_uuid: businessInfoUuid,
+            start_date: cycleStartDateIso,
+            end_date: cycleEndDateIso
           });
 
-          const totalAmount = aggregate._sum.net_price ?? 0;
+          const totalAmountReais = consumptionResult.total_cycle_used;
+          const totalAmountCents = Math.round(totalAmountReais * 100);
 
-          // Só gera fatura se teve algum consumo no mês
-          if (totalAmount > 0) {
+          // 4. Cria a fatura se houver consumo (evita duplicidade verificando se já existe fatura deste ciclo)
+          const existingInvoice = await prismaClient.employerInvoice.findFirst({
+            where: {
+              business_info_uuid: businessInfoUuid,
+              reference_month: referenceMonth,
+              cycle_start_date: new Date(cycleStartDateIso),
+            }
+          });
+
+          if (!existingInvoice && totalAmountCents > 0) {
             await prismaClient.employerInvoice.create({
               data: {
                 business_info_uuid: businessInfoUuid,
                 reference_month: referenceMonth,
-                cycle_start_date: cycleStartDate,
-                cycle_end_date: cycleEndDate,
+                cycle_start_date: new Date(cycleStartDateIso),
+                cycle_end_date: new Date(cycleEndDateIso),
                 due_date: dueDate,
-                total_amount: totalAmount,
+                total_amount: totalAmountCents,
                 status: 'PENDING',
               },
             });
             generatedCount++;
-            console.log(`[${this.name}] Fatura gerada para ${detail.BusinessInfo.fantasy_name} (Benefício: ${detail.Item.name}) - Valor: ${totalAmount} (cents)`);
+            console.log(`[${this.name}] Fatura gerada para ${detail.BusinessInfo.fantasy_name} (Benefício: ${detail.Item.name}) - Total: R$ ${totalAmountReais.toFixed(2)} (${totalAmountCents} cents) via GetPostpaidConsumptionUsecase`);
+          } else if (existingInvoice) {
+            console.log(`[${this.name}] Fatura de ${referenceMonth} para ${detail.BusinessInfo.fantasy_name} já existe. Pulando criação.`);
           } else {
-            console.log(`[${this.name}] Sem consumo para ${detail.BusinessInfo.fantasy_name} (Benefício: ${detail.Item.name}). Nenhuma fatura gerada.`);
+            console.log(`[${this.name}] Sem consumo no ciclo para ${detail.BusinessInfo.fantasy_name} (${detail.Item.name}).`);
           }
 
-          // RENOVAÇÃO DE LIMITE AUTOMÁTICA
+          // 5. RENOVAÇÃO DE LIMITE AUTOMÁTICA DOS COLABORADORES
           try {
             const txRepository = new TransactionOrderPrismaRepository();
             const rolloverUsecase = new PostpaidRolloverUsecase(txRepository);
-            
+
             const rolloverResult = await rolloverUsecase.execute({
               employer_item_details_uuid: detail.uuid
             });
-            
+
             if (rolloverResult.total_users_updated > 0) {
               rolloverCount++;
               console.log(`[${this.name}] Limites renovados para ${rolloverResult.total_users_updated} colaboradores da empresa ${detail.BusinessInfo.fantasy_name}.`);
@@ -122,11 +161,11 @@ export class GenerateEmployerInvoicesJob implements ICronJob {
           }
 
         } catch (error: any) {
-          console.error(`[${this.name}] Falha ao processar fatura para o benefício ${detail.uuid}:`, error.message);
+          console.error(`[${this.name}] Falha ao processar benefício ${detail.uuid}:`, error.message);
         }
       }
 
-      console.log(`[${this.name}] Finalizado. ${generatedCount} faturas criadas e ${rolloverCount} empresas tiveram limites renovados.`);
+      console.log(`[${this.name}] Finalizado. ${generatedCount} faturas criadas e ${rolloverCount} benefícios tiveram limites renovados.`);
     } catch (error: any) {
       console.error(`[${this.name}] Erro geral no Job:`, error.message);
     }
