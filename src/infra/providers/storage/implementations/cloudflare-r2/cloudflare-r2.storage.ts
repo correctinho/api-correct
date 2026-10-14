@@ -1,9 +1,19 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { NodeHttpHandler } from '@smithy/node-http-handler';
+import https from 'https';
+import dns from 'dns';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { IStorage, StorageUploadData, UploadResponse } from '../../storage';
 import { MulterFile } from '../../../../shared/multer/multer-memory.config';
+
+// Força resolução IPv4 prioritária para evitar falhas ENETUNREACH/ETIMEDOUT em conexões com Cloudflare
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {
+  // Ignora se não suportado no ambiente
+}
 
 export class CloudflareR2Storage implements IStorage {
   private s3Client: S3Client;
@@ -24,13 +34,24 @@ export class CloudflareR2Storage implements IStorage {
       console.warn("R2 credentials not fully configured in environment variables.");
     }
 
+    const agent = new https.Agent({
+      keepAlive: true,
+      maxSockets: 50,
+      timeout: 60000,
+    });
+
     this.s3Client = new S3Client({
       region: 'auto',
       endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
       credentials: {
         accessKeyId: accessKeyId || '',
         secretAccessKey: secretAccessKey || '',
-      }
+      },
+      requestHandler: new NodeHttpHandler({
+        httpsAgent: agent,
+        connectionTimeout: 30000,
+        requestTimeout: 60000,
+      }),
     });
   }
 
@@ -41,21 +62,23 @@ export class CloudflareR2Storage implements IStorage {
       let mimeType = file.mimetype;
       let extension = file.originalname.split('.').pop() || 'bin';
 
-      if (mimeType.startsWith('image/') && mimeType !== 'image/webp') {
+      if (mimeType.startsWith('image/')) {
         fileBuffer = await sharp(file.buffer)
+          .rotate() // Auto-orienta baseado no EXIF da câmera
+          .resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true })
           .webp({ quality: 80 })
           .toBuffer();
         mimeType = 'image/webp';
         extension = 'webp';
       }
 
-      // 2. Definir nome único e caminho (respeita o originalname caso ele exista e já seja único, como ocorre no usecase)
+      // 2. Definir nome único e caminho
       const fileName = file.originalname || `${uuidv4()}.${extension}`;
       const filePath = folder ? `${folder}/${fileName}` : fileName;
       
       const bucketName = isPrivate ? this.privateBucket : this.publicBucket;
 
-      // 3. Upload para o R2
+      // 3. Upload para o R2 com retentativa
       const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: filePath,
@@ -63,11 +86,20 @@ export class CloudflareR2Storage implements IStorage {
         ContentType: mimeType,
       });
 
-      await this.s3Client.send(command);
+      let attempts = 0;
+      while (true) {
+        try {
+          attempts++;
+          await this.s3Client.send(command);
+          break;
+        } catch (uploadErr) {
+          if (attempts >= 2) throw uploadErr;
+          console.warn(`[CloudflareR2Storage] Tentativa ${attempts} de upload para ${filePath} falhou, tentando novamente...`);
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
 
       // 4. Retornar os dados
-      // Se for privado, não há URL pública acessível, retornamos apenas o path (ou uma URL fake)
-      // Se for público, montamos a URL com o domínio público configurado no Cloudflare
       const url = isPrivate ? filePath : `${this.publicDomain}/${filePath}`;
 
       return {

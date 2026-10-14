@@ -27,10 +27,10 @@ export class GetByDocumentUsecase {
             userAuth = false;
 
             //It's possible that user info exists and user auth does not
-            const userInfoByDocument = await this.appUserInfoRepository.findByDocumentUserInfo(documentValidated)
+            const userInfoByDocument = await this.appUserInfoRepository.findByDocumentUserInfo(documentValidated);
             if(!userInfoByDocument){
-                userInfo = false
-                address = false
+                userInfo = false;
+                address = false;
                 return {
                     status: status,
                     UserAuth: userAuth,
@@ -46,24 +46,24 @@ export class GetByDocumentUsecase {
             }else{
                 //check if address exists
                 if(!userInfoByDocument.address_uuid){
-                    userInfo = true
-                    address = false
+                    userInfo = true;
+                    address = false;
 
                     return {
-                    status: status,
-                    UserAuth: userAuth,
-                    UserInfo: userInfo,
-                    Address: address,
-                    UserValidation: {
-                        document_front_status: UserDocumentValidationStatus.pending_to_send,
-                        document_back_status: UserDocumentValidationStatus.pending_to_send,
-                        selfie_status: UserDocumentValidationStatus.pending_to_send,
-                        document_selfie_status: UserDocumentValidationStatus.pending_to_send,
-                    },
-                };
+                        status: status,
+                        UserAuth: userAuth,
+                        UserInfo: userInfo,
+                        Address: address,
+                        UserValidation: {
+                            document_front_status: UserDocumentValidationStatus.pending_to_send,
+                            document_back_status: UserDocumentValidationStatus.pending_to_send,
+                            selfie_status: UserDocumentValidationStatus.pending_to_send,
+                            document_selfie_status: UserDocumentValidationStatus.pending_to_send,
+                        },
+                    };
                 }
-                userInfo = true
-                address = true
+                userInfo = true;
+                address = true;
                 return {
                     status: status,
                     UserAuth: userAuth,
@@ -97,7 +97,6 @@ export class GetByDocumentUsecase {
                         document_selfie_status: UserDocumentValidationStatus.pending_to_send,
                     },
                 };
-                
             }
             const getUserInfo = await this.appUserInfoRepository.find(
                 getUserAuth.user_info_uuid
@@ -122,7 +121,7 @@ export class GetByDocumentUsecase {
                 };
             }
 
-            status = true; // status = getUserInfo.status === 'active' ? true : false
+            status = true;
     
             if (!getUserInfo.address_uuid) {
                 status = false;
@@ -144,7 +143,7 @@ export class GetByDocumentUsecase {
             }
     
             if (!getUserInfo.user_document_validation_uuid) {
-                status =true;
+                status = false;
                 userAuth = true;
                 userInfo = true;
                 address = true;
@@ -167,7 +166,7 @@ export class GetByDocumentUsecase {
                     getUserInfo.user_document_validation_uuid
                 );
             if (!userValidations) {
-                status = true;
+                status = false;
                 userAuth = true;
                 userInfo = true;
                 address = true;
@@ -185,14 +184,12 @@ export class GetByDocumentUsecase {
                 };
             }
             
-            // if (
-            //     (userValidations.document_front_status !== 'approved' && userValidations.document_front_status !== "under_analysis") ||
-            //     (userValidations.document_back_status !== 'approved' && userValidations.document_back_status !== "under_analysis") ||
-            //     (userValidations.selfie_status !== 'approved' && userValidations.selfie_status !== "under_analysis") ||
-            //     (userValidations.document_selfie_status !== 'approved' && userValidations.document_selfie_status !== "under_analysis")
-            // ) {
-            //     status = true;
-            // }
+            const isApproved =
+                userValidations.document_front_status === UserDocumentValidationStatus.approved &&
+                userValidations.selfie_status === UserDocumentValidationStatus.approved;
+
+            status = isApproved;
+
             return {
                 status: status,
                 UserAuth: userAuth,
