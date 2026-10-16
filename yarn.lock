@@ -73,6 +73,39 @@
     "@smithy/types" "^4.19.0"
     tslib "^2.6.2"
 
+"@aws-sdk/client-bedrock-runtime@^3.1152.0":
+  version "3.1152.0"
+  resolved "https://registry.npmjs.org/@aws-sdk/client-bedrock-runtime/-/client-bedrock-runtime-3.1152.0.tgz"
+  integrity sha512-73OunQANpKST6eQljF9mwt9z49MpL1oL1inIgBTUtc/CegxYQ8OLj/5/yLrmxuRzZWYFSxp0e04TLiwIrDRuSQ==
+  dependencies:
+    "@aws-sdk/core" "^3.978.3"
+    "@aws-sdk/credential-provider-node" "^3.972.86"
+    "@aws-sdk/eventstream-handler-node" "^3.972.36"
+    "@aws-sdk/middleware-eventstream" "^3.972.31"
+    "@aws-sdk/middleware-websocket" "^3.972.56"
+    "@aws-sdk/token-providers" "3.1152.0"
+    "@aws-sdk/types" "^3.974.6"
+    "@smithy/core" "^3.35.2"
+    "@smithy/fetch-http-handler" "^5.8.0"
+    "@smithy/node-http-handler" "^4.12.1"
+    "@smithy/types" "^4.19.0"
+    tslib "^2.6.2"
+
+"@aws-sdk/client-bedrock@^3.1152.0":
+  version "3.1152.0"
+  resolved "https://registry.npmjs.org/@aws-sdk/client-bedrock/-/client-bedrock-3.1152.0.tgz"
+  integrity sha512-mZQk6H/Gt34V5LWDJfSf4Ar/FMaUrGwu9TOvstKP7GNo81PJJOkgS+ICjhoV3YX/AZXjZD8mNCp+MYynRitRag==
+  dependencies:
+    "@aws-sdk/core" "^3.978.3"
+    "@aws-sdk/credential-provider-node" "^3.972.86"
+    "@aws-sdk/token-providers" "3.1152.0"
+    "@aws-sdk/types" "^3.974.6"
+    "@smithy/core" "^3.35.2"
+    "@smithy/fetch-http-handler" "^5.8.0"
+    "@smithy/node-http-handler" "^4.12.1"
+    "@smithy/types" "^4.19.0"
+    tslib "^2.6.2"
+
 "@aws-sdk/client-rekognition@^3.1150.0":
   version "3.1150.0"
   resolved "https://registry.npmjs.org/@aws-sdk/client-rekognition/-/client-rekognition-3.1150.0.tgz"
@@ -890,6 +923,26 @@
     "@smithy/types" "^4.9.0"
     tslib "^2.6.2"
 
+"@aws-sdk/eventstream-handler-node@^3.972.36":
+  version "3.972.36"
+  resolved "https://registry.npmjs.org/@aws-sdk/eventstream-handler-node/-/eventstream-handler-node-3.972.36.tgz"
+  integrity sha512-HFaKXA6ugPVvpR7W/3UT3hylWIPndqGMwduwNVrmGsRT5+OESHN8/ven4eeofraQF5Kxp8A8QgGVrv7iQsTRKQ==
+  dependencies:
+    "@aws-sdk/types" "^3.974.6"
+    "@smithy/core" "^3.35.2"
+    "@smithy/types" "^4.19.0"
+    tslib "^2.6.2"
+
+"@aws-sdk/middleware-eventstream@^3.972.31":
+  version "3.972.31"
+  resolved "https://registry.npmjs.org/@aws-sdk/middleware-eventstream/-/middleware-eventstream-3.972.31.tgz"
+  integrity sha512-4yvdTVwPGKCnrwuwlYEmwLqQXKwk0unx3f/FvBi4FA9ruK/WGoPJyqfK7hOYurheIyQL44FR0ovgOHqvkfdpAQ==
+  dependencies:
+    "@aws-sdk/types" "^3.974.6"
+    "@smithy/core" "^3.35.2"
+    "@smithy/types" "^4.19.0"
+    tslib "^2.6.2"
+
 "@aws-sdk/middleware-host-header@3.723.0":
   version "3.723.0"
   resolved "https://registry.npmjs.org/@aws-sdk/middleware-host-header/-/middleware-host-header-3.723.0.tgz"
@@ -1017,6 +1070,19 @@
     "@smithy/core" "^3.18.7"
     "@smithy/protocol-http" "^5.3.5"
     "@smithy/types" "^4.9.0"
+    tslib "^2.6.2"
+
+"@aws-sdk/middleware-websocket@^3.972.56":
+  version "3.972.56"
+  resolved "https://registry.npmjs.org/@aws-sdk/middleware-websocket/-/middleware-websocket-3.972.56.tgz"
+  integrity sha512-32d9EnnNM5UMwjVp/qnL0K4XYiZv+YlSbULI3BaoBdJvebAS6cD0bKfPJ7lzovN0qrelvmSh5jo/3tk0KoTuGQ==
+  dependencies:
+    "@aws-sdk/core" "^3.978.3"
+    "@aws-sdk/types" "^3.974.6"
+    "@smithy/core" "^3.35.2"
+    "@smithy/fetch-http-handler" "^5.8.0"
+    "@smithy/signature-v4" "^5.7.4"
+    "@smithy/types" "^4.19.0"
     tslib "^2.6.2"
 
 "@aws-sdk/nested-clients@^3.997.46":
@@ -1174,6 +1240,18 @@
   version "3.1150.0"
   resolved "https://registry.npmjs.org/@aws-sdk/token-providers/-/token-providers-3.1150.0.tgz"
   integrity sha512-wDU36ofhabZYu+d2KSriyDbwzxNoaOp+4dG0p3qkabk7HeALR5nIWyQbjoyJZLn3iqWkv/xNdyUfbfevDVDzzg==
+  dependencies:
+    "@aws-sdk/core" "^3.978.3"
+    "@aws-sdk/nested-clients" "^3.997.48"
+    "@aws-sdk/types" "^3.974.6"
+    "@smithy/core" "^3.35.2"
+    "@smithy/types" "^4.19.0"
+    tslib "^2.6.2"
+
+"@aws-sdk/token-providers@3.1152.0":
+  version "3.1152.0"
+  resolved "https://registry.npmjs.org/@aws-sdk/token-providers/-/token-providers-3.1152.0.tgz"
+  integrity sha512-XcQlQFkIDOk4P1dF/ADQAjPK361mBChR/AJghM4my6SgDnsOX77Z7zCUtZfXXbQG4E+vpoWfbySzX/oKXcmV5w==
   dependencies:
     "@aws-sdk/core" "^3.978.3"
     "@aws-sdk/nested-clients" "^3.997.48"

@@ -1,23 +1,36 @@
+import redisClient from '../../../../../infra/redis/redis.client';
 import { Uuid } from '../../../../../@shared/ValueObjects/uuid.vo';
 import { prismaClient } from '../../../../../infra/databases/prisma.config';
 import { ProductHistoryEntity } from '../../entities/product-history.entity';
 import { ProductEntity, ProductProps } from '../../entities/product.entity';
-import { IProductRepository } from '../product.repository';
+import { IProductRepository, ActiveMegaPromotionItem, UserRecommendationProfile, TargetUserCandidate, MegaPromotionPushContext } from '../product.repository';
 
 export class ProductPrismaRepository implements IProductRepository {
+
+  private async invalidateMegaPromoCache(): Promise<void> {
+    try {
+      const keys = await redisClient.keys('mega_promo_feed:*');
+      if (keys && keys.length > 0) {
+        await redisClient.del(...keys);
+      }
+    } catch (err) {
+      console.warn('[ProductPrismaRepository] Erro ao invalidar cache de mega promoções:', err);
+    }
+  }
+
   async hasBookableServices(businessUuid: Uuid): Promise<boolean> {
     // Conta quantos produtos do tipo BOOKABLE_SERVICE essa empresa tem.
     const count = await prismaClient.products.count({
-        where: {
-            business_info_uuid: businessUuid.uuid,
-            product_type: 'BOOKABLE_SERVICE',
-            is_active: true
-        }
+      where: {
+        business_info_uuid: businessUuid.uuid,
+        product_type: 'BOOKABLE_SERVICE',
+        is_active: true
+      }
     });
 
     // Se a contagem for maior que 0, retorna true.
     return count > 0;
-}
+  }
   async updateWithHistory(entity: ProductEntity, history: ProductHistoryEntity[]): Promise<void> {
     // 1. Preparamos os dados para a persistência usando o método .toJSON() de cada entidade.
     const productDataToSave = entity.toJSON();
@@ -88,6 +101,9 @@ export class ProductPrismaRepository implements IProductRepository {
         updated_at: dataToSave.updated_at, // O método .touch() na entidade já atualizou esta data
       },
     });
+    if (dataToSave.is_mega_promotion) {
+      this.invalidateMegaPromoCache();
+    }
   }
   async find(id: Uuid): Promise<ProductEntity | null> {
     // 1. Busca os dados brutos da transação no banco de dados
@@ -141,6 +157,9 @@ export class ProductPrismaRepository implements IProductRepository {
     const createdProductData = await prismaClient.products.create({
       data: dataToSave,
     });
+    if (createdProductData.is_mega_promotion) {
+      this.invalidateMegaPromoCache();
+    }
 
     // CRUCIAL: Após criar, reconstruímos a entidade para retornar uma instância de classe completa.
     const productProps: ProductProps = {
@@ -289,117 +308,293 @@ export class ProductPrismaRepository implements IProductRepository {
 
     return { products, total };
   }
-  // async findActiveProductsByBusinessId(businessInfoUuid: string): Promise<ProductEntity[]> {
-  //   const productsData = await prismaClient.products.findMany({
-  //     where: {
-  //       business_info_uuid: businessInfoUuid,
-  //       is_active: true, // A chave da lógica está aqui
-  //       deleted_at: null,
-  //     },
-  //     orderBy: [
-  //       { is_mega_promotion: 'desc' },
-  //       { created_at: 'desc' },
-  //     ],
-  //   });
 
-  //   if (!productsData || productsData.length === 0) {
-  //     return [];
-  //   }
+  async findActiveMegaPromotions(): Promise<ActiveMegaPromotionItem[]> {
+    const products = await prismaClient.products.findMany({
+      where: {
+        is_mega_promotion: true,
+        is_active: true,
+        deleted_at: null,
+        stock: { gt: 0 },
+        Businessinfo: {
+          status: 'active',
+        },
+      },
+      include: {
+        Businessinfo: {
+          select: {
+            uuid: true,
+            fantasy_name: true,
+            corporate_reason: true,
+            PartnerConfig: {
+              select: {
+                title: true,
+                DispatchAddress: {
+                  select: {
+                    city: true,
+                    neighborhood: true,
+                    latitude: true,
+                    longitude: true,
+                  },
+                },
+              },
+            },
+            Address: {
+              select: {
+                city: true,
+                neighborhood: true,
+                latitude: true,
+                longitude: true,
+              },
+            },
+          },
+        },
+        Categories: {
+          select: {
+            uuid: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: [
+        { discount: 'desc' },
+        { created_at: 'desc' },
+      ],
+      take: 50,
+    });
 
-  //   // Mapeamos os dados brutos do banco para reconstruir nossas Entidades de Domínio.
-  //   return productsData.map(product => {
-  //     const productProps: ProductProps = {
-  //       uuid: new Uuid(product.uuid),
-  //       category_uuid: new Uuid(product.category_uuid),
-  //       business_info_uuid: new Uuid(product.business_info_uuid),
-  //       created_by_uuid: new Uuid(product.created_by_uuid),
-  //       updated_by_uuid: new Uuid(product.updated_by_uuid),
-  //       product_type: product.product_type,
-  //       ean_code: product.ean_code,
-  //       brand: product.brand,
-  //       name: product.name,
-  //       description: product.description,
-  //       original_price: product.original_price,
-  //       discount: product.discount,
-  //       promotional_price: product.promotional_price,
-  //       stock: product.stock,
-  //       image_urls: product.image_urls,
-  //       is_mega_promotion: product.is_mega_promotion,
-  //       is_active: product.is_active,
-  //       weight: product.weight,
-  //       height: product.height,
-  //       width: product.width,
-  //       created_at: product.created_at,
-  //       updated_at: product.updated_at,
-  //     };
-  //     return ProductEntity.hydrate(productProps);
-  //   });
-  // }
-  // async upsert(entity: ProductEntity): Promise<ProductEntity> {
-  //   const product = await prismaClient.products.upsert({
-  //     where: {
-  //       uuid: entity.uuid.uuid,
-  //     },
-  //     create: {
-  //       uuid: entity.uuid.uuid,
-  //       category_uuid: entity.category_uuid.uuid,
-  //       ean_code: entity.ean_code,
-  //       brand: entity.brand,
-  //       name: entity.name,
-  //       description: entity.description,
-  //       original_price: entity.original_price,
-  //       promotional_price: entity.promotional_price,
-  //       discount: entity.discount,
-  //       image_urls: entity.image_urls,
-  //       is_mega_promotion: entity.is_mega_promotion,
-  //       is_active: entity.is_active,
-  //       stock: entity.stock,
-  //       weight: entity.weight,
-  //       height: entity.height,
-  //       width: entity.width,
-  //       business_info_uuid: entity.business_info_uuid.uuid,
-  //       created_at: entity.created_at,
-  //     },
-  //     update: {
-  //       category_uuid: entity.category_uuid.uuid,
-  //       ean_code: entity.ean_code,
-  //       brand: entity.brand,
-  //       name: entity.name,
-  //       description: entity.description,
-  //       original_price: entity.original_price,
-  //       promotional_price: entity.promotional_price,
-  //       discount: entity.discount,
-  //       image_urls: entity.image_urls,
-  //       is_mega_promotion: entity.is_mega_promotion,
-  //       is_active: entity.is_active,
-  //       stock: entity.stock,
-  //       weight: entity.weight,
-  //       height: entity.height,
-  //       width: entity.width,
-  //       updated_at: entity.updated_at,
-  //     },
-  //   });
+    return products.map((p) => {
+      const partnerConfig = p.Businessinfo?.PartnerConfig?.[0];
+      // DispatchAddress é o endereço base/despacho do parceiro. Fallback: Address cadastral
+      const address = (partnerConfig?.DispatchAddress as any) || (p.Businessinfo as any)?.Address;
+      const businessName =
+        partnerConfig?.title ||
+        p.Businessinfo?.fantasy_name ||
+        p.Businessinfo?.corporate_reason ||
+        'Parceiro';
 
-  //   return {
-  //     uuid: new Uuid(product.uuid),
-  //     category_uuid: new Uuid(product.category_uuid),
-  //     business_info_uuid: new Uuid(product.business_info_uuid),
-  //     ean_code: product.ean_code,
-  //     brand: product.brand,
-  //     name: product.name,
-  //     description: product.description,
-  //     original_price: product.original_price,
-  //     discount: product.discount,
-  //     promotional_price: product.promotional_price,
-  //     stock: product.stock,
-  //     image_urls: product.image_urls,
-  //     is_mega_promotion: product.is_mega_promotion,
-  //     is_active: product.is_active,
-  //     weight: product.weight,
-  //     height: product.height,
-  //     width: product.width,
-  //     created_at: product.created_at,
-  //     updated_at: product.updated_at,
-  //   } as ProductEntity;
-  // }
+      return {
+        uuid: p.uuid,
+        name: p.name,
+        description: p.description,
+        brand: p.brand,
+        original_price: p.original_price,
+        promotional_price: p.promotional_price,
+        discount: p.discount > 100 ? Math.round(p.discount / 10000) : p.discount,
+        stock: p.stock,
+        image_urls: p.image_urls,
+        product_type: p.product_type,
+        category_uuid: p.category_uuid,
+        category_name: p.Categories?.name || null,
+        business_info_uuid: p.business_info_uuid,
+        business_name: businessName,
+        latitude: address?.latitude ?? null,
+        longitude: address?.longitude ?? null,
+        city: address?.city ?? null,
+        neighborhood: address?.neighborhood ?? null,
+      };
+    });
+  }
+
+  async getUserRecommendationProfile(userInfoUuid: string): Promise<UserRecommendationProfile> {
+    try {
+      const [userInfo, recentTransactions, userItems] = await Promise.all([
+        prismaClient.userInfo.findUnique({
+          where: { uuid: userInfoUuid },
+          select: {
+            full_name: true,
+            display_name: true,
+            Address: {
+              select: {
+                latitude: true,
+                longitude: true,
+                city: true,
+              },
+            },
+          },
+        }),
+        prismaClient.transactions.findMany({
+          where: {
+            status: 'success',
+            OR: [
+              { UserItem: { user_info_uuid: userInfoUuid } },
+              { favored_user_uuid: userInfoUuid },
+            ],
+            favored_business_info_uuid: { not: null },
+          },
+          select: {
+            favored_business_info_uuid: true,
+          },
+          orderBy: { created_at: 'desc' },
+          take: 50,
+        }),
+        prismaClient.userItem.findMany({
+          where: {
+            user_info_uuid: userInfoUuid,
+            status: 'active',
+            balance: { gt: 0 },
+          },
+          select: {
+            item_name: true,
+            balance: true,
+          },
+        }),
+      ]);
+
+      const favoriteBusinessUuids = Array.from(
+        new Set(
+          recentTransactions
+            .map((t) => t.favored_business_info_uuid)
+            .filter((id): id is string => Boolean(id))
+        )
+      );
+
+      const firstName =
+        userInfo?.display_name ||
+        userInfo?.full_name?.trim().split(' ')[0] ||
+        null;
+
+      return {
+        userName: firstName,
+        userAddress: userInfo?.Address ? {
+          latitude: userInfo.Address.latitude,
+          longitude: userInfo.Address.longitude,
+          city: userInfo.Address.city,
+        } : null,
+        favoriteBusinessUuids,
+        userBalances: userItems.map((item) => ({
+          item_name: item.item_name,
+          balance: item.balance / 100,
+        })),
+      };
+    } catch (err) {
+      console.error('[ProductPrismaRepository] Error fetching user recommendation profile:', err);
+      return {
+        userName: null,
+        userAddress: null,
+        favoriteBusinessUuids: [],
+        userBalances: [],
+      };
+    }
+  }
+
+  async findTargetUsersForMegaPromotion(
+    productUuid: string
+  ): Promise<{ users: TargetUserCandidate[]; promotion: MegaPromotionPushContext | null }> {
+    try {
+      const product = await prismaClient.products.findUnique({
+        where: { uuid: productUuid },
+        include: {
+          Businessinfo: {
+            include: {
+              Address: true,
+              PartnerConfig: {
+                include: {
+                  DispatchAddress: true,
+                },
+              },
+            },
+          },
+          Categories: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!product || !product.is_mega_promotion) {
+        return { users: [], promotion: null };
+      }
+
+      const partnerConfig = product.Businessinfo?.PartnerConfig?.[0];
+      const address = (partnerConfig?.DispatchAddress as any) || (product.Businessinfo as any)?.Address;
+      const businessName =
+        partnerConfig?.title ||
+        product.Businessinfo?.fantasy_name ||
+        product.Businessinfo?.corporate_reason ||
+        'Parceiro';
+
+      const discountNormalized =
+        product.discount > 100 ? Math.round(product.discount / 10000) : product.discount;
+
+      const promotion: MegaPromotionPushContext = {
+        productUuid: product.uuid,
+        productName: product.name,
+        discountPercent: discountNormalized,
+        promotionalPrice: product.promotional_price / 100,
+        businessInfoUuid: product.business_info_uuid,
+        businessName,
+        categoryName: product.Categories?.name || null,
+        partnerLatitude: address?.latitude ? Number(address.latitude) : null,
+        partnerLongitude: address?.longitude ? Number(address.longitude) : null,
+      };
+
+      const allUsers = await prismaClient.userInfo.findMany({
+        select: {
+          uuid: true,
+          display_name: true,
+          full_name: true,
+          Address: {
+            select: {
+              latitude: true,
+              longitude: true,
+            },
+          },
+          UserItem: {
+            where: {
+              status: 'active',
+              balance: { gt: 0 },
+            },
+            select: {
+              item_name: true,
+              balance: true,
+            },
+          },
+        },
+      });
+
+      const categoryNameLower = (promotion.categoryName || '').toLowerCase();
+
+      const candidateUsers: TargetUserCandidate[] = allUsers.map((u) => {
+        const hasBalance = u.UserItem.some((item: any) => {
+          const itemLower = item.item_name.toLowerCase();
+          if (
+            categoryNameLower.includes('alimento') ||
+            categoryNameLower.includes('supermercado') ||
+            categoryNameLower.includes('mercado')
+          ) {
+            return itemLower.includes('alimenta') || itemLower.includes('refei');
+          }
+          if (categoryNameLower.includes('farm') || categoryNameLower.includes('saude')) {
+            return itemLower.includes('farm') || itemLower.includes('saude');
+          }
+          if (categoryNameLower.includes('combustivel') || categoryNameLower.includes('auto')) {
+            return itemLower.includes('combust');
+          }
+          return itemLower.includes(categoryNameLower);
+        });
+
+        const totalBalance = u.UserItem.reduce((acc: number, curr: any) => acc + curr.balance, 0) / 100;
+        const firstName = u.display_name || u.full_name?.trim().split(' ')[0] || null;
+
+        return {
+          user_info_uuid: u.uuid,
+          userName: firstName,
+          latitude: u.Address?.latitude ? Number(u.Address.latitude) : null,
+          longitude: u.Address?.longitude ? Number(u.Address.longitude) : null,
+          hasCategoryBalance: hasBalance,
+          totalBalance,
+        };
+      });
+
+      return {
+        users: candidateUsers,
+        promotion,
+      };
+    } catch (err) {
+      console.error('[ProductPrismaRepository] Error in findTargetUsersForMegaPromotion:', err);
+      return { users: [], promotion: null };
+    }
+  }
 }

@@ -1,3 +1,5 @@
+import { sendTargetedMegaPromotionPushController } from "../../modules/Ecommerce/Products/usecases/send-targeted-mega-promotion-push";
+import { getRankedMegaPromotionsController } from "../../modules/Ecommerce/Products/usecases/get-ranked-mega-promotions";
 import { request, Router } from "express";
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
 import { findCategoryController } from "../../modules/Ecommerce/Categories/usecases/findCategory";
@@ -132,5 +134,17 @@ ecommerceRouter.get('/address/reverse', async (request, response) => {
 ecommerceRouter.post('/ecommerce/cart/checkout', appUserIsAuth, async (request, response) => {
   await processCartPaymentController.handle(request, response)
 })
+
+
+// get ranked mega promotions for home carousel feed (AI scoring & recommendation)
+ecommerceRouter.get('/ecommerce/mega-promotions/home-feed', appUserIsAuth, async (request, response) => {
+  await getRankedMegaPromotionsController.handle(request, response);
+});
+
+
+// dispatch targeted push notification for mega promotion (OneSignal)
+ecommerceRouter.post('/ecommerce/mega-promotions/:productUuid/dispatch-push', async (request, response) => {
+  await sendTargetedMegaPromotionPushController.handle(request, response);
+});
 
 export { ecommerceRouter }
