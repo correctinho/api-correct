@@ -5,6 +5,7 @@ import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-a
 import { processPaymentByAppUserController } from "../../modules/Payments/Transactions/useCases/process-payment-by-app-user";
 import { getPOSTransactionByAppUserController } from "../../modules/Payments/Transactions/useCases/get-pos-transaction-by-appuser";
 import { getPOSTransactionByPartnerController } from "../../modules/Payments/Transactions/useCases/get-pos-transaction-by-partner";
+import { getPOSTransactionStatusController } from "../../modules/Payments/Transactions/useCases/get-pos-transaction-status";
 
 import { getAvailablePaymentMethodsByCartController } from "../../modules/Payments/Transactions/useCases/get-available-payment-methods-by-cart";
 import { geTransactionReceiptController } from "../../modules/Payments/Transactions/useCases/get-transaction-receipt";
@@ -51,6 +52,11 @@ transactionsRouter.post("/pos-transaction/processing", appUserIsAuth, async (req
 // Get POS transaction details by partner
 transactionsRouter.get("/pos-transaction/business/:transactionId", companyIsAuth, async (request, response) => {
   await getPOSTransactionByPartnerController.handle(request, response)
+})
+
+// Fast Polling endpoint for POS transaction status
+transactionsRouter.get("/pos-transaction/:transactionId/status", companyIsAuth, async (request, response) => {
+  await getPOSTransactionStatusController.handle(request, response)
 })
 
 //Process payment by partner with business account

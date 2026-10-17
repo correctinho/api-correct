@@ -171,4 +171,8 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
     eventType: CorrectAccountEventType,
     transactionUuid: string
   ): Promise<void>;
+
+  findStatusById(
+    id: string
+  ): Promise<{ status: string; favored_business_info_uuid: string | null } | null>;
 }

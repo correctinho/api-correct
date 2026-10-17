@@ -2363,4 +2363,23 @@ export class TransactionOrderPrismaRepository
       totalPages,
     };
   }
+
+  async findStatusById(
+    id: string
+  ): Promise<{ status: string; favored_business_info_uuid: string | null } | null> {
+    const tx = await prismaClient.transactions.findUnique({
+      where: { uuid: id },
+      select: {
+        status: true,
+        favored_business_info_uuid: true,
+      },
+    });
+
+    if (!tx) return null;
+
+    return {
+      status: tx.status,
+      favored_business_info_uuid: tx.favored_business_info_uuid,
+    };
+  }
 }
