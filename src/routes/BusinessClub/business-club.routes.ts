@@ -7,7 +7,7 @@ import { getPartnerDetailsController } from "../../modules/AppUser/AppUserManage
 
 const businessClubRouter = Router();
 
-businessClubRouter.use(appUserIsAuth);
+businessClubRouter.use('/app-user/business-club', appUserIsAuth);
 
 businessClubRouter.get('/app-user/business-club/home-programs', (req, res) => {
   return listHomeProgramsController.handle(req, res);

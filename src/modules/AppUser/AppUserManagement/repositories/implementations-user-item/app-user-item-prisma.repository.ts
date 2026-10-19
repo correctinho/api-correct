@@ -469,6 +469,9 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         const expiredItems = await prismaClient.userItem.findMany({
             where: {
                 status: 'to_be_cancelled',
+                balance: {
+                    lte: 0 // BLINDAGEM: S? cancela definitivamente se o saldo j? estiver zerado
+                },
                 grace_period_end_date: {
                     not: null,
                     lte: newDateF(referenceDate)

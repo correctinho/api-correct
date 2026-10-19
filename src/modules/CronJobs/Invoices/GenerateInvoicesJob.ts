@@ -48,7 +48,7 @@ export class GenerateEmployerInvoicesJob implements ICronJob {
           const nowInTimezone = toZonedTime(new Date(), timezone);
           const yesterdayInTimezone = subDays(nowInTimezone, 1);
           const yesterdayDay = yesterdayInTimezone.getDate();
-          
+
           // Quantidade de dias no mês de ontem (para tratar meses com menos de 31 dias)
           const lastDayOfMonth = new Date(
             yesterdayInTimezone.getFullYear(),
@@ -98,7 +98,7 @@ export class GenerateEmployerInvoicesJob implements ICronJob {
 
           // Vencimento da fatura: 5 dias após o fechamento
           const dueDate = new Date(yesterdayInTimezone);
-          dueDate.setDate(dueDate.getDate() + 5);
+          dueDate.setDate(dueDate.getDate() + 1);
           dueDate.setHours(23, 59, 59, 999);
 
           const referenceMonth = `${String(endMonth + 1).padStart(2, '0')}/${endYear}`;
