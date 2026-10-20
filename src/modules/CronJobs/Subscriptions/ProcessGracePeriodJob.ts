@@ -12,10 +12,10 @@ export class ProcessGracePeriodJob implements ICronJob {
   ) {}
 
   async execute(): Promise<void> {
-    console.log(`[${this.name}] ⏰ Iniciando verificação de cancelamentos agendados (Fim de Ciclo e saldo zerado)...`);
+    console.log(`[${this.name}] ⏰ Iniciando verificação de cancelamentos agendados (saldo zerado)...`);
     const now = new Date();
 
-    // 1. Busca os UserItems que tiveram a carência expirada E já esgotaram o saldo (balance <= 0)
+    // 1. Busca os UserItems em to_be_cancelled com saldo esgotado (balance <= 0)
     const expiredEntities = await this.userItemRepository.findItemsWithExpiredGracePeriod(now);
 
     if (expiredEntities.length === 0) {

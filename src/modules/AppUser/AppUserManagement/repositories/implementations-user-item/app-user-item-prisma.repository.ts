@@ -470,11 +470,7 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
             where: {
                 status: 'to_be_cancelled',
                 balance: {
-                    lte: 0 // BLINDAGEM: S? cancela definitivamente se o saldo j? estiver zerado
-                },
-                grace_period_end_date: {
-                    not: null,
-                    lte: newDateF(referenceDate)
+                    lte: 0 // Cancela definitivamente qualquer item agendado cujo saldo já tenha zerado
                 }
             }
         });
@@ -549,16 +545,22 @@ export class AppUserItemPrismaRepository implements IAppUserItemRepository {
         const rawUuids = uuids.map(uuidVO => uuidVO.uuid);
 
         // 3. Execução do updateMany
+        const updateData: any = {
+            status: newStatus as UserItemStatus,
+            updated_at: newDateF(new Date())
+        };
+
+        if (newStatus === 'cancelled') {
+            updateData.cancelled_at = newDateF(new Date());
+        }
+
         await prismaClient.userItem.updateMany({
             where: {
                 uuid: {
                     in: rawUuids
                 }
             },
-            data: {
-                status: newStatus as UserItemStatus, // Cast para o Enum do Prisma correspondente (ex: 'blocked')
-                updated_at: newDateF(new Date())
-            }
+            data: updateData
         });
     }
 

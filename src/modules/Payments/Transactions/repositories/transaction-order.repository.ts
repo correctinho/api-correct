@@ -172,6 +172,8 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
     transactionUuid: string
   ): Promise<void>;
 
+  cancelAbandonedPOSTransactions(cutoffDate: string): Promise<number>;
+
   findStatusById(
     id: string
   ): Promise<{ status: string; favored_business_info_uuid: string | null } | null>;

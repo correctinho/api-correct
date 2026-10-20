@@ -1,7 +1,8 @@
-﻿import { Router, Request, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { ensureCronSecret } from '../../infra/shared/middlewares/ensureCronSecret';
 import { expireSubscriptionsJob, processGracePeriodJob } from '../../modules/CronJobs/Subscriptions';
 import { generateEmployerInvoicesJob } from '../../modules/CronJobs/Invoices/GenerateInvoicesJob';
+import { cancelAbandonedPOSTransactionsJob } from '../../modules/CronJobs/Transactions';
 import { logger } from '../../infra/logger/winston.logger';
 
 const cronRouter = Router();
@@ -90,12 +91,45 @@ cronRouter.post('/cron/invoices/generate', async (req: Request, res: Response) =
     }
 });
 
-// 4. Job de Lote Diário (Opcional - roda todos os jobs diários em sequência)
+// 4. Job: Cancelar transações POS pendentes abandonadas
+cronRouter.post('/cron/transactions/cancel-abandoned', async (req: Request, res: Response) => {
+    const startTime = Date.now();
+    const minutesQuery = req.query.minutes ? parseInt(req.query.minutes as string, 10) : undefined;
+    const thresholdMinutes = minutesQuery && !isNaN(minutesQuery) && minutesQuery > 0 ? minutesQuery : 30;
+
+    logger.info(`[HTTP Cron] Disparando CancelAbandonedPOSTransactionsJob com limite de ${thresholdMinutes} min...`);
+
+    try {
+        const { cancelledCount, cutoffDate } = await cancelAbandonedPOSTransactionsJob.execute(thresholdMinutes);
+        const duration = Date.now() - startTime;
+        logger.info(`[HTTP Cron] ✅ CancelAbandonedPOSTransactionsJob concluído em ${duration}ms (${cancelledCount} canceladas)`);
+
+        return res.status(200).json({
+            success: true,
+            job: cancelAbandonedPOSTransactionsJob.name,
+            cancelled_count: cancelledCount,
+            cutoff_date: cutoffDate,
+            threshold_minutes: thresholdMinutes,
+            duration_ms: duration,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error: any) {
+        logger.error(`[HTTP Cron] ❌ Erro ao executar ${cancelAbandonedPOSTransactionsJob.name}:`, error);
+        return res.status(500).json({
+            success: false,
+            job: cancelAbandonedPOSTransactionsJob.name,
+            error: error?.message || 'Erro interno ao executar CancelAbandonedPOSTransactionsJob',
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+// 5. Job de Lote Diário (Opcional - roda todos os jobs diários em sequência)
 cronRouter.post('/cron/run-all-daily', async (req: Request, res: Response) => {
     const startTime = Date.now();
     logger.info('[HTTP Cron] Disparando lote diário de todos os jobs...');
 
-    const results: Array<{ job: string; success: boolean; duration_ms: number; error?: string }> = [];
+    const results: Array<{ job: string; success: boolean; duration_ms: number; error?: string; details?: any }> = [];
 
     // Job 1
     const t1 = Date.now();
@@ -122,6 +156,15 @@ cronRouter.post('/cron/run-all-daily', async (req: Request, res: Response) => {
         results.push({ job: generateEmployerInvoicesJob.name, success: true, duration_ms: Date.now() - t3 });
     } catch (err: any) {
         results.push({ job: generateEmployerInvoicesJob.name, success: false, duration_ms: Date.now() - t3, error: err?.message });
+    }
+
+    // Job 4
+    const t4 = Date.now();
+    try {
+        const job4Res = await cancelAbandonedPOSTransactionsJob.execute(30);
+        results.push({ job: cancelAbandonedPOSTransactionsJob.name, success: true, duration_ms: Date.now() - t4, details: { cancelled_count: job4Res.cancelledCount } });
+    } catch (err: any) {
+        results.push({ job: cancelAbandonedPOSTransactionsJob.name, success: false, duration_ms: Date.now() - t4, error: err?.message });
     }
 
     const totalDuration = Date.now() - startTime;

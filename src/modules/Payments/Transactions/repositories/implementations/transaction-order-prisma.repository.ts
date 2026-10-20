@@ -1895,6 +1895,24 @@ export class TransactionOrderPrismaRepository
     })
   }
 
+  async cancelAbandonedPOSTransactions(cutoffDate: string): Promise<number> {
+    const result = await prismaClient.transactions.updateMany({
+      where: {
+        status: TransactionStatus.pending,
+        transaction_type: TransactionType.POS_PAYMENT,
+        created_at: {
+          lte: cutoffDate,
+        },
+      },
+      data: {
+        status: TransactionStatus.cancelled,
+        updated_at: newDateF(new Date()),
+      },
+    });
+
+    return result.count;
+  }
+
   async executeTeiTransfer(data: ExecuteTeiTransferDTO): Promise<void> {
     const { payerUserItemUuid, payeeUserItemUuid, amount, transactionData } = data;
 

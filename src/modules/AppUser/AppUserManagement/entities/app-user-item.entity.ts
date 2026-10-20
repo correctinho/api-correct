@@ -191,11 +191,6 @@ export class AppUserItemEntity {
     const requestedAt = newDateF(new Date())
 
     this.changeCancellingRequestAt(requestedAt)
-
-    //add 60 days
-    const dateToCancel = await addDaysToDate(requestedAt, 60)
-
-    this.changeGracePeriodEndDate(dateToCancel)
     this.validate()
   }
 

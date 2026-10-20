@@ -985,12 +985,27 @@ export class AppUserInfoPrismaRepository implements IAppUserInfoRepository {
                     });
                 } else {
                     // pre_pago
-                    await tx.userItem.update({
-                        where: { uuid: item.uuid },
-                        data: {
-                            group_uuid: null
-                        }
-                    });
+                    if (item.balance <= 0) {
+                        await tx.userItem.update({
+                            where: { uuid: item.uuid },
+                            data: {
+                                status: 'cancelled',
+                                cancelled_at: newDateF(new Date()),
+                                cancel_reason: 'Desligamento da empresa',
+                                group_uuid: null
+                            }
+                        });
+                    } else {
+                        await tx.userItem.update({
+                            where: { uuid: item.uuid },
+                            data: {
+                                status: 'to_be_cancelled',
+                                cancelling_request_at: newDateF(new Date()),
+                                cancel_reason: 'Desligamento da empresa',
+                                group_uuid: null
+                            }
+                        });
+                    }
                 }
             }
         });

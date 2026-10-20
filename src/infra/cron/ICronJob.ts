@@ -15,5 +15,5 @@ export interface ICronJob {
   /**
    * O método que contém a lógica de negócio a ser executada.
    */
-  execute(): Promise<void>;
+  execute(params?: any): Promise<any>;
 }
