@@ -1,6 +1,8 @@
 import { request, Router } from "express";
 import { companyUserController } from "../../modules/Company/CompanyUser/usecases/create-company-admin";
 import { authCompanyUserController } from "../../modules/Company/CompanyUser/usecases/authenticate-company-user";
+import { verifyTwoFactorController } from "../../modules/Company/CompanyUser/usecases/verify-two-factor";
+import { resendTwoFactorController } from "../../modules/Company/CompanyUser/usecases/resend-two-factor";
 import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/company-admin-auth.middlware";
 import { companyUserDetailsController } from "../../modules/Company/CompanyUser/usecases/company-user-details";
 import { deleteUserController } from "../../modules/Company/CompanyUser/usecases/delete-user";
@@ -18,10 +20,9 @@ import { resetCompanyUserPasswordController } from "../../modules/Company/Compan
 import { requireRole } from "../../infra/shared/middlewares/CompanyAdmin/role.middleware";
 import { CompanyAdminJWToken } from "../../infra/shared/crypto/token/CompanyAdmin/jwt.token";
 
-
 export const companyUserRouter = Router()
 
- //Create Company admin by correct - TESTED
+//Create Company admin by correct - TESTED
 companyUserRouter.post('/business/admin/correct', correctIsAuth, async (request, response) => {
     await companyUserController.handle(request, response)
 })
@@ -29,6 +30,16 @@ companyUserRouter.post('/business/admin/correct', correctIsAuth, async (request,
 //authenticate business user - TESTED
 companyUserRouter.post('/business/admin/login', async (request, response) => {
     await authCompanyUserController.handle(request, response)
+})
+
+//verify 2FA authentication code - TESTED
+companyUserRouter.post('/business/admin/verify-2fa', async (request, response) => {
+    await verifyTwoFactorController.handle(request, response)
+})
+
+//resend 2FA authentication code - TESTED
+companyUserRouter.post('/business/admin/resend-2fa', async (request, response) => {
+    await resendTwoFactorController.handle(request, response)
 })
 
 //get user details - TESTED
@@ -66,7 +77,6 @@ companyUserRouter.post('/business/admin/register/user', companyIsAuth, requireRo
     await companyUserByAdminController.handle(request, response)
 })
 
-
 //get single User by authenticated admin - //TESTED
 companyUserRouter.get("/business/admin/details/user", companyIsAuth, requireRole([]), async (request, response) => {
     await getSingleUserController.handle(request, response)
@@ -77,7 +87,6 @@ companyUserRouter.get('/company-users', companyIsAuth, requireRole([]), async (r
     await getUsersController.handle(request, response)
 })
 
-
 //Delete User By company Admin - //TESTED
 companyUserRouter.patch("/company-user/delete", companyIsAuth, requireRole([]), async (request, response) => {
     await deleteUserController.handle(request, response)
@@ -87,7 +96,6 @@ companyUserRouter.patch("/company-user/delete", companyIsAuth, requireRole([]), 
 companyUserRouter.post("/confirm-password", companyIsAuth, async (request, response) => {
     await confirmPasswordController.handle(request, response)
 })
-
 
 //Get Business Account
 companyUserRouter.get('/business/admin/account', companyIsAuth, requireRole(['finances']), async (request, response) => {

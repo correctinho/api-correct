@@ -24,7 +24,7 @@ export class ListEmployerPrismaRepository implements IListEmployerRepository {
         {
           fantasy_name: { contains: search, mode: 'insensitive' }
         }, {
-          company_name: { contains: search, mode: 'insensitive' }
+          corporate_reason: { contains: search, mode: 'insensitive' }
         }
       ];
 

@@ -1,10 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { JWTToken } from "../../crypto/token/CorrectAdmin/jwt.token";
 import { CorrectAdminPrismaRepository } from "../../../../modules/CorrectAdmin/repositories/implementations/correct-admin.prisma.repository";
-import { EnsureValidCorrectAdminController } from "./ensure-valid-correct-admin.controller.midleware";
-import { api } from "../../../axios/axios.config";
-import { OutputAdminDetailDTO } from "./ensure-valid-correct-admin.usecase.middlware";
-import { Console } from "winston/lib/winston/transports";
+import { EnsureValidCorrectAdminUsecase } from "./ensure-valid-correct-admin.usecase.middlware";
+import { Uuid } from "../../../../@shared/ValueObjects/uuid.vo";
 
 export const correctIsAuth = async (req: Request, res: Response, next: NextFunction) => {
   const headerAuth = req.headers.authorization;
@@ -24,59 +22,27 @@ export const correctIsAuth = async (req: Request, res: Response, next: NextFunct
   }
 
   //monolito mode
-  const verifyToken = new JWTToken().validate(token)
-  if (verifyToken) {
-    req.correctAdmin = {
-      correctAdminId: verifyToken.sub,
-      userName: '',
-      email: '',
-      isAdmin: false
-    };
+  const verifyToken = new JWTToken().validate(token);
+  if (verifyToken && verifyToken.sub) {
+    try {
+      const correctAdminRepository = new CorrectAdminPrismaRepository();
+      const validAdminUsecase = new EnsureValidCorrectAdminUsecase(correctAdminRepository);
+      const admin = await validAdminUsecase.execute(new Uuid(verifyToken.sub));
 
-    const correctAdminRepository = new CorrectAdminPrismaRepository();
-    const ensureValidAdmin = new EnsureValidCorrectAdminController(correctAdminRepository);
-    const admin = await ensureValidAdmin.handle(req, res) as OutputAdminDetailDTO
+      req.correctAdmin = {
+        correctAdminId: admin.uuid,
+        userName: admin.userName,
+        email: admin.email,
+        isAdmin: admin.isAdmin
+      };
 
-    req.correctAdmin = {
-      correctAdminId: admin.uuid || '',
-      userName: admin.userName || '',
-      email: admin.email || '',
-      isAdmin: admin.isAdmin || false
-    };
-    return next()
+      return next();
+    } catch (err: any) {
+      return res.status(err.statusCode || 401).json({
+        error: err.message || "Admin is not allowed to access"
+      });
+    }
   }
-
-  //jwt with go ms
-  // try {
-  //   const response = await api.post("/api/v1/jwt/decode", {
-  //     token: token
-  //   });
-  //   const verifyToken = response.data;
-
-  //   if (verifyToken) {
-  //     // Inicialize req.correctAdmin com todas as propriedades necessárias
-  //     req.correctAdmin = {
-  //       correctAdminId: verifyToken.data.user_uuid,
-  //       userName: verifyToken.data.userName || '',
-  //       email: verifyToken.data.email || '',
-  //       isAdmin: verifyToken.data.isAdmin || false
-  //     };
-
-  //     const correctAdminRepository = new CorrectAdminPrismaRepository();
-  //     const ensureValidAdmin = new EnsureValidCorrectAdminController(correctAdminRepository);
-  //     const admin = await ensureValidAdmin.handle(req, res) as OutputAdminDetailDTO
-
-  //     req.correctAdmin = {
-  //       correctAdminId: admin.uuid || '',
-  //       userName: admin.userName || '',
-  //       email: admin.email || '',
-  //       isAdmin: admin.isAdmin || false
-  //     };
-  //     return next();
-  //   }
-  // } catch (err: any) {
-  //   console.log("Erro ao verificar token do correct Admin");
-  // }
 
   return res.status(401).json({
     error: "Authentication Error"

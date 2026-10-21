@@ -5,6 +5,7 @@ import { ICompanyUserRepository } from "../../repositories/company-user.reposito
 import { AuthenticateCompanyUserUsecase } from "./authenticate-company-user.usecase";
 import { ICompanyDataRepository } from "../../../CompanyData/repositories/company-data.repository";
 import { IRedisCacheRepository } from "../../../../../infra/redis/redis-cache.repository";
+import { TwoFactorAuthService } from "../../services/two-factor-auth.service";
 
 export class AuthenticateCompanyAdminController {
     constructor(
@@ -12,8 +13,8 @@ export class AuthenticateCompanyAdminController {
         private companyDataRepository: ICompanyDataRepository,
         private passwordCrypto: IPasswordCrypto,
         private token: ICompanyAdminToken,
-        private redisCacheRepository: IRedisCacheRepository
-
+        private redisCacheRepository: IRedisCacheRepository,
+        private twoFactorAuthService: TwoFactorAuthService
     ) { }
 
     async handle(req: Request, res: Response) {
@@ -24,7 +25,8 @@ export class AuthenticateCompanyAdminController {
                 this.companyDataRepository,
                 this.passwordCrypto,
                 this.token,
-                this.redisCacheRepository
+                this.redisCacheRepository,
+                this.twoFactorAuthService
             )
 
             const companyUser = await authCompanyUserUsecase.execute({ business_document, user_name, password, email, required_business_type })
@@ -32,8 +34,8 @@ export class AuthenticateCompanyAdminController {
 
         } catch (err: any) {
             console.log(err)
-            return res.status(err.statusCode).json({
-                error: err.message
+            return res.status(err.statusCode || 500).json({
+                error: err.message || "Erro durante a autenticação."
             })
         }
     }

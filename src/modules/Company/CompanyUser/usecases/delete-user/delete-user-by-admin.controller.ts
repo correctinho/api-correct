@@ -9,18 +9,16 @@ export class DeleteUserByAdminController {
     async handle(req: Request, res: Response) {
 
         try {
-            const user_id = req.query.user_id as string
+            const user_id = (req.query.user_id || req.body?.user_id) as string
             const business_info_uuid = req.companyUser.businessInfoUuid
             const deleteUsecase = new DeleteUserByAdminUsecase(this.companyUserRepository)
 
             await deleteUsecase.execute(user_id, business_info_uuid)
 
-            // return res.json(deleteUser)
-
             return res.json({ message: "Usuário excluído com sucesso" })
 
         } catch (err: any) {
-            return res.status(err.statusCode).json({
+            return res.status(err.statusCode || 400).json({
                 error: err.message
             })
         }

@@ -62,7 +62,7 @@ export class CompanyUserPrismaRepository implements ICompanyUserRepository {
 
   async findUsers(business_info_uuid: string): Promise<CompanyUserEntity[] | []> {
     const companyUsers = await prismaClient.businessUser.findMany({
-      where: { business_info_uuid, is_admin: false }
+      where: { business_info_uuid, is_admin: false, status: { not: 'deleted' } }
     })
     return companyUsers.map(user => this.mapPrismaToEntity(user));
   }
