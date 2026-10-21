@@ -16,10 +16,11 @@ async function geocodeAddress(number: string, street: string, zipcode: string) {
       zipcode: `${zipcode}`
     });
 
-    if (res.length === 0) return { lat: "not found", long: "not found" }
+    if (res.length === 0) return { lat: null, long: null };
     return { lat: res[0].latitude, long: res[0].longitude }
   } catch (err: any) {
-    console.log("Error: ", err)
+    console.log("Error: ", err);
+    return { lat: null, long: null };
   }
 
 }

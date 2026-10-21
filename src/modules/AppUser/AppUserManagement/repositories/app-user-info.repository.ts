@@ -41,5 +41,6 @@ export interface IAppUserInfoRepository extends RepositoryInterface<AppUserInfoE
   updateEmployeeByCSV(userInfo: AppUserInfoEntity, employeeData: any, employeeItem: AppUserItemEntity[]): Promise<void>
   findRecipientByDocument(document: string): Promise<RecipientLookupDTO | null>;
   findSimpleListByBusiness(business_info_uuid: string): Promise<OutputGetSimpleEmployeesDTO[]>
+  dismissEmployee(employee_uuid: string, business_info_uuid: string): Promise<void>
 
 }

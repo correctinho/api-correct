@@ -5,6 +5,7 @@ export interface InputListTransactionsDto {
   start_date?: string | Date;
   end_date?: string | Date;
   search?: string;
+  partner_name?: string;
 }
 
 export interface TransactionSummaryDto {

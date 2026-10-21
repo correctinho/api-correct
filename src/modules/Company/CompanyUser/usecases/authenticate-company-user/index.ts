@@ -4,19 +4,24 @@ import { CompanyDataPrismaRepository } from "../../../CompanyData/repositories/i
 import { CompanyUserPrismaRepository } from "../../repositories/implementations/company-user.prisma.repository";
 import { AuthenticateCompanyAdminController } from "./authenticate-company-user.controller";
 import { RedisCacheRepository } from "../../../../../infra/redis/redis-cache.repository";
+import { TwoFactorAuthService } from "../../services/two-factor-auth.service";
+import { TitanMailProvider } from "../../../../../infra/providers/MailProvider/implementations/TitanMailProvider";
 
-const companyUserRepository = new CompanyUserPrismaRepository()
-const companyDataRepository = new CompanyDataPrismaRepository()
-const passwordCrypto = new PasswordBCrypt()
-const tokenGenerated = new CompanyAdminJWToken()
-const redisCacheRepository = new RedisCacheRepository()
+const companyUserRepository = new CompanyUserPrismaRepository();
+const companyDataRepository = new CompanyDataPrismaRepository();
+const passwordCrypto = new PasswordBCrypt();
+const tokenGenerated = new CompanyAdminJWToken();
+const redisCacheRepository = new RedisCacheRepository();
+const titanMailProvider = new TitanMailProvider();
+const twoFactorAuthService = new TwoFactorAuthService(redisCacheRepository, titanMailProvider);
 
 const authCompanyUserController = new AuthenticateCompanyAdminController(
     companyUserRepository,
     companyDataRepository,
     passwordCrypto,
     tokenGenerated,
-    redisCacheRepository
-)
+    redisCacheRepository,
+    twoFactorAuthService
+);
 
-export { authCompanyUserController }
+export { authCompanyUserController };

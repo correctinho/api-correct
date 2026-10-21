@@ -6,6 +6,7 @@ export interface IEmployerDashboardRepository {
             custom_benefits: number;
             total_lives: number;       // NOVO
             estimated_monthly_cost: number; // NOVO
+            postpaid_current_invoice: number;
         },
         distribution: { // NOVO (Para o Gráfico)
             category: string;

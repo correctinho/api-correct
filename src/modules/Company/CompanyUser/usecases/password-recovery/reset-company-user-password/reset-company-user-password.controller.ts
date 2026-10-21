@@ -5,12 +5,11 @@ import { ResetCompanyPasswordUsecase } from "./reset-company-user-password.useca
 export class ResetCompanyPasswordController {
   constructor(
     private companyUserRepository: ICompanyUserRepository
-  ) {}
+  ) { }
 
   async handle(req: Request, res: Response) {
     try {
-      const { newPassword } = req.body;
-      const { token } = req.query as { token: string };
+      const { newPassword, token } = req.body;
       const useCase = new ResetCompanyPasswordUsecase(
         this.companyUserRepository
       );

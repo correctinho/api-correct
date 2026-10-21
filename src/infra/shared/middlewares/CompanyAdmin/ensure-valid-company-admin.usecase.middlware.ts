@@ -14,6 +14,7 @@ export type OutputCompanyUserDTO = {
   permissions: string[],
   status: string,
   fantasy_name: string | null,
+  corporate_reason: string | null,
   created_at: string,
   updated_at: string
 
@@ -41,6 +42,7 @@ export class EnsureValidCompanyUserUsecase {
           permissions: user.permissions,
           status: user.status,
           fantasy_name: user.fantasy_name,
+          corporate_reason: user.corporate_reason || null,
           created_at: user.created_at,
           updated_at: user.updated_at
 

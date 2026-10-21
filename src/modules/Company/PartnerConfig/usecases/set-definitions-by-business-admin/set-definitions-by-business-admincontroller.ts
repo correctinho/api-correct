@@ -11,9 +11,9 @@ export class SetDefinitionsByBusinessAdminController {
     private branchInfoRepository: IBranchRepository,
     private partnerConfigRepository: IPartnerConfigRepository,
     private companyAddressRepository: ICompanyAddressRepository
-  ){}
+  ) { }
 
-  async handle(req: Request, res: Response){
+  async handle(req: Request, res: Response) {
     try {
       const data = req.body
       data.business_info_uuid = req.companyUser.businessInfoUuid

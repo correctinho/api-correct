@@ -8,7 +8,7 @@ export class ListTransactionsPrismaRepository implements IListTransactionsReposi
     total: number,
     aggregates: any // NOVO: Devolvemos o objeto inteiro com todas as somas
   }> {
-    const { page = 1, limit = 20, status, start_date, end_date, search } = filters;
+    const { page = 1, limit = 20, status, start_date, end_date, search, partner_name } = filters;
 
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
@@ -36,6 +36,11 @@ export class ListTransactionsPrismaRepository implements IListTransactionsReposi
 
     if (search && search.trim() !== '') {
       where.uuid = { contains: search };
+    }
+    if (partner_name && partner_name.trim() !== '') {
+      where.BusinessInfo = {
+        fantasy_name: { contains: partner_name, mode: 'insensitive' }
+      };
     }
 
     const [transactions, total, aggregateData] = await Promise.all([

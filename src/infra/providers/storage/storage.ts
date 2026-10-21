@@ -13,6 +13,7 @@ export interface UploadResponse {
 }
 
 export abstract class IStorage {
-  abstract upload(file: MulterFile, folder: string): Promise<UploadResponse>;
-  abstract delete(filePath: string): Promise<void>; // Continua usando o path relativo
+  abstract upload(file: MulterFile, folder: string, isPrivate?: boolean): Promise<UploadResponse>;
+  abstract delete(filePath: string, isPrivate?: boolean): Promise<void>; // Continua usando o path relativo
+  abstract getPresignedUrl?(filePath: string): Promise<string>;
 }

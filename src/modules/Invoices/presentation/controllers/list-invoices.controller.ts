@@ -16,7 +16,6 @@ export class ListInvoicesController {
     };
 
     const result = await this.listInvoicesUseCase.execute(input);
-    console.log(result)
     return response.status(200).json(result);
   }
 }

@@ -32,6 +32,16 @@ const approveBusinessController = new ApproveBusinessController(approveBusinessR
 const resendAccessRepository = new ResendAccessPrismaRepository();
 const resendAccessController = new ResendAccessController(resendAccessRepository, titanMailProvider);
 
+import { MarkContractSignedController } from './mark-contract-signed.controller';
+import { ManualPaymentController } from './manual-payment.controller';
+import { GenerateContractPdfController } from './generate-contract-pdf.controller';
+import { ManualPaymentUsecase } from '../../application/usecases/manual-payment.usecase';
+
+const markContractSignedController = new MarkContractSignedController();
+const manualPaymentUsecase = new ManualPaymentUsecase();
+const manualPaymentController = new ManualPaymentController(manualPaymentUsecase);
+const generateContractPdfController = new GenerateContractPdfController();
+
 export { 
   listPartnerController,
   listEmployerController,
@@ -39,4 +49,12 @@ export {
   getEmployerDetailsController,
   approveBusinessController,
   resendAccessController,
+  markContractSignedController,
+  manualPaymentController,
+  generateContractPdfController,
 };
+
+
+
+
+

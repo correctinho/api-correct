@@ -31,7 +31,6 @@ export class ListCollaboratorsByBenefitController {
                 limit,
                 status
             });
-            console.log(result)
             return res.status(200).json(result);
 
         } catch (err: any) {

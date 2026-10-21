@@ -7,12 +7,13 @@ export type InputCreateRechargeOrderDTO = {
     business_info_uuid: string;
     item_uuid: string; // O benefício (VR, VA, etc.)
     items: RechargeOrderItemInput[]; // A lista final validada pelo RH
+    payment_method: 'PIX' | 'TED';
 }
 
 export type OutputCreateRechargeOrderDTO = {
     order_uuid: string;
     status: string;
     total_amount: number; // Em Reais (para confirmação visual)
-    pix_key: string;      // A chave para pagamento
+    pix_key?: string;      // A chave para pagamento (opcional no TED)
     qr_code_base64?: string; // Opcional: Se já tiver gerador de QR Code
 }

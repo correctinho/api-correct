@@ -20,7 +20,7 @@ export class BlockOrCanceluserItemByEmployerUsecase {
     if (!userItem) throw new CustomError("User Item not found", 404)
     
     // 2. Check if business admin has access
-    if (userItem.business_info_uuid.uuid !== input.business_info_uuid) throw new CustomError("Unauthorized acess", 403);
+    if (!userItem.business_info_uuid || userItem.business_info_uuid.uuid !== input.business_info_uuid) throw new CustomError("Unauthorized acess", 403);
 
     // 3. Verify status to avoid redundancy
     if (userItem.status === 'cancelled' || userItem.status === 'to_be_cancelled') throw new CustomError("User item already cancelled", 400)
@@ -42,17 +42,16 @@ export class BlockOrCanceluserItemByEmployerUsecase {
       
       if (userItem.item_category === 'pre_pago') {
         // Benefício Pré-Pago (PAT - VR/VA): Não pode confiscar saldo.
-        // O método scheduleCancelling deve alterar o status para 'to_be_cancelled' e definir a data final
-        await userItem.scheduleCancelling()
-
-        userItem.changeCancelReason(input.cancel_reason)
-
-        // Formata a mensagem avisando sobre o Aviso Prévio
-        const dataFim = userItem.grace_period_end_date 
-            ? new Date(userItem.grace_period_end_date).toLocaleDateString('pt-BR') 
-            : 'data a definir';
-
-        systemMessage = `Solicitação aceita. Por ser um benefício pré-pago (PAT), o usuário entrou em aviso prévio para uso do saldo remanescente até ${dataFim}.`;
+        // Se o saldo já estiver zerado, encerra de imediato. Se tiver saldo, agenda to_be_cancelled até zerar.
+        if (userItem.balance <= 0) {
+          userItem.cancelPostPaidUserItem();
+          userItem.changeCancelReason(input.cancel_reason);
+          systemMessage = "Cancelamento efetuado com sucesso. Como o saldo já estava zerado, o benefício foi encerrado imediatamente.";
+        } else {
+          await userItem.scheduleCancelling();
+          userItem.changeCancelReason(input.cancel_reason);
+          systemMessage = "Solicitação aceita. Por ser um benefício pré-pago (PAT), o usuário poderá utilizar o saldo remanescente até o esgotamento total, quando o benefício será encerrado definitivamente.";
+        }
         
       } else if (userItem.item_category === 'pos_pago') {
         // Benefício Pós-Pago: Cancela na hora.

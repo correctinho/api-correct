@@ -8,6 +8,20 @@ import { OutputGetPartnersByAppUserDTO } from "../../../usecases/get-partners-by
 
 
 export class CompanyDataPrismaRepository implements ICompanyDataRepository {
+  async countContractsThisYear(year: string): Promise<number> {
+    const count = await prismaClient.businessInfo.count({
+      where: {
+        created_at: {
+          startsWith: year
+        },
+        contract_number: {
+          not: null
+        }
+      }
+    });
+    return count;
+  }
+
 
 
   async update(data: CompanyDataEntity): Promise<CompanyDataEntity> {
@@ -91,6 +105,7 @@ export class CompanyDataPrismaRepository implements ICompanyDataRepository {
       email: companyData.email,
       business_type: companyData.business_type,
       employer_branch: companyData.employer_branch,
+      timezone: companyData.timezone,
       branch_name: companyData.BusinessinfoBranch.length > 0 ? companyData.BusinessinfoBranch[0].BranchInfo.name : undefined,
       created_at: companyData.created_at,
       updated_at: companyData.updated_at,

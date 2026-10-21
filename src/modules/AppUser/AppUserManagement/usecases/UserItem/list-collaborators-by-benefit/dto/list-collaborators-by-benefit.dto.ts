@@ -5,6 +5,7 @@ export type CollaboratorItemDTO = {
     document: string;       // CPF
     status: string;         // 'active' | 'inactive' | 'blocked'
     group_name: string;     // Ex: "Grupo Padrão", "Diretoria"
+    group_value: number;
     balance: number;        // Saldo atual em centavos (ou reais, dependendo da sua regra de exibição)
     admitted_at: string | Date | null; // Data de criação do vínculo
 };

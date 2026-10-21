@@ -8,6 +8,8 @@ import { ISubscriptionRepository } from '../../../SubscriptionsPlans/repositorie
 import { IAppUserItemRepository } from '../../../../AppUser/AppUserManagement/repositories/app-user-item-repository';
 import { ICompanyDataRepository } from '../../../../Company/CompanyData/repositories/company-data.repository';
 import { IMailProvider } from '../../../../../infra/providers/MailProvider/models/IMailProvider';
+import { IBusinessOrderRepository } from '../../../../Company/BusinessItemsDetails/repositories/business-order-repository';
+import { BusinessOrderPrismaRepository } from '../../../../Company/BusinessItemsDetails/repositories/implementations/business-order-prisma.repository';
 
 // Tipagem do payload do Sicredi
 export interface SicrediPix {
@@ -33,7 +35,8 @@ export class ProcessPixWebhookUsecase {
         private readonly subscriptionRepository: ISubscriptionRepository,
         private readonly userItemRepository: IAppUserItemRepository,
         private readonly businessRepository: ICompanyDataRepository,
-        private readonly mailProvider: IMailProvider
+        private readonly mailProvider: IMailProvider,
+        private readonly businessOrderRepository: IBusinessOrderRepository
     ) { }
 
     public async execute(payload: SicrediPixWebhookPayload): Promise<void> {
@@ -122,6 +125,10 @@ export class ProcessPixWebhookUsecase {
                             transaction,
                             pixPayment
                         );
+                        break;
+
+                    case TransactionType.COMPANY_PRE_PAID_RECHARGE:
+                        await this.processCompanyRecharge(transaction, pixPayment);
                         break;
 
                     default:
@@ -306,7 +313,7 @@ export class ProcessPixWebhookUsecase {
         console.log(`Iniciando processamento de ONBOARDING_PIX para a transação ${transaction.uuid.uuid}`);
 
         const receivedAmountInCents = Math.round(parseFloat(pixPayment.valor) * 100);
-        const expectedAmountInCents = Math.round(transaction.net_price);
+        const expectedAmountInCents = Math.round(transaction.net_price * 100);
 
         if (receivedAmountInCents !== expectedAmountInCents) {
             throw new CustomError(`ERRO DE VALOR para ONBOARDING_PIX. Esperado: ${expectedAmountInCents}, Recebido: ${receivedAmountInCents}`, 400);
@@ -408,4 +415,32 @@ export class ProcessPixWebhookUsecase {
 
         await Promise.allSettled([sendToPartner, sendToAdmin]);
     }
+
+
+    private async processCompanyRecharge(
+        transaction: TransactionEntity,
+        pixPayment: SicrediPix
+    ): Promise<void> {
+        console.log(`Iniciando processamento de COMPANY_PRE_PAID_RECHARGE para a transação ${transaction.uuid.uuid}`);
+        const providerTxId = pixPayment.txid;
+        const receivedAmountInCents = Math.round(parseFloat(pixPayment.valor) * 100);
+        const expectedAmountInCents = Math.round(transaction.net_price * 100);
+        
+        if (receivedAmountInCents !== expectedAmountInCents) {
+            throw new CustomError(`ERRO DE VALOR: Esperado ${expectedAmountInCents}, Recebido ${receivedAmountInCents}`, 400);
+        }
+
+        const order = await this.businessOrderRepository.findByProviderTxId(providerTxId);
+        if (!order) throw new CustomError('Pedido não encontrado para txid ' + providerTxId, 404);
+        if (order.status !== 'PENDING') return;
+
+        console.log('Repo keys:', Object.keys(this.businessOrderRepository || {}), 'Constructor:', this.businessOrderRepository?.constructor?.name);
+        
+        await this.businessOrderRepository.approveOrderTransaction(order.uuid);
+
+        
+        transaction.changeStatus(TransactionStatus.success);
+        await this.transactionRepository.upsert(transaction);
+    }
+
 }

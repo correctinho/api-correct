@@ -9,12 +9,14 @@ export type InputListCollaboratorsRepoDTO = {
     page: number;
     limit: number;
     status?: string; // opcional
+    search?: string; // Busca por nome, CPF ou internal_code
 }
 
 export type AppUserItemWithDetails = AppUserItemEntity & {
     UserInfo?: {
         full_name: string;
         document: string;
+        Employee?: { company_internal_code: string | null }[];
     };
     BenefitGroups?: {
         group_name: string;
@@ -35,8 +37,8 @@ export interface IAppUserItemRepository extends RepositoryInterface<AppUserItemE
   activateManyByBusinessAndItem(
     business_info_uuid: string,
     item_uuid: string,
-    user_uuids: string[]
-): Promise<void>
+    users: { user_info_uuid: string, custom_value?: number }[]
+): Promise<number>
   findAllByItemAndBusinessPaginated(
         params: InputListCollaboratorsRepoDTO
     ): Promise<{ items: AppUserItemWithDetails[]; total: number }>;

@@ -4,6 +4,9 @@ import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/compa
 import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
 import { processPaymentByAppUserController } from "../../modules/Payments/Transactions/useCases/process-payment-by-app-user";
 import { getPOSTransactionByAppUserController } from "../../modules/Payments/Transactions/useCases/get-pos-transaction-by-appuser";
+import { getPOSTransactionByPartnerController } from "../../modules/Payments/Transactions/useCases/get-pos-transaction-by-partner";
+import { getPOSTransactionStatusController } from "../../modules/Payments/Transactions/useCases/get-pos-transaction-status";
+
 import { getAvailablePaymentMethodsByCartController } from "../../modules/Payments/Transactions/useCases/get-available-payment-methods-by-cart";
 import { geTransactionReceiptController } from "../../modules/Payments/Transactions/useCases/get-transaction-receipt";
 import { generateReceiptPDFController } from "../../modules/Payments/Transactions/useCases/get-transaction-receipt/generate-receipt-pdf";
@@ -19,12 +22,19 @@ import { cancelPOSTransactionController } from "../../modules/Payments/Transacti
 import { getRecipientController } from "../../modules/Payments/Transactions/useCases/tei/get-recipient-by-cpf";
 import { executeTeiTransfer } from "../../modules/Payments/Transactions/useCases/tei/execute-tei-transfer";
 import { transferBetweenOwnCardsController } from "../../modules/Payments/Transactions/useCases/tei/transfer-between-own-cards";
+import { cancelPartnerSaleController } from "../../modules/Payments/Transactions/useCases/cancel-partner-sale";
+import { cancelSaleByAdminController } from "../../modules/Payments/Transactions/useCases/cancel-sale-by-admin";
+import { getAdminTransactionDetailsController } from "../../modules/Payments/Transactions/useCases/get-admin-transaction-details";
+
+import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
+import { getPartnerSalesController } from "../../modules/Payments/Transactions/useCases/get-partner-sales";
+import { requireRole } from "../../infra/shared/middlewares/CompanyAdmin/role.middleware";
 
 const transactionsRouter = Router()
 
 
 // Create POS transaction order by partner - TESTED
-transactionsRouter.post("/pos-transaction", companyIsAuth, async (request, response) => {
+transactionsRouter.post("/pos-transaction", companyIsAuth, requireRole(['sales', 'finances']), async (request, response) => {
   await posTransactionController.handle(request, response)
 })
 
@@ -38,8 +48,19 @@ transactionsRouter.post("/pos-transaction/processing", appUserIsAuth, async (req
   await processPaymentByAppUserController.handle(request, response)
 })
 
+
+// Get POS transaction details by partner
+transactionsRouter.get("/pos-transaction/business/:transactionId", companyIsAuth, async (request, response) => {
+  await getPOSTransactionByPartnerController.handle(request, response)
+})
+
+// Fast Polling endpoint for POS transaction status
+transactionsRouter.get("/pos-transaction/:transactionId/status", companyIsAuth, async (request, response) => {
+  await getPOSTransactionStatusController.handle(request, response)
+})
+
 //Process payment by partner with business account
-transactionsRouter.post("/pos-transaction/business/processing", companyIsAuth, async (request, response) => {
+transactionsRouter.post("/pos-transaction/business/processing", companyIsAuth, requireRole(['finances']), async (request, response) => {
   await processPaymentByPartnerController.handle(request, response)
 })
 
@@ -80,7 +101,7 @@ transactionsRouter.get("/app-user/offline-tokens", appUserIsAuth, async (request
   await getTokensOffline.handle(request, response)
 })
 //Process POS Offline Token transaction
-transactionsRouter.post("/app-user/transation/offline-token", companyIsAuth, async (request, response) => {
+transactionsRouter.post("/app-user/transation/offline-token", companyIsAuth, requireRole(['sales', 'finances']), async (request, response) => {
   await processOfflineTokenController.handle(request, response)
 })
 
@@ -88,6 +109,7 @@ transactionsRouter.post("/app-user/transation/offline-token", companyIsAuth, asy
 transactionsRouter.patch(
   '/transactions/:transaction_uuid/cancel',
   companyIsAuth,
+  requireRole(['sales', 'finances']),
   (request, response) => {
     return cancelPOSTransactionController.handle(request, response);
   }
@@ -107,6 +129,44 @@ transactionsRouter.post('/tei/transfer', appUserIsAuth, async (request, response
 transactionsRouter.post('/tei/transfer/internal', appUserIsAuth, async (request, response) => {
   await transferBetweenOwnCardsController.handle(request, response);
 });
+
+// Get Partner Sales (Paginated)
+transactionsRouter.get(
+  '/business/sales',
+  companyIsAuth,
+  requireRole(['sales', 'finances']),
+  (request, response) => {
+    return getPartnerSalesController.handle(request, response);
+  }
+);
+
+// Cancel/Refund Partner Sale (Completed Transactions)
+transactionsRouter.post(
+  '/business/sales/:transaction_uuid/cancel',
+  companyIsAuth,
+  requireRole(['finances']),
+  (request, response) => {
+    return cancelPartnerSaleController.handle(request, response);
+  }
+);
+
+// Admin Cancel/Refund Partner Sale (Ignores 7-day rule)
+transactionsRouter.post(
+  '/admin/sales/:transaction_uuid/cancel',
+  correctIsAuth,
+  (request, response) => {
+    return cancelSaleByAdminController.handle(request, response);
+  }
+);
+
+// Admin Get Transaction Details
+transactionsRouter.get(
+  '/admin/sales/:transaction_uuid/details',
+  correctIsAuth,
+  (request, response) => {
+    return getAdminTransactionDetailsController.handle(request, response);
+  }
+);
 
 // Get available payment methods by cart
 transactionsRouter.get("/cart/:cart_uuid/payment-methods", appUserIsAuth, async (request, response) => {

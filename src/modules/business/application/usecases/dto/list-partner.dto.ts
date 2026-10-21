@@ -8,6 +8,7 @@ export interface ListPartnerInputDto {
 export interface PartnerEntity {
   uuid: string;
   fantasy_name: string;
+  corporate_reason?: string | null;
   document: string;
   email: string;
   phone_1: string;

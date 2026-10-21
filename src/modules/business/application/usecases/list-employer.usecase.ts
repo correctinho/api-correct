@@ -5,7 +5,8 @@ class OutputMapper {
   static toOutput(data: any): ListEmployerOutputDto {
     const mappedData: EmployerEntity[] = data.data.map((item: any) => ({
       uuid: item.uuid,
-      fantasy_name: item.fantasy_name,
+      company_name: item.company_name,
+      fantasy_name: item.company_name, // fallback for old frontends
       document: item.document,
       email: item.email,
       phone_1: item.phone_1,

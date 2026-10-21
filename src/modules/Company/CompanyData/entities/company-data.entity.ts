@@ -20,6 +20,7 @@ type CompanyDataProps = {
     employer_branch?: string
     payroll_closing_day?: number | null
     txt_delivery_day?: number | null
+    timezone?: string
     created_at?: string
     updated_at?: string
 }
@@ -42,6 +43,7 @@ export class CompanyDataEntity {
     employer_branch?: string
     payroll_closing_day?: number | null
     txt_delivery_day?: number | null
+    timezone?: string
     created_at?: string
     updated_at?: string
 
@@ -70,6 +72,7 @@ export class CompanyDataEntity {
         this.employer_branch = props.employer_branch
         this.payroll_closing_day = props.payroll_closing_day
         this.txt_delivery_day = props.txt_delivery_day
+        this.timezone = props.timezone
         this.created_at = newDateF(new Date())
         this.updated_at = newDateF(new Date())
 

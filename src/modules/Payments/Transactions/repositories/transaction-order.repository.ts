@@ -45,6 +45,9 @@ export type ApprovedTransactionWithUserOutput = {
     UserInfo?: {
       full_name: string;
       document: string;
+      Employee?: {
+        company_internal_code: string | null;
+      }[];
     } | null;
   } | null;
 };
@@ -64,6 +67,20 @@ export type RolloverTransactionData = {
   oldBalance: number;
   newBalance: number;
 };
+export type PartnerSalesPaginatedResult = {
+  data: {
+    uuid: string;
+    amount: number;
+    status: string;
+    created_at: string;
+  paid_at: string | null;
+    payerName: string | null;
+    operatorName: string | null;
+  }[];
+  totalCount: number;
+  totalPages: number;
+};
+
 export interface ITransactionOrderRepository extends RepositoryInterface<TransactionEntity> {
   savePOSTransaction(entity: TransactionEntity): Promise<TransactionEntity>;
   processSplitPrePaidPayment(
@@ -137,9 +154,27 @@ export interface ITransactionOrderRepository extends RepositoryInterface<Transac
   executeRolloverTransaction(
     updates: RolloverTransactionData[]
   ): Promise<number>; // Retorna o total de colaboradores atualizados
+  
+  findPartnerSalesPaginated(
+    businessInfoUuid: string,
+    page: number,
+    limit: number
+  ): Promise<PartnerSalesPaginatedResult>;
+
+  refundPartnerSale(
+    transactionEntity: TransactionEntity,
+    reason: string
+  ): Promise<{ success: boolean; netRefundedToUser: number }>;
+
   registerPlatformRevenue(
     amountInCents: number,
     eventType: CorrectAccountEventType,
     transactionUuid: string
   ): Promise<void>;
+
+  cancelAbandonedPOSTransactions(cutoffDate: string): Promise<number>;
+
+  findStatusById(
+    id: string
+  ): Promise<{ status: string; favored_business_info_uuid: string | null } | null>;
 }

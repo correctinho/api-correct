@@ -22,6 +22,7 @@ declare global {
         permissions: string[],
         status: string,
         fantasy_name?: string
+        corporate_reason?: string
         created_at: string,
         updated_at: string | null
       },

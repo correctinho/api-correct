@@ -224,6 +224,9 @@ export class CreateAppUserByCorrectUsecaseTest {
         // 1. Buscas iniciais
         const existingUserInfo = await this.appUserInfoRepository.findByDocumentUserInfo(user.document);
         const findUserAuth = await this.appUserAuthRepository.findByDocument(user.document);
+        if (findUserAuth) {
+            user.changeIsAuthenticated(true);
+        }
 
         let employeeItemsArray: AppUserItemEntity[] = [];
 

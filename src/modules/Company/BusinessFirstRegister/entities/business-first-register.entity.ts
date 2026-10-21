@@ -29,6 +29,9 @@ export type BusinessRegisterProps = {
   employer_branch?: string | null
   items_uuid?: string[]
   referred_by_code?: string
+  contract_number?: string
+  legal_representative_name?: string
+  legal_representative_cpf?: string
 }
 
 export class BusinessRegisterEntity {
@@ -57,6 +60,9 @@ export class BusinessRegisterEntity {
   employer_branch?: string | null
   items_uuid?: string[]
   referred_by_code?: string
+  contract_number?: string
+  legal_representative_name?: string
+  legal_representative_cpf?: string
 
 
   private constructor(props: BusinessRegisterProps) {
@@ -86,6 +92,9 @@ export class BusinessRegisterEntity {
     this.employer_branch = props.employer_branch
     this.items_uuid = props.items_uuid ?? ['']
     this.referred_by_code = props.referred_by_code
+    this.contract_number = props.contract_number
+    this.legal_representative_name = props.legal_representative_name
+    this.legal_representative_cpf = props.legal_representative_cpf
     this.validate()
 
   }

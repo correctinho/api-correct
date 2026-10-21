@@ -1,6 +1,9 @@
 import { BusinessContractDataProps } from "../usecase/generate-business-contract/dto/generate-business-contract.dto";
 
 export interface IBusinessContractRepository {
+    findByBusinessId(business_info_uuid: string): Promise<any | null>;
+    deleteByBusinessId(business_info_uuid: string): Promise<void>;
+    updateStatus(business_info_uuid: string, status: string): Promise<void>;
     // Busca as informações do lojista e das taxas (BusinessInfo + PartnerConfig)
     getBusinessData(business_info_uuid: string): Promise<BusinessContractDataProps | null>;
 

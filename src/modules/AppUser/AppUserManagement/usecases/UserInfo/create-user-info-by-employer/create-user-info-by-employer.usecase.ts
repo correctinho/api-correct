@@ -30,7 +30,9 @@ export class CreateAppUserInfoByEmployerUsecase {
     //check if document is already registered
     const existingUserInfo = await this.appUserInfoRepository.findByDocumentUserInfo(userInfoEntity.document)
     const findUserAuth = await this.appUserAuthRepository.findByDocument(userInfoEntity.document);
-
+    if (findUserAuth) {
+      userInfoEntity.changeIsAuthenticated(true);
+    }
     const isEmployee = existingUserInfo?.Employee.find(business => business.business_info_uuid === data.business_info_uuid.uuid)
     if (existingUserInfo && isEmployee) throw new CustomError("User with this document already exists for the provided business", 409);
 

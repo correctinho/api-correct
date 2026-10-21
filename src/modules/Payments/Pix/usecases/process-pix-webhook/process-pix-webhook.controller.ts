@@ -5,6 +5,7 @@ import { IAppUserItemRepository } from '../../../../AppUser/AppUserManagement/re
 import { ISubscriptionRepository } from '../../../SubscriptionsPlans/repositories/subscription.repository';
 import { ICompanyDataRepository } from '../../../../Company/CompanyData/repositories/company-data.repository';
 import { IMailProvider } from '../../../../../infra/providers/MailProvider/models/IMailProvider';
+import { IBusinessOrderRepository } from '../../../../Company/BusinessItemsDetails/repositories/business-order-repository';
 
 export class ProcessPixWebhookController {
     constructor(
@@ -12,7 +13,8 @@ export class ProcessPixWebhookController {
         private readonly subscriptionRepository: ISubscriptionRepository,
         private readonly userItemRepository: IAppUserItemRepository,
         private readonly businessRepository: ICompanyDataRepository,
-        private readonly mailProvider: IMailProvider
+        private readonly mailProvider: IMailProvider,
+        private readonly businessOrderRepository: IBusinessOrderRepository
     ) { }
     async handle(req: Request, res: Response) {
         try {
@@ -21,7 +23,8 @@ export class ProcessPixWebhookController {
                 this.subscriptionRepository,
                 this.userItemRepository,
                 this.businessRepository,
-                this.mailProvider
+                this.mailProvider,
+                this.businessOrderRepository
 
             );
             const result = await usecase.execute(req.body);

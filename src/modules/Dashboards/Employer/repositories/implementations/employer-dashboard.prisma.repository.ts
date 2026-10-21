@@ -9,6 +9,7 @@ export class EmployerDashboardPrismaRepository implements IEmployerDashboardRepo
             custom_benefits: number;
             total_lives: number;
             estimated_monthly_cost: number;
+            postpaid_current_invoice: number;
         },
         distribution: {
             category: string;
@@ -60,8 +61,21 @@ export class EmployerDashboardPrismaRepository implements IEmployerDashboardRepo
         ).length;
 
         // B. Cálculos Financeiros e Vidas
-        let totalLives = 0;
+        
+        
+        // Cálculo de Vidas Únicas
+        const uniqueUsers = await prismaClient.userItem.findMany({
+            where: {
+                business_info_uuid: businessInfoUuid,
+                status: 'active'
+            },
+            select: { user_info_uuid: true },
+            distinct: ['user_info_uuid']
+        });
+        const totalLives = uniqueUsers.length;
+
         let totalCost = 0;
+        let totalPostpaidInvoice = 0;
         const categoryMap: Record<string, number> = {};
 
         for (const benefit of activeBenefits) {
@@ -72,20 +86,24 @@ export class EmployerDashboardPrismaRepository implements IEmployerDashboardRepo
                 const livesInGroup = group.UserItem.length;
                 const groupValue = group.value || 0;
 
-                totalLives += livesInGroup;
-
                 // Custo = Vidas * Valor
                 benefitCost += (livesInGroup * groupValue);
             }
 
-            totalCost += benefitCost;
+            // Soma ao Custo Fixo Mensal APENAS se for pré-pago
+            if (benefit.Item.item_category === 'pre_pago') {
+                totalCost += benefitCost;
+            } else if (benefit.Item.item_category === 'pos_pago') {
+                // Aqui armazenamos a exposição máxima (limite total) e não o gasto
+                totalPostpaidInvoice += benefitCost;
+            }
 
             // Agrupa por categoria para o gráfico
             const category = benefit.Item.item_category || 'Outros';
             if (!categoryMap[category]) {
                 categoryMap[category] = 0;
             }
-            categoryMap[category] += benefitCost;
+            categoryMap[category] += benefitCost; 
         }
 
         // 3. Formatação
@@ -99,7 +117,8 @@ export class EmployerDashboardPrismaRepository implements IEmployerDashboardRepo
             overview: {
                 total_benefits: totalBenefits,    // Apenas ativos
                 custom_benefits: customBenefits,  // Apenas ativos personalizados
-                total_lives: totalLives,          // Vidas em benefícios ativos
+                total_lives: totalLives,
+                postpaid_current_invoice: totalPostpaidInvoice,          // Vidas em benefícios ativos
                 estimated_monthly_cost: totalCost // Custo real da folha
             },
             distribution

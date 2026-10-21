@@ -1863,7 +1863,7 @@ describe('E2E Business tests', () => {
                     .set('Authorization', `Bearer ${partner_admin_token}`)
                     .query({ user_id: '' });
                 expect(result.statusCode).toBe(400);
-                expect(result.body.error).toBe('User id is required');
+                expect(result.body.error).toBe('O ID do usuário é obrigatório.');
             });
 
             it('Should throw an error if user is not found', async () => {
@@ -1872,7 +1872,7 @@ describe('E2E Business tests', () => {
                     .set('Authorization', `Bearer ${partner_admin_token}`)
                     .query({ user_id: '12345' });
                 expect(result.statusCode).toBe(404);
-                expect(result.body.error).toBe('User not found');
+                expect(result.body.error).toBe('Usuário não encontrado.');
             });
 
             it('Should delete an user', async () => {

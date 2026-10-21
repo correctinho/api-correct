@@ -2,39 +2,41 @@ import { Request, Response } from "express";
 import { IAppUserItemRepository } from "../../../../../AppUser/AppUserManagement/repositories/app-user-item-repository";
 import { IBusinessOrderRepository } from "../../../repositories/business-order-repository";
 import { CreateRechargeOrderUsecase } from "./create-recharge-order.usecase";
+import { ICompanyDataRepository } from "../../../../CompanyData/repositories/company-data.repository";
+import { IPixProvider } from "../../../../../../infra/providers/PixProvider/IPixProvider";
 
 export class CreateRechargeOrderController {
     constructor(
         private businessOrderRepository: IBusinessOrderRepository,
-        private appUserItemRepository: IAppUserItemRepository
-    ) {}
+        private appUserItemRepository: IAppUserItemRepository,
+        private businessInfoRepository: ICompanyDataRepository,
+        private pixProvider: IPixProvider
+    ) { }
 
     async handle(req: Request, res: Response) {
         try {
-            // 1. Instancia o UseCase com as dependências injetadas no construtor
             const usecase = new CreateRechargeOrderUsecase(
                 this.businessOrderRepository,
-                this.appUserItemRepository
+                this.appUserItemRepository,
+                this.businessInfoRepository,
+                this.pixProvider
             );
 
-            // 2. Extrai os dados do Frontend (Body)
-            // Espera-se receber: { "item_uuid": "...", "items": [{ "user_item_uuid": "...", "amount": 500.00 }] }
-            const { item_uuid, items } = req.body;
+            const { item_uuid, items, payment_method } = req.body;
 
-            // 3. Executa o UseCase
             const result = await usecase.execute({
-                // O ID da empresa vem do Token (segurança)
+                // @ts-ignore
                 business_info_uuid: req.companyUser.businessInfoUuid,
                 item_uuid: item_uuid,
-                items: items
+                items: items,
+                payment_method: payment_method
             });
 
-            // 4. Retorna 201 (Created) com os dados do pedido e a Chave PIX
             return res.status(201).json(result);
-
-        } catch (err: any) {
-            return res.status(err.statusCode || 500).json({
-                message: err.message || "Internal Server Error"
+        } catch (error: any) {
+            console.error("Erro ao criar pedido de recarga:", error);
+            return res.status(error.statusCode || 500).json({
+                error: error.message || "Erro interno ao processar o pedido"
             });
         }
     }

@@ -11,3 +11,6 @@ logs
 /dist
 
 /certs
+
+# Seed scripts
+src/scripts/seed-partner-sales.ts

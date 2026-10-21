@@ -10,6 +10,7 @@ export class FindAllCategoryController {
       const result = await usecase.execute();
       return res.status(200).json(result);
     } catch (err: any) {
+      console.log(err)
       return res.status(err.statusCode).json({
         error: err.message || "Internal Server Error",
       });

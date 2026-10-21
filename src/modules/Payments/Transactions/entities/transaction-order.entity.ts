@@ -119,7 +119,7 @@ export class TransactionEntity {
     this._description = props.description ?? null;
     this._status = props.status ?? TransactionStatus.pending;
     this._transaction_type = props.transaction_type;
-    this._paid_at = newDateF(new Date());
+    this._paid_at = props.paid_at ?? null;
     this._item_uuid = props.item_uuid;
     this._favored_partner_user_uuid = props.favored_partner_user_uuid ?? null;
 
@@ -464,6 +464,33 @@ export class TransactionEntity {
     this.validate();
   }
 
+  canBeRefunded(maxDays: number = 7): boolean {
+    if (this._status !== TransactionStatus.success) {
+      return false;
+    }
+    if (!this._paid_at) {
+      return false;
+    }
+    
+    // Calcula a diferença de dias
+    const paidDate = new Date(this._paid_at);
+    const currentDate = new Date();
+    
+    const diffTime = Math.abs(currentDate.getTime() - paidDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    
+    return diffDays <= maxDays;
+  }
+
+  refundTransaction(): void {
+    if (this._status !== TransactionStatus.success) {
+      throw new CustomError(`Cannot refund a transaction with status ${this._status}`, 400);
+    }
+    this._status = TransactionStatus.cancelled;
+    this._updated_at = newDateF(new Date());
+    this.validate();
+  }
+
   // --- Validation Logic ---
   private validate(): void {
     // Basic mandatory field checks
@@ -495,8 +522,8 @@ export class TransactionEntity {
     // This logic might need refinement based on when exactly fields become mandatory
     if (this._status === 'success') { // Example: Check on success
       // Source must be defined on success
-      if (!this._user_item_uuid) {
-        throw new CustomError("Source user item (user_item_uuid) is required for a successful transaction", 400);
+      if (!this._user_item_uuid && !this._payer_business_info_uuid) {
+        throw new CustomError("Source (user_item_uuid or payer_business_info_uuid) is required for a successful transaction", 400);
       }
 
       const hasUserRecipient = !!this._favored_user_uuid;
@@ -507,7 +534,9 @@ export class TransactionEntity {
         throw new CustomError("Transaction cannot have both a user and a business recipient", 400);
       }
       if (!hasUserRecipient && !hasBusinessRecipient) {
-        throw new CustomError("Successful transaction must have either a user or a business recipient", 400);
+        if (this._transaction_type !== 'COMPANY_PRE_PAID_RECHARGE' && this._transaction_type !== 'ONBOARDING_PIX') {
+          throw new CustomError("Successful transaction must have either a user or a business recipient", 400);
+        }
       }
 
       // Validate type against recipient

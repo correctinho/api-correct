@@ -56,7 +56,18 @@ export class CreateBusinessRegisterUsecase {
       }
       partnerConfigEntity.changeAdminTax(mainBranchRawData.admin_tax);
 
-      partnerConfigEntity.changeItemsUuid(mainBranchDetails.benefits_uuid);
+      
+      // Pegar os itens do main branch que NÃO são programas nem produtos (itens estruturais)
+      const structuralItems = mainBranchDetails.items
+        ? mainBranchDetails.items.filter(item => item.item_type !== 'programa' && item.item_type !== 'produto').map(item => item.uuid)
+        : [];
+      
+      // Juntar com os programas selecionados pelo parceiro
+      const selectedPrograms = data.partnerConfig.selected_programs || [];
+      const finalItems = Array.from(new Set([...structuralItems, ...selectedPrograms]));
+
+      partnerConfigEntity.changeItemsUuid(finalItems.length > 0 ? finalItems : []);
+
 
       const response = await this.businessRegisterRepository.savePartner(register, partnerConfigEntity, data.correct_user_uuid);
       return response;

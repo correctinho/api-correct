@@ -9,6 +9,7 @@ import {
   BenefitGroupSnapshot,
   ExecuteTeiTransferDTO,
   ITransactionOrderRepository,
+  PartnerSalesPaginatedResult,
   ProcessAppUserPixCreditPaymentResult,
   ProcessPaymentByBusinessParams,
   ProcessPaymentByBusinessResult,
@@ -534,6 +535,7 @@ export class TransactionOrderPrismaRepository
       paid_at: transactionPix.paid_at,
       provider_tx_id: transactionPix.provider_tx_id,
       pix_e2e_id: transactionPix.pix_e2e_id,
+      payer_business_info_uuid: transactionPix.payer_business_info_uuid ? new Uuid(transactionPix.payer_business_info_uuid) : null,
       subscription_uuid: transactionPix.subscription_uuid ? new Uuid(transactionPix.subscription_uuid) : null,
       created_at: transactionPix.created_at,
       updated_at: transactionPix.updated_at,
@@ -1576,13 +1578,19 @@ export class TransactionOrderPrismaRepository
       const transactionJson = transaction.toJSON();
       let amountToPayInCents = transactionJson.net_price;
       const cashbackAmountToCreditPayer = transactionJson.cashback || 0; // O Cashback total da compra
+      
+      const partnerCreditAmount = transactionJson.partner_credit_amount; // O que o parceiro Vendedor recebe
+      const platformNetFeeAmount = transactionJson.platform_net_fee_amount; // O que a plataforma recebe
+
       let totalPaidFromCredits = 0;
       let totalPaidFromLiquid = 0;
+      
+      let remainingSellerCreditToCreate = partnerCreditAmount; // Limite de recebíveis que o vendedor vai ganhar
 
       const payerAccountJson = payerAccount.toJSON();
       let currentPayerBalance = payerAccountJson.balance; // Foto inicial do saldo pagador
 
-      // --- PASSO 2: BUSCAR A CONTA DO VENDEDOR ---
+      // --- PASSO 2: BUSCAR A CONTA DO VENDEDOR E DA CORRECT ---
       const sellerAccount = await tx.businessAccount.findFirst({
         where: { business_info_uuid: sellerBusinessInfoId },
       });
@@ -1591,6 +1599,11 @@ export class TransactionOrderPrismaRepository
           'Conta do parceiro vendedor não encontrada.',
           404
         );
+      }
+
+      const correctAccount = await tx.correctAccount.findFirst();
+      if (!correctAccount) {
+        throw new CustomError('Conta da plataforma Correct não encontrada.', 500);
       }
 
       // --- PASSO 3: LÓGICA DE CONSUMO DE CRÉDITOS (FIFO) ---
@@ -1621,17 +1634,21 @@ export class TransactionOrderPrismaRepository
           new Date()
         );
 
-        // 4. Cria o novo crédito para o vendedor (transferência do recebível)
-        await tx.partnerCredit.create({
-          data: {
-            business_account_uuid: sellerAccount.uuid,
-            original_transaction_uuid: transactionJson.uuid,
-            balance: spendAmount,
-            spent_amount: 0,
-            status: 'PENDING',
-            availability_date: newSettlementDate,
-          },
-        });
+        // 4. Cria o novo crédito para o vendedor (apenas até o limite do que ele tem direito)
+        const sellerCreditAmountToCreate = Math.min(spendAmount, remainingSellerCreditToCreate);
+        if (sellerCreditAmountToCreate > 0) {
+          await tx.partnerCredit.create({
+            data: {
+              business_account_uuid: sellerAccount.uuid,
+              original_transaction_uuid: transactionJson.uuid,
+              balance: sellerCreditAmountToCreate,
+              spent_amount: 0,
+              status: 'PENDING',
+              availability_date: newSettlementDate,
+            },
+          });
+          remainingSellerCreditToCreate -= sellerCreditAmountToCreate;
+        }
 
         // 5. Registra o gasto do crédito para fins de auditoria
         await tx.partnerCreditSpend.create({
@@ -1662,12 +1679,6 @@ export class TransactionOrderPrismaRepository
           throw new CustomError("Saldo líquido do parceiro ficou negativo durante a liquidação. Transação abortada.", 402);
         }
 
-        // 2. Credita no saldo líquido do vendedor
-        const updatedSellerAccount = await tx.businessAccount.update({
-          where: { uuid: sellerAccount.uuid },
-          data: { balance: { increment: totalPaidFromLiquid } },
-        });
-
         // 3. Cria históricos para a movimentação de saldo líquido (B2B pagador)
         await tx.businessAccountHistory.create({
           data: {
@@ -1682,13 +1693,24 @@ export class TransactionOrderPrismaRepository
 
         // 4. Atualiza a foto do saldo na memória para o próximo passo
         currentPayerBalance = updatedPayerAccount.balance;
+      }
 
-        // 5. Histórico de crédito para o vendedor
+      // --- PASSO 5: DISTRIBUIÇÃO LÍQUIDA PARA VENDEDOR E PLATAFORMA ---
+      // O Vendedor recebe em líquido aquilo que não foi coberto por PartnerCredits.
+      // E a Correct recebe sua taxa de plataforma em líquido.
+      
+      const sellerLiquidToReceive = remainingSellerCreditToCreate;
+      if (sellerLiquidToReceive > 0) {
+        const updatedSellerAccount = await tx.businessAccount.update({
+          where: { uuid: sellerAccount.uuid },
+          data: { balance: { increment: sellerLiquidToReceive } },
+        });
+
         await tx.businessAccountHistory.create({
           data: {
             business_account_uuid: sellerAccount.uuid,
             event_type: 'PAYMENT_RECEIVED',
-            amount: totalPaidFromLiquid,
+            amount: sellerLiquidToReceive,
             balance_before: sellerAccount.balance,
             balance_after: updatedSellerAccount.balance,
             related_transaction_uuid: transactionJson.uuid,
@@ -1696,7 +1718,25 @@ export class TransactionOrderPrismaRepository
         });
       }
 
-      // --- PASSO 5: CRÉDITO DE CASHBACK (NOVO!) ---
+      if (platformNetFeeAmount > 0) {
+        const updatedCorrectAccount = await tx.correctAccount.update({
+          where: { uuid: correctAccount.uuid },
+          data: { balance: { increment: platformNetFeeAmount } },
+        });
+
+        await tx.correctAccountHistory.create({
+          data: {
+            correct_account_uuid: correctAccount.uuid,
+            event_type: CorrectAccountEventType.PLATFORM_FEE_COLLECTED,
+            amount: platformNetFeeAmount,
+            balance_before: correctAccount.balance,
+            balance_after: updatedCorrectAccount.balance,
+            related_transaction_uuid: transactionJson.uuid,
+          },
+        });
+      }
+
+      // --- PASSO 6: CRÉDITO DE CASHBACK (NOVO!) ---
       if (cashbackAmountToCreditPayer > 0) {
         // 1. Adiciona o dinheiro na conta da empresa pagadora
         const updatedPayerAccountWithCashback = await tx.businessAccount.update({
@@ -1717,7 +1757,7 @@ export class TransactionOrderPrismaRepository
         });
       }
 
-      // --- PASSO 6: FINALIZAÇÃO DA TRANSAÇÃO ORIGINAL ---
+      // --- PASSO 7: FINALIZAÇÃO DA TRANSAÇÃO ORIGINAL ---
       await tx.transactions.update({
         where: { uuid: transactionJson.uuid },
         data: {
@@ -1728,7 +1768,7 @@ export class TransactionOrderPrismaRepository
         },
       });
 
-      // --- PASSO 7: RETORNO PARA O USE CASE ---
+      // --- PASSO 8: RETORNO PARA O USE CASE ---
       const finalPayerAccountState = await tx.businessAccount.findUnique({
         where: { uuid: payerAccountJson.uuid },
       });
@@ -1782,6 +1822,9 @@ export class TransactionOrderPrismaRepository
         ? new Uuid(transactionData.favored_partner_user_uuid)
         : null,
       paid_at: transactionData.paid_at,
+      payer_business_info_uuid: transactionData.payer_business_info_uuid
+        ? new Uuid(transactionData.payer_business_info_uuid)
+        : null,
       created_at: transactionData.created_at,
       updated_at: transactionData.updated_at,
     };
@@ -1850,6 +1893,24 @@ export class TransactionOrderPrismaRepository
         updated_at: newDateF(new Date()),
       },
     })
+  }
+
+  async cancelAbandonedPOSTransactions(cutoffDate: string): Promise<number> {
+    const result = await prismaClient.transactions.updateMany({
+      where: {
+        status: TransactionStatus.pending,
+        transaction_type: TransactionType.POS_PAYMENT,
+        created_at: {
+          lte: cutoffDate,
+        },
+      },
+      data: {
+        status: TransactionStatus.cancelled,
+        updated_at: newDateF(new Date()),
+      },
+    });
+
+    return result.count;
   }
 
   async executeTeiTransfer(data: ExecuteTeiTransferDTO): Promise<void> {
@@ -1958,6 +2019,15 @@ export class TransactionOrderPrismaRepository
               select: {
                 full_name: true,
                 document: true,
+                Employee: {
+                  where: {
+                    business_info_uuid: businessInfoUuid,
+                  },
+                  select: {
+                    company_internal_code: true,
+                  },
+                  take: 1,
+                },
               },
             },
           },
@@ -2072,5 +2142,262 @@ export class TransactionOrderPrismaRepository
         }
       })
     ]);
+  }
+
+  async refundPartnerSale(
+    transactionEntity: TransactionEntity,
+    reason: string
+  ): Promise<{ success: boolean; netRefundedToUser: number }> {
+    const transactionId = transactionEntity.uuid.uuid;
+    const favoredBusinessInfoId = transactionEntity.favored_business_info_uuid?.uuid;
+    const userItemId = transactionEntity.user_item_uuid?.uuid;
+    const payerBusinessInfoId = transactionEntity.payer_business_info_uuid?.uuid;
+    const partnerAmountToDebit = Math.round(transactionEntity.partner_credit_amount * 100);
+    const platformFeeToDebit = Math.round(transactionEntity.platform_net_fee_amount * 100);
+    const cashbackToDeduct = Math.round(transactionEntity.cashback * 100);
+    const originalPrice = Math.round(transactionEntity.original_price * 100);
+    const netPriceToRefund = Math.round(transactionEntity.net_price * 100);
+
+    if (!favoredBusinessInfoId || (!userItemId && !payerBusinessInfoId)) {
+      throw new CustomError("Transaction is missing necessary relationships for refund", 400);
+    }
+
+    const result = await prismaClient.$transaction(async (tx) => {
+      // 1. Busca BusinessAccount
+      const businessAccount = await tx.businessAccount.findFirst({
+        where: { business_info_uuid: favoredBusinessInfoId },
+        select: { uuid: true, balance: true }
+      });
+      if (!businessAccount) throw new CustomError("BusinessAccount not found", 404);
+
+      // 1.5 Busca PartnerCredit atrelado à transação
+      const partnerCredit = await tx.partnerCredit.findFirst({
+        where: { original_transaction_uuid: transactionId }
+      });
+
+      let debitPartnerBalance = true;
+
+      if (partnerCredit && partnerCredit.status === 'PENDING') {
+        // Se o crédito ainda está pendente, não debitamos o saldo real, apenas cancelamos o crédito.
+        debitPartnerBalance = false;
+        
+        await tx.partnerCredit.update({
+          where: { uuid: partnerCredit.uuid },
+          data: { status: 'CANCELLED' }
+        });
+      }
+
+      // 2. Busca CorrectAccount
+      const correctAccount = await tx.correctAccount.findFirst({
+        select: { uuid: true, balance: true }
+      });
+      if (!correctAccount) throw new CustomError("CorrectAccount not found", 500);
+
+      // 3. Busca UserItem ou payerBusinessAccount
+      let userItem = null;
+      let payerBusinessAccount = null;
+
+      if (userItemId) {
+        userItem = await tx.userItem.findUnique({
+          where: { uuid: userItemId },
+          select: { uuid: true, balance: true, user_info_uuid: true }
+        });
+        if (!userItem) throw new CustomError("UserItem not found", 404);
+      } else if (payerBusinessInfoId) {
+        payerBusinessAccount = await tx.businessAccount.findFirst({
+          where: { business_info_uuid: payerBusinessInfoId },
+          select: { uuid: true, balance: true }
+        });
+        if (!payerBusinessAccount) throw new CustomError("Payer BusinessAccount not found", 404);
+      }
+
+      if (debitPartnerBalance) {
+        if (businessAccount.balance < partnerAmountToDebit) {
+          throw new CustomError("Saldo insuficiente na conta do parceiro para realizar o estorno.", 400);
+        }
+
+        // Debita Parceiro
+        await tx.businessAccount.update({
+          where: { uuid: businessAccount.uuid },
+          data: { balance: { decrement: partnerAmountToDebit } }
+        });
+        await tx.businessAccountHistory.create({
+          data: {
+            business_account_uuid: businessAccount.uuid,
+            event_type: 'REFUND_ISSUED',
+            amount: -partnerAmountToDebit,
+            balance_before: businessAccount.balance,
+            balance_after: businessAccount.balance - partnerAmountToDebit,
+            related_transaction_uuid: transactionId
+          }
+        });
+      }
+
+      // Debita Correct
+      await tx.correctAccount.update({
+        where: { uuid: correctAccount.uuid },
+        data: { balance: { decrement: platformFeeToDebit } }
+      });
+      await tx.correctAccountHistory.create({
+        data: {
+          correct_account_uuid: correctAccount.uuid,
+          event_type: 'OTHER',
+          amount: -platformFeeToDebit,
+          balance_before: correctAccount.balance,
+          balance_after: correctAccount.balance - platformFeeToDebit,
+          related_transaction_uuid: transactionId
+        }
+      });
+
+      // Credita Usuário ou Parceiro Comprador
+      if (userItem) {
+        await tx.userItem.update({
+          where: { uuid: userItem.uuid },
+          data: { balance: { increment: netPriceToRefund } }
+        });
+        await tx.userItemHistory.create({
+          data: {
+            user_item_uuid: userItem.uuid,
+            event_type: 'REFUND_RECEIVED',
+            amount: netPriceToRefund,
+            balance_before: userItem.balance,
+            balance_after: userItem.balance + netPriceToRefund,
+            related_transaction_uuid: transactionId
+          }
+        });
+
+        // Retira o cashback da carteira Correct
+        if (cashbackToDeduct > 0 && userItem.user_info_uuid) {
+          const correctUserItem = await tx.userItem.findFirst({
+            where: {
+              user_info_uuid: userItem.user_info_uuid,
+              item_name: 'Correct'
+            },
+            select: { uuid: true, balance: true }
+          });
+
+          if (correctUserItem) {
+            await tx.userItem.update({
+              where: { uuid: correctUserItem.uuid },
+              data: { balance: { decrement: cashbackToDeduct } }
+            });
+            await tx.userItemHistory.create({
+              data: {
+                user_item_uuid: correctUserItem.uuid,
+                event_type: 'BALANCE_ADJUSTMENT',
+                amount: -cashbackToDeduct,
+                balance_before: correctUserItem.balance,
+                balance_after: correctUserItem.balance - cashbackToDeduct,
+                related_transaction_uuid: transactionId
+              }
+            });
+          }
+        }
+      } else if (payerBusinessAccount) {
+        await tx.businessAccount.update({
+          where: { uuid: payerBusinessAccount.uuid },
+          data: { balance: { increment: netPriceToRefund } }
+        });
+        await tx.businessAccountHistory.create({
+          data: {
+            business_account_uuid: payerBusinessAccount.uuid,
+            event_type: 'OTHER',
+            amount: netPriceToRefund,
+            balance_before: payerBusinessAccount.balance,
+            balance_after: payerBusinessAccount.balance + netPriceToRefund,
+            related_transaction_uuid: transactionId
+          }
+        });
+      }
+
+      // Atualiza Transação para cancelada
+      await tx.transactions.update({
+        where: { uuid: transactionId },
+        data: {
+          status: 'cancelled',
+          updated_at: newDateF(new Date())
+        }
+      });
+
+      return {
+        success: true,
+        netRefundedToUser: netPriceToRefund
+      };
+    });
+
+    return result;
+  }
+  async findPartnerSalesPaginated(
+    businessInfoUuid: string,
+    page: number,
+    limit: number
+  ): Promise<PartnerSalesPaginatedResult> {
+    const skip = (page - 1) * limit;
+    const whereClause = {
+      favored_business_info_uuid: businessInfoUuid,
+    };
+
+    const [totalCount, transactions] = await prismaClient.$transaction([
+      prismaClient.transactions.count({ where: whereClause }),
+      prismaClient.transactions.findMany({
+        where: whereClause,
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          UserItem: { include: { UserInfo: true } },
+          PartnerUser: true,
+        },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    const formattedData = transactions.map((tx) => {
+      let payerName = 'Cliente';
+      if (tx.UserItem?.UserInfo?.full_name) {
+        payerName = tx.UserItem.UserInfo.full_name;
+      }
+
+      let operatorName = null;
+      if (tx.PartnerUser) {
+        operatorName = tx.PartnerUser.name || tx.PartnerUser.user_name || null;
+      }
+
+      return {
+        uuid: tx.uuid,
+        amount: tx.net_price,
+        status: tx.status,
+        created_at: tx.created_at,
+        paid_at: tx.paid_at,
+        payerName,
+        operatorName,
+      };
+    });
+
+    return {
+      data: formattedData,
+      totalCount,
+      totalPages,
+    };
+  }
+
+  async findStatusById(
+    id: string
+  ): Promise<{ status: string; favored_business_info_uuid: string | null } | null> {
+    const tx = await prismaClient.transactions.findUnique({
+      where: { uuid: id },
+      select: {
+        status: true,
+        favored_business_info_uuid: true,
+      },
+    });
+
+    if (!tx) return null;
+
+    return {
+      status: tx.status,
+      favored_business_info_uuid: tx.favored_business_info_uuid,
+    };
   }
 }

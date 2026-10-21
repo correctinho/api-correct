@@ -1,3 +1,5 @@
+import { getEmployerInvoicesController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPostPaidItemsManagement/get-employer-invoices";
+import { listAllRechargeOrdersController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPrePaidItemsManagement/list-all-recharge-orders";
 import { Router } from "express";
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
 import { findEmployerItemDetails } from "../../modules/Company/BusinessItemsDetails/usecases/CorrectAdmin/findItemDetailsByCorrect";
@@ -15,10 +17,22 @@ import { getPostPaidConsumptionController } from "../../modules/Company/Business
 import { ensureApiKey } from "../../infra/shared/middlewares/ensureApiKey";
 import { postpaidRolloverController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPostPaidItemsManagement/postpaid-rollover";
 import { updateDefaultBenefitValueController } from "../../modules/Company/BenefitGroups/usecases/update-default-benefit-value";
+import { uploadRechargeReceiptController } from "../../modules/Company/BusinessItemsDetails/usecases/BusinessPrePaidItemsManagement/upload-recharge-receipt";
+import multer from "multer";
+import { uploadImage, uploadDocument } from "../../infra/shared/multer/multer-memory.config";
 
 export const businessItemDetailsRouter = Router()
 
 /*****CORRECT ENDPOINTS****** */
+// List ALL recharge orders (Correct Admin)
+businessItemDetailsRouter.get(
+    "/admin/recharge-orders",
+    correctIsAuth,
+    async (request, response) => {
+        await listAllRechargeOrdersController.handle(request, response)
+    }
+)
+
 
 //create employer item details by correct admin - TESTED
 businessItemDetailsRouter.post("/business/item/details/correct", correctIsAuth, async (request, response) => {
@@ -86,6 +100,16 @@ businessItemDetailsRouter.get(
 )
 
 //Approve recharge order endpoint
+//Upload recharge order receipt
+businessItemDetailsRouter.post(
+    "/business/orders/:order_uuid/upload-receipt",
+    companyIsAuth,
+    uploadDocument.single("file"),
+    async (request, response) => {
+        await uploadRechargeReceiptController.handle(request, response)
+    }
+)
+
 businessItemDetailsRouter.post(
     "/business/recharge-orders/approve",
     correctIsAuth,
@@ -103,3 +127,8 @@ businessItemDetailsRouter.get("/business/item/details/:employer_item_details_uui
 businessItemDetailsRouter.post("/internal/webhooks/postpaid-rollover", ensureApiKey, async (request, response) => {
   await postpaidRolloverController.handle(request, response)
 })
+
+// List Employer Invoices
+businessItemDetailsRouter.get("/business/invoices", companyIsAuth, async (request, response) => {
+    await getEmployerInvoicesController.handle(request, response);
+});

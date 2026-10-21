@@ -20,6 +20,8 @@ import { serviceScheduling } from './ServiceScheduling/serviceScheduling,routes'
 import { termsRouter } from './Terms/terms.routes';
 import { gameRouter } from './Games/game.routes';
 import { dashboardRouter } from './Dashboard/dashboard.routes';
+import { businessClubRouter } from './BusinessClub/business-club.routes';
+import { cronRouter } from './Cron/cron.routes';
 
 const router = Router();
 
@@ -44,4 +46,6 @@ router.use(serviceScheduling)
 router.use(termsRouter)
 router.use(gameRouter)
 router.use(dashboardRouter)
+router.use(businessClubRouter);
+router.use(cronRouter);
 export { router };

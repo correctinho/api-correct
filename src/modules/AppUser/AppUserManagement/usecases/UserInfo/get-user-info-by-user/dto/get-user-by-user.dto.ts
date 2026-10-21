@@ -23,7 +23,7 @@ export interface OutputFindUserByUserDTO {
   status: Status
   function: string | null
   recommendation_code: string | null
-  marital_status: string | null
+  marital_status?: string | null
   dependents_quantity: number
   created_at: string | null
   updated_at: string | null
@@ -51,12 +51,14 @@ export interface OutputFindUserDTO {
   recommendation_code: string | null
   marital_status: string | null
   is_employee?: boolean
+  is_authenticated?: boolean
   user_document_validation_uuid?: string
   created_at: string | null
   updated_at: string | null
   Employee: {
     uuid: string
     business_info_uuid: string
+    status?: string
     internal_company_code: string | null
     salary: number | null
     company_owner: boolean

@@ -1,6 +1,8 @@
 import { request, Router } from "express";
 import { companyUserController } from "../../modules/Company/CompanyUser/usecases/create-company-admin";
 import { authCompanyUserController } from "../../modules/Company/CompanyUser/usecases/authenticate-company-user";
+import { verifyTwoFactorController } from "../../modules/Company/CompanyUser/usecases/verify-two-factor";
+import { resendTwoFactorController } from "../../modules/Company/CompanyUser/usecases/resend-two-factor";
 import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/company-admin-auth.middlware";
 import { companyUserDetailsController } from "../../modules/Company/CompanyUser/usecases/company-user-details";
 import { deleteUserController } from "../../modules/Company/CompanyUser/usecases/delete-user";
@@ -15,11 +17,12 @@ import { getBusinessAccountController } from "../../modules/Payments/Accounts/us
 import { getBusinessAccountHistoryController } from "../../modules/Payments/Accounts/usecases/account-histories/business-user";
 import { sendCompanyPasswordController } from "../../modules/Company/CompanyUser/usecases/password-recovery/send-forget-password-email";
 import { resetCompanyUserPasswordController } from "../../modules/Company/CompanyUser/usecases/password-recovery/reset-company-user-password";
-
+import { requireRole } from "../../infra/shared/middlewares/CompanyAdmin/role.middleware";
+import { CompanyAdminJWToken } from "../../infra/shared/crypto/token/CompanyAdmin/jwt.token";
 
 export const companyUserRouter = Router()
 
- //Create Company admin by correct - TESTED
+//Create Company admin by correct - TESTED
 companyUserRouter.post('/business/admin/correct', correctIsAuth, async (request, response) => {
     await companyUserController.handle(request, response)
 })
@@ -29,40 +32,63 @@ companyUserRouter.post('/business/admin/login', async (request, response) => {
     await authCompanyUserController.handle(request, response)
 })
 
+//verify 2FA authentication code - TESTED
+companyUserRouter.post('/business/admin/verify-2fa', async (request, response) => {
+    await verifyTwoFactorController.handle(request, response)
+})
+
+//resend 2FA authentication code - TESTED
+companyUserRouter.post('/business/admin/resend-2fa', async (request, response) => {
+    await resendTwoFactorController.handle(request, response)
+})
+
 //get user details - TESTED
 companyUserRouter.get('/business/admin/details', companyIsAuth, async (request, response) => {
     await companyUserDetailsController.handle(request, response)
 })
 
+//refresh business user token
+companyUserRouter.post('/business/admin/refresh-token', companyIsAuth, async (request, response) => {
+    try {
+        const companyUser = request.companyUser;
+        const token = new CompanyAdminJWToken().create({
+            uuid: { uuid: companyUser.companyUserId },
+            business_info_uuid: { uuid: companyUser.businessInfoUuid }
+        } as any);
+
+        return response.json({ token });
+    } catch (err: any) {
+        return response.status(500).json({ error: 'Erro ao renovar token' });
+    }
+})
+
 //update company admin by company admin - TESTED
-companyUserRouter.put("/company-admin", companyIsAuth, async (request, response) => {
+companyUserRouter.put("/company-admin", companyIsAuth, requireRole([]), async (request, response) => {
   await updateAdminController.handle(request, response)
 })
 
 //update company user by company admin - TESTED
-companyUserRouter.patch("/company-user", companyIsAuth, async (request, response) => {
+companyUserRouter.patch("/company-user", companyIsAuth, requireRole([]), async (request, response) => {
   await updateUserController.handle(request, response)
 })
 
 //create company user by company admin - TESTED
-companyUserRouter.post('/business/admin/register/user', companyIsAuth, async (request, response) => {
+companyUserRouter.post('/business/admin/register/user', companyIsAuth, requireRole([]), async (request, response) => {
     await companyUserByAdminController.handle(request, response)
 })
 
-
 //get single User by authenticated admin - //TESTED
-companyUserRouter.get("/business/admin/details/user", companyIsAuth, async (request, response) => {
+companyUserRouter.get("/business/admin/details/user", companyIsAuth, requireRole([]), async (request, response) => {
     await getSingleUserController.handle(request, response)
 })
 
 //get users by authenticated admin - //TESTED
-companyUserRouter.get('/company-users', companyIsAuth, async (request, response) => {
+companyUserRouter.get('/company-users', companyIsAuth, requireRole([]), async (request, response) => {
     await getUsersController.handle(request, response)
 })
 
-
 //Delete User By company Admin - //TESTED
-companyUserRouter.patch("/company-user/delete", companyIsAuth, async (request, response) => {
+companyUserRouter.patch("/company-user/delete", companyIsAuth, requireRole([]), async (request, response) => {
     await deleteUserController.handle(request, response)
 })
 
@@ -71,14 +97,13 @@ companyUserRouter.post("/confirm-password", companyIsAuth, async (request, respo
     await confirmPasswordController.handle(request, response)
 })
 
-
 //Get Business Account
-companyUserRouter.get('/business/admin/account', companyIsAuth, async (request, response) => {
+companyUserRouter.get('/business/admin/account', companyIsAuth, requireRole(['finances']), async (request, response) => {
   await getBusinessAccountController.handle(request, response)
 })
 
 // Get business Account History
-companyUserRouter.get('/business/account/history', companyIsAuth, async (request, response) => {
+companyUserRouter.get('/business/account/history', companyIsAuth, requireRole(['finances']), async (request, response) => {
   await getBusinessAccountHistoryController.handle(request, response)
 })
 

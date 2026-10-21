@@ -15,6 +15,7 @@ export class PartnerDashboardPrismaRepository implements IPartnerDashboardReposi
     const aggregation = await prismaClient.transactions.aggregate({
       _sum: {
         net_price: true, // Usamos net_price pois é o valor efetivamente pago pelo usuário
+        partner_credit_amount: true, // Adicionamos para calcular o Líquido
       },
       _count: {
         uuid: true,
@@ -31,6 +32,7 @@ export class PartnerDashboardPrismaRepository implements IPartnerDashboardReposi
 
     return {
       totalRevenue: Number(aggregation._sum.net_price || 0),
+      netRevenue: Number(aggregation._sum.partner_credit_amount || 0),
       transactionCount: aggregation._count.uuid || 0,
     };
   }
@@ -157,6 +159,10 @@ export class PartnerDashboardPrismaRepository implements IPartnerDashboardReposi
         // NOVO: Inclui o operador que fez a venda (BusinessUser)
         PartnerUser: {
           select: { name: true, user_name: true }
+        },
+        // NOVO: Inclui o Parceiro pagador se for venda B2B
+        PayerBusiness: {
+          select: { fantasy_name: true }
         }
       },
     });
@@ -192,7 +198,7 @@ export class PartnerDashboardPrismaRepository implements IPartnerDashboardReposi
       const entity = TransactionEntity.hydrate(props);
 
       // Extraímos os nomes com fallbacks caso sejam nulos
-      const payerName = data.UserItem?.UserInfo?.full_name || data.UserItem?.UserInfo?.display_name || 'Cliente Avulso';
+      const payerName = data.UserItem?.UserInfo?.full_name || data.UserItem?.UserInfo?.display_name || data.PayerBusiness?.fantasy_name || 'Cliente Avulso';
       const operatorName = data.PartnerUser?.name || data.PartnerUser?.user_name || 'Caixa / Avulso';
 
       return { entity, payerName, operatorName };

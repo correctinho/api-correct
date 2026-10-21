@@ -8,7 +8,9 @@ export interface InputGetPostpaidConsumptionDTO {
 export interface CollaboratorConsumption {
     name: string;
     document: string;
-    total_used: number; // Valor em centavos ou na unidade padrão que você já utiliza
+    company_internal_code?: string | null;
+    internal_company_code?: string | null;
+    total_used: number; // Valor em reais
 }
 
 export interface OutputGetPostpaidConsumptionDTO {

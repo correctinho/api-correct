@@ -1,6 +1,7 @@
 // DTO genérico para os dados necessários para criar uma cobrança
 export interface PixChargeCreationData {
-    cpf: string;
+    cpf?: string;
+    cnpj?: string;
     nome: string;
     valor: string; // Valor em formato string, ex: "10.50"
     chave: string; // A chave PIX que receberá o valor
@@ -24,7 +25,7 @@ export interface ChargeDetailsResult {
     };
     chave: string;
     // O campo 'pix' é opcional. Ele só existirá se a cobrança já foi paga.
-    pix?: PixDetailsResult[]; 
+    pix?: PixDetailsResult[];
 }
 
 export interface PixDetailsResult {
@@ -64,11 +65,11 @@ export interface IPixProvider {
      */
     getChargeByTxid(txid: string): Promise<ChargeDetailsResult>;
 
-     /**
-     * Consulta a configuração de Webhook para uma chave Pix específica.
-     * @param pixKey A chave Pix cuja configuração de webhook será consultada.
-     * @returns Uma promessa que resolve com os detalhes da configuração do webhook.
-     */
+    /**
+    * Consulta a configuração de Webhook para uma chave Pix específica.
+    * @param pixKey A chave Pix cuja configuração de webhook será consultada.
+    * @returns Uma promessa que resolve com os detalhes da configuração do webhook.
+    */
     getWebhookConfiguration(pixKey: string): Promise<WebhookConfigurationResult>;
     // No futuro, poderíamos adicionar outros métodos aqui, como:
     // getChargeStatus(txid: string): Promise<PixChargeStatus>;

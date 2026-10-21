@@ -2,6 +2,7 @@ import { Router } from "express"
 import { getEmployerDashbardoMetricsController } from "../../modules/Dashboards/Employer/usecases"
 import { companyIsAuth } from "../../infra/shared/middlewares/CompanyAdmin/company-admin-auth.middlware"
 import { getPartnerDashboardController } from "../../modules/Dashboards/Partner/usecases"
+import { requireRole } from "../../infra/shared/middlewares/CompanyAdmin/role.middleware"
 
 const dashboardRouter = Router()
 
@@ -9,7 +10,7 @@ dashboardRouter.get("/employer/dashboard", companyIsAuth, async (request, respon
     await getEmployerDashbardoMetricsController.handle(request, response)
 })
 
-dashboardRouter.get("/partner/dashboard", companyIsAuth, async (request, response) => {
+dashboardRouter.get("/partner/dashboard", companyIsAuth, requireRole(['finances']), async (request, response) => {
     await getPartnerDashboardController.handle(request, response)
 })
 

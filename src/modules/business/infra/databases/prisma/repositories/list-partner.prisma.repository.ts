@@ -31,6 +31,7 @@ export class ListPartnerPrismaRepository implements IListPartnerRepository {
         select: {
           uuid: true,
           fantasy_name: true,
+          corporate_reason: true,
           document: true,
           email: true,
           phone_1: true,

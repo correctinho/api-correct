@@ -1,3 +1,5 @@
+import { sendTargetedMegaPromotionPushController } from "../../modules/Ecommerce/Products/usecases/send-targeted-mega-promotion-push";
+import { getRankedMegaPromotionsController } from "../../modules/Ecommerce/Products/usecases/get-ranked-mega-promotions";
 import { request, Router } from "express";
 import { correctIsAuth } from "../../infra/shared/middlewares/CorrectAdmin/correct-admin-auth.middleware";
 import { findCategoryController } from "../../modules/Ecommerce/Categories/usecases/findCategory";
@@ -13,6 +15,7 @@ import { uploadProducImageController } from "../../modules/Ecommerce/Products/us
 import multer from "multer";
 import uploadConfig from '../../infra/shared/multer/multer.csv.memory.config'
 import { deleteProductController } from "../../modules/Ecommerce/Products/usecases/delete-product";
+import { deleteProductImagesController } from "../../modules/Ecommerce/Products/usecases/delete-product-image";
 import { updateProduct } from "../../modules/Ecommerce/Products/usecases/update-product";
 import { appUserIsAuth } from "../../infra/shared/middlewares/AppUser/app-user-auth.middleware";
 import { createCategoryController } from "../../modules/Ecommerce/Categories/usecases/createCategory";
@@ -25,6 +28,7 @@ import { lookupProductByEanController } from "../../modules/Ecommerce/Products/u
 import { quoteCartFreightController } from "../../modules/Ecommerce/Carts/usecases/quote-cart-freight";
 import { getAddressFromCoordsController } from "../../modules/Ecommerce/Address/useCases/get-address-from-coords";
 import { processCartPaymentController } from "../../modules/Ecommerce/Checkout/usecases/process-cart-payment";
+import { requireRole } from "../../infra/shared/middlewares/CompanyAdmin/role.middleware";
 
 const ecommerceRouter = Router()
 const upload = multer(uploadConfig.upload())
@@ -45,16 +49,16 @@ ecommerceRouter.get('/ecommerce/categories', async (request, response) => {
 })
 
 //Register product by business user with no image
-ecommerceRouter.post("/ecommerce/product/no-image", companyIsAuth, async (request, response) => {
+ecommerceRouter.post("/ecommerce/product/no-image", companyIsAuth, requireRole(['marketing']), async (request, response) => {
   await createProductController.handle(request, response)
 })
 //REgister product by business user with image
-ecommerceRouter.post('/ecommerce/product', companyIsAuth, uploadImage.array('file', 5), async (request, response) => {
+ecommerceRouter.post('/ecommerce/product', companyIsAuth, requireRole(['marketing']), uploadImage.array('file', 5), async (request, response) => {
   await createProductControllerOnMinio.handle(request, response)
 })
 
 //upload product images - PRODUCTS ON SUPABASE
-ecommerceRouter.post('/ecommerce/product/:product_uuid/images', companyIsAuth, uploadImage.array('file', 5), async (request, response) => {
+ecommerceRouter.post('/ecommerce/product/:product_uuid/images', companyIsAuth, requireRole(['marketing']), uploadImage.array('file', 5), async (request, response) => {
   await uploadProducImageController.handle(request, response)
 })
 
@@ -62,12 +66,12 @@ ecommerceRouter.post('/ecommerce/product/:product_uuid/images', companyIsAuth, u
 ecommerceRouter.get('/ecommerce/business/:business_info_uuid/products', async (request, response) => {
   await findBusinessProducts.handle(request, response)
 })
-ecommerceRouter.get('/ecommerce/business/products', companyIsAuth, async (request, response) => {
+ecommerceRouter.get('/ecommerce/business/products', companyIsAuth, requireRole(['marketing', 'sales']), async (request, response) => {
   await findBusinessProducts.handle(request, response)
 })
 
 // lookup product by ean
-ecommerceRouter.get('/ecommerce/product/ean/:ean', companyIsAuth, async (request, response) => {
+ecommerceRouter.get('/ecommerce/product/ean/:ean', companyIsAuth, requireRole(['marketing', 'sales']), async (request, response) => {
   await lookupProductByEanController.handle(request, response)
 })
 
@@ -77,18 +81,18 @@ ecommerceRouter.get('/ecommerce/product/:product_uuid', async (request, response
 })
 
 //delete product
-ecommerceRouter.patch('/ecommerce/product/:product_uuid/delete', companyIsAuth, async (request, response) => {
+ecommerceRouter.patch('/ecommerce/product/:product_uuid/delete', companyIsAuth, requireRole(['marketing']), async (request, response) => {
   await deleteProductController.handle(request, response)
 })
 
 //update product
-ecommerceRouter.put('/ecommerce/product/:productId', companyIsAuth, async (request, response) => {
+ecommerceRouter.put('/ecommerce/product/:productId', companyIsAuth, requireRole(['marketing']), async (request, response) => {
   await updateProduct.handle(request, response)
 })
 
 //delete product images
-ecommerceRouter.patch('/ecommerce/product/:productId/images/delete', companyIsAuth, async (request, response) => {
-  await deleteProductController.handle(request, response)
+ecommerceRouter.patch('/ecommerce/product/:productId/images/delete', companyIsAuth, requireRole(['marketing']), async (request, response) => {
+  await deleteProductImagesController.handle(request, response)
 })
 
 //add item to cart by appuser
@@ -130,5 +134,17 @@ ecommerceRouter.get('/address/reverse', async (request, response) => {
 ecommerceRouter.post('/ecommerce/cart/checkout', appUserIsAuth, async (request, response) => {
   await processCartPaymentController.handle(request, response)
 })
+
+
+// get ranked mega promotions for home carousel feed (AI scoring & recommendation)
+ecommerceRouter.get('/ecommerce/mega-promotions/home-feed', appUserIsAuth, async (request, response) => {
+  await getRankedMegaPromotionsController.handle(request, response);
+});
+
+
+// dispatch targeted push notification for mega promotion (OneSignal)
+ecommerceRouter.post('/ecommerce/mega-promotions/:productUuid/dispatch-push', async (request, response) => {
+  await sendTargetedMegaPromotionPushController.handle(request, response);
+});
 
 export { ecommerceRouter }

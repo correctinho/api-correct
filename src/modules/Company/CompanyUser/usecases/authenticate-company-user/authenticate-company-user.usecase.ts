@@ -6,28 +6,33 @@ import { ICompanyDataRepository } from "../../../CompanyData/repositories/compan
 import { ICompanyUserRepository } from "../../repositories/company-user.repository"
 import { z } from 'zod'
 import { IRedisCacheRepository } from "../../../../../infra/redis/redis-cache.repository"
+import { TwoFactorAuthService, Generate2FAResult } from "../../services/two-factor-auth.service"
 
 export type AuthenticateCompanyUserRequest = {
-
   business_document: string,
   email: string | null,
   user_name: string,
   password: string,
   required_business_type: 'comercio' | 'empregador'
 }
+
+export type AuthenticateCompanyUserResponse =
+  | { token: string }
+  | Generate2FAResult;
+
 export class AuthenticateCompanyUserUsecase {
   constructor(
     private companyUserRepository: ICompanyUserRepository,
     private companyDataRepository: ICompanyDataRepository,
     private passwordCrypto: IPasswordCrypto,
     private token: ICompanyAdminToken,
-    private redisCacheRepository: IRedisCacheRepository
+    private redisCacheRepository: IRedisCacheRepository,
+    private twoFactorAuthService?: TwoFactorAuthService
   ) { }
 
-  async execute({ business_document, user_name, password, email, required_business_type }: AuthenticateCompanyUserRequest) {
+  async execute({ business_document, user_name, password, email, required_business_type }: AuthenticateCompanyUserRequest): Promise<AuthenticateCompanyUserResponse> {
 
     if (!business_document || !password) throw new CustomError("Credenciais incorretas", 401);
-
     const findBusinessInfo = await this.companyDataRepository.findByDocument(business_document);
     if (!findBusinessInfo) throw new CustomError("Credenciais incorretas", 401);
 
@@ -36,14 +41,11 @@ export class AuthenticateCompanyUserUsecase {
       throw new CustomError("Este usuário não tem permissão para acessar o portal de Parceiros", 403);
     }
     const allowedEmployerTypes = ['empregador', 'empregador_comercio'];
-
     if (required_business_type === 'empregador' && !allowedEmployerTypes.includes(findBusinessInfo.business_type)) {
       throw new CustomError("Este usuário não tem permissão para acessar o portal de Empregadores", 403);
     }
-
     const isEmail = z.string().email().safeParse(email);
     let findUser: any;
-
     // 1. Busca o usuário
     if (isEmail.success && email) {
       findUser = await this.companyUserRepository.findByBusinessIdAndEmail(findBusinessInfo.uuid, email);
@@ -51,14 +53,13 @@ export class AuthenticateCompanyUserUsecase {
       if (!user_name) throw new CustomError("Credenciais incorretas", 401);
       findUser = await this.companyUserRepository.findByBusinessIdAndUsername(findBusinessInfo.uuid, user_name);
     }
-
     if (!findUser) throw new CustomError("Credenciais incorretas", 401);
-
     // 2. Validações básicas antes do Redis
-    if (findUser.status === "inactive") throw new CustomError("Usuário não está autorizado a acessar", 401);
+    if (findUser.status === "inactive" || findUser.status === "deleted") throw new CustomError("Usuário não está autorizado a acessar", 401);
 
     // 3. Lógica de Rate Limiting
-    const redisKey = `login_lock:company_user:${findUser.uuid}`;
+    const userUuidStr = typeof findUser.uuid === 'object' && findUser.uuid !== null ? (findUser.uuid as any).uuid : String(findUser.uuid);
+    const redisKey = `login_lock:company_user:${userUuidStr}`;
     const failedAttempts = await this.redisCacheRepository.get(redisKey);
 
     if (failedAttempts && Number(failedAttempts) >= 5) {
@@ -82,11 +83,40 @@ export class AuthenticateCompanyUserUsecase {
       throw new CustomError(msg, restantes > 0 ? 401 : 403);
     }
 
-    // 5. Sucesso: Limpa o rastro no Redis e gera o token
+    // 5. Sucesso: Limpa o rastro de tentativas erradas no Redis
     await this.redisCacheRepository.del(redisKey);
 
-    return {
-      token: this.token.create(findUser)
-    };
+    // 6. Bifurcação 2FA:
+    // Operadores de balcão/caixa (permissão exclusiva 'sales') não passam por 2FA para agilidade no PDV.
+    const isExclusiveSales = 
+      !findUser.is_admin &&
+      Array.isArray(findUser.permissions) &&
+      findUser.permissions.length === 1 &&
+      findUser.permissions[0] === 'sales';
+
+    if (isExclusiveSales || !this.twoFactorAuthService) {
+      return {
+        token: this.token.create(findUser)
+      };
+    }
+
+    // 7. Administradores e perfis sensíveis (Finanças, RH, etc.) -> 2FA obrigatório
+    const destinationEmail = findUser.email || findBusinessInfo.email;
+    if (!destinationEmail) {
+      throw new CustomError("Nenhum e-mail de segurança encontrado para envio do código de verificação.", 400);
+    }
+
+    const businessUuidStr = typeof findBusinessInfo.uuid === 'object' && findBusinessInfo.uuid !== null ? (findBusinessInfo.uuid as any).uuid : String(findBusinessInfo.uuid);
+    const displayName = findUser.name || findUser.user_name || findBusinessInfo.fantasy_name || "Usuário";
+
+    const twoFactorResult = await this.twoFactorAuthService.generateAndSend({
+      userId: userUuidStr,
+      businessInfoUuid: businessUuidStr,
+      email: destinationEmail,
+      userName: findUser.user_name || undefined,
+      name: displayName,
+    });
+
+    return twoFactorResult;
   }
 }

@@ -17,6 +17,7 @@ export class GetEmployerDashboardMetricsUsecase {
                 custom_benefits: metrics.overview.custom_benefits,
                 total_lives: metrics.overview.total_lives,
                 estimated_monthly_cost: metrics.overview.estimated_monthly_cost / 100,
+                postpaid_current_invoice: metrics.overview.postpaid_current_invoice / 100,
             },
             distribution: metrics.distribution.map(item => ({
                 category: item.category,

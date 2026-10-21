@@ -44,6 +44,11 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
         use_marketing: dataToSave.use_marketing,
         market_place_tax: dataToSave.market_place_tax,
         use_market_place: dataToSave.use_market_place,
+        pending_admin_tax: dataToSave.pending_admin_tax,
+        pending_marketing_tax: dataToSave.pending_marketing_tax,
+        pending_use_marketing: dataToSave.pending_use_marketing,
+        pending_market_place_tax: dataToSave.pending_market_place_tax,
+        pending_use_market_place: dataToSave.pending_use_market_place,
         title: dataToSave.title,
         phone: dataToSave.phone,
         description: dataToSave.description,
@@ -77,6 +82,11 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
       description: config.description,
       sales_type: config.sales_type,
       cashback_tax: config.cashback_tax,
+      pending_admin_tax: config.pending_admin_tax,
+      pending_marketing_tax: config.pending_marketing_tax,
+      pending_use_marketing: config.pending_use_marketing,
+      pending_market_place_tax: config.pending_market_place_tax,
+      pending_use_market_place: config.pending_use_market_place,
     } as PartnerConfigEntity
   }
 
@@ -103,6 +113,11 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
       description: config.description || undefined,
       sales_type: config.sales_type || undefined,
       cashback_tax: config.cashback_tax || 0,
+      pending_admin_tax: config.pending_admin_tax || undefined,
+      pending_marketing_tax: config.pending_marketing_tax || undefined,
+      pending_use_marketing: config.pending_use_marketing || undefined,
+      pending_market_place_tax: config.pending_market_place_tax || undefined,
+      pending_use_market_place: config.pending_use_market_place || undefined,
     });
   }
   findAll(): Promise<PartnerConfigEntity[]> {

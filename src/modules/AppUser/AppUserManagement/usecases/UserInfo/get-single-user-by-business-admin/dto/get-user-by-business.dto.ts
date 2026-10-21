@@ -21,6 +21,7 @@ export type OutputGetSingleEmployeeByBusinessDTO = {
   function: string
   marital_status: string
   dependents_quantity: number
+  is_authenticated: boolean
   user_document_validation_uuid: string
   is_employee: boolean
   created_at: string
