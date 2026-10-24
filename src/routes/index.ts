@@ -22,6 +22,8 @@ import { gameRouter } from './Games/game.routes';
 import { dashboardRouter } from './Dashboard/dashboard.routes';
 import { businessClubRouter } from './BusinessClub/business-club.routes';
 import { cronRouter } from './Cron/cron.routes';
+import { supportRouter } from './Support/support.routes';
+import { webhooksRoutes } from './webhooks.routes';
 
 const router = Router();
 
@@ -29,23 +31,26 @@ router.use(correctAdminRouter);
 router.use(companyUserRouter);
 router.use(companyDataRouter);
 router.use(appUserRouter);
-router.use(companyAddressRouter)
+router.use(companyAddressRouter);
 router.use(businessRegisterRouter);
 router.use(benefitsRouter);
 router.use(branchRouter);
-router.use(contractsRouter)
-router.use(businessItemDetailsRouter)
-router.use(appUserItemRouter)
-router.use(groupsRouter)
-router.use(transactionsRouter)
-router.use(ecommerceRouter)
-router.use(accountsRouter)
-router.use(subscriptionRouter)
-router.use(sseRouter)
-router.use(serviceScheduling)
-router.use(termsRouter)
-router.use(gameRouter)
-router.use(dashboardRouter)
+router.use(contractsRouter);
+router.use(businessItemDetailsRouter);
+router.use(appUserItemRouter);
+router.use(groupsRouter);
+router.use(transactionsRouter);
+router.use(ecommerceRouter);
+router.use(accountsRouter);
+router.use(subscriptionRouter);
+router.use(sseRouter);
+router.use(serviceScheduling);
+router.use(termsRouter);
+router.use(gameRouter);
+router.use(dashboardRouter);
 router.use(businessClubRouter);
 router.use(cronRouter);
+router.use(supportRouter);
+router.use(webhooksRoutes);
+
 export { router };
