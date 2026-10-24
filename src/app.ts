@@ -10,9 +10,19 @@ import { errorMiddleware } from "./infra/shared/middlewares/error.middleware";
 
 const app = express()
 
-
 app.use(express.json({
-  limit: '200mb'
+  limit: '200mb',
+  verify: (req: any, res, buf) => {
+    req.rawBody = buf;
+  }
+}))
+
+app.use(express.urlencoded({
+  extended: true,
+  limit: '200mb',
+  verify: (req: any, res, buf) => {
+    req.rawBody = buf;
+  }
 }))
 app.use(cors({
   origin: '*', // Permite o URL dinâmico do Bolt
@@ -24,10 +34,10 @@ app.use(cors({
     'Accept',
     'Authorization',
     'ngrok-skip-browser-warning',
-    'correctisauth'
+    'correctisauth',
+    'x-portal-origin'
   ]
 }));
-
 
 app.use(router)
 
