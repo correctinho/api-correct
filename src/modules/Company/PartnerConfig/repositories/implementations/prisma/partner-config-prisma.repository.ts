@@ -194,14 +194,16 @@ export class PartnerConfigPrismaRepository implements IPartnerConfigRepository {
     return partners
   }
 
-  async filterPartnersByAppUser(partner_category: string, page: number, limit: number, branch_uuid?: string, city?: string, search?: string, item_uuid?: string): Promise<any[]> {
+  async filterPartnersByAppUser(partner_category?: string, page: number = 1, limit: number = 15, branch_uuid?: string, city?: string, search?: string, item_uuid?: string): Promise<any[]> {
     const take = limit; // Quantidade de registros por página
     const skip = (page - 1) * limit; // Quantos registros pular
-    const where: any = {
-      partner_category: {
+    const where: any = {};
+
+    if (partner_category) {
+      where.partner_category = {
         has: partner_category,
-      }
-    };
+      };
+    }
 
     if (branch_uuid) {
       where.main_branch = branch_uuid;

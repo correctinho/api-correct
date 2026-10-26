@@ -7,6 +7,6 @@ export interface IPartnerConfigRepository extends RepositoryInterface<PartnerCon
   findPartnersByCategory(partner_category: string, page: number, limit: number): Promise<any>
   findByPartnerId(business_info_uuid: string): Promise<PartnerConfigEntity | null>
   findByBusinessInfoId(businessInfoUuid: string): Promise<any>
-  filterPartnersByAppUser(partner_category: string, page: number, limit: number, branch_uuid?: string, city?: string, search?: string, item_uuid?: string): Promise<any[]>
+  filterPartnersByAppUser(partner_category?: string, page?: number, limit?: number, branch_uuid?: string, city?: string, search?: string, item_uuid?: string): Promise<any[]>
   update(data: PartnerConfigEntity): Promise<void>
 }
