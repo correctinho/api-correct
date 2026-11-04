@@ -68,10 +68,8 @@ export class FakeDocumentValidatorProvider implements IDocumentValidatorProvider
     }
 
     let status: 'approved' | 'under_analysis' | 'denied' = 'approved';
-    if (faceMatch.similarity < 50 || (!cpfMatches && ocrData.cpf)) {
+    if (faceMatch.similarity < 85 || !cpfMatches || this.shouldFailOcr) {
       status = 'denied';
-    } else if (faceMatch.similarity < 85 || !cpfMatches || this.shouldFailOcr) {
-      status = 'under_analysis';
     }
 
     return {

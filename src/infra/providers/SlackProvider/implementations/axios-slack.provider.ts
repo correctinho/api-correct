@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ISlackProvider, PostTicketSlackInput, PostTicketSlackResult, SlackThreadReply } from "../ISlackProvider";
+import { ISlackProvider, PostTicketSlackInput, PostTicketSlackResult, SlackThreadReply, DocumentAnalysisAlertInput } from "../ISlackProvider";
 
 export class AxiosSlackProvider implements ISlackProvider {
 
@@ -28,6 +28,17 @@ export class AxiosSlackProvider implements ISlackProvider {
     async sendRechargeOrderAlert(companyName: string, orderUuid: string): Promise<void> {
         const webhookUrl = process.env.SLACK_WEBHOOK_ALERTA_ADMINISTRATIVOS || "";
         const message = `🚨 *Nova Recarga Aguardando Aprovação!* 🚨\n\n*Empresa:* ${companyName}\n*Pedido:* ${orderUuid}\n\n*Ação:* O comprovante de pagamento foi anexado e o pedido aguarda conferência e liberação pelo painel Admin.`;
+        await this.sendMessage(webhookUrl, message);
+    }
+
+    async sendDocumentAnalysisAlert(input: DocumentAnalysisAlertInput): Promise<void> {
+        const webhookUrl = process.env.SLACK_WEBHOOK_REGISTRATIONS || process.env.SLACK_WEBHOOK_ALERTA_ADMINISTRATIVOS || "";
+        const cleanDoc = input.document.replace(/\D/g, '');
+        const formattedCpf = cleanDoc.length === 11 
+            ? cleanDoc.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+            : input.document;
+        const reasonText = input.reason ? `\n*Motivo / Diagnóstico:* ${input.reason}` : "";
+        const message = `🚨 *Atenção: Usuário Aguardando Análise Manual de Documentos!* 🚨\n\n*Nome:* ${input.userName}\n*CPF:* ${formattedCpf}${reasonText}\n\n👉 Acesse o painel Correct Admin para conferir e validar a documentação.`;
         await this.sendMessage(webhookUrl, message);
     }
 

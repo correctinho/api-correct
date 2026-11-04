@@ -89,12 +89,17 @@ export class AwsDocumentValidatorProvider implements IDocumentValidatorProvider 
     } catch (error: unknown) {
       const err = error as Error;
       console.error('[AwsDocumentValidatorProvider] Erro ao extrair texto com Textract:', err?.message || error);
-      return {
-        rawText: '',
-        lines: [],
-        cpf: null,
-        birthDate: null,
-      };
+      // Se for formato de documento corrompido ou não suportado, retorna vazio para ser tratado como reprovado pela esteira
+      if (err.name === 'UnsupportedDocumentException' || err.name === 'BadDocumentException') {
+        return {
+          rawText: '',
+          lines: [],
+          cpf: null,
+          birthDate: null,
+        };
+      }
+      // Qualquer outro erro (rede, DNS ENOTFOUND, timeout, credenciais ou serviço AWS fora do ar) indica indisponibilidade da AWS
+      throw err;
     }
   }
 
@@ -132,11 +137,16 @@ export class AwsDocumentValidatorProvider implements IDocumentValidatorProvider 
     } catch (error: unknown) {
       const err = error as Error;
       console.error('[AwsDocumentValidatorProvider] Erro no Rekognition CompareFaces:', err?.message || error);
-      return {
-        isMatch: false,
-        similarity: 0,
-        errorMessage: err?.message || 'Falha na comparacao facial da AWS',
-      };
+      // Se for apenas ausência de rostos detectados nas imagens, não é queda de serviço, e sim reprovação do documento
+      if (err.name === 'InvalidParameterException' && /no face/i.test(err.message)) {
+        return {
+          isMatch: false,
+          similarity: 0,
+          errorMessage: 'Nenhum rosto correspondente identificado no documento.',
+        };
+      }
+      // Qualquer erro de infraestrutura (ENOTFOUND, conexão, timeout, 5xx) indica indisponibilidade da AWS
+      throw err;
     }
   }
 
@@ -173,17 +183,16 @@ export class AwsDocumentValidatorProvider implements IDocumentValidatorProvider 
       reasons.push(`Similaridade facial (${faceMatch.similarity}%) abaixo do mínimo (${this.minSimilarity}%)`);
     }
 
-    let status: DocumentValidationDecisionStatus = 'under_analysis';
-
     const isHighFaceMatch = faceMatch.similarity >= this.minSimilarity;
-    const isVeryLowFaceMatch = faceMatch.similarity < 50;
+
+    // Se a AWS processou com sucesso, ela aprova se cumprir os critérios ou reprova informando os motivos para reenvio.
+    // 'under_analysis' é reservado apenas para contingência (quando a AWS estiver indisponível).
+    let status: DocumentValidationDecisionStatus = 'denied';
 
     if (isHighFaceMatch && (cpfMatch || nameMatch)) {
       status = 'approved';
-    } else if (isVeryLowFaceMatch || (cleanExtractedCpf && !cpfMatch)) {
-      status = 'denied';
     } else {
-      status = 'under_analysis';
+      status = 'denied';
     }
 
     return {

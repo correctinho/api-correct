@@ -1,3 +1,9 @@
+export interface DocumentAnalysisAlertInput {
+    userName: string;
+    document: string;
+    reason?: string;
+}
+
 export interface PostTicketSlackInput {
     protocol: string;
     origin: "EMPREGADOR" | "PARCEIRO" | "MEGA_APP";
@@ -27,6 +33,7 @@ export interface ISlackProvider {
     sendMassRegistrationAlert(companyName: string, requestUuid: string): Promise<void>;
     sendBugAlert(errorContent: any): Promise<void>;
     sendRechargeOrderAlert(companyName: string, orderUuid: string): Promise<void>;
+    sendDocumentAnalysisAlert(input: DocumentAnalysisAlertInput): Promise<void>;
     postTicketToSlack(input: PostTicketSlackInput): Promise<PostTicketSlackResult | null>;
     postMessageToThread(channel: string, thread_ts: string, message: string): Promise<void>;
     getThreadReplies(channel: string, thread_ts: string): Promise<SlackThreadReply[]>;

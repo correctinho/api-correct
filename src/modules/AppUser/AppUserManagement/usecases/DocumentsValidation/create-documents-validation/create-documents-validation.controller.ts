@@ -7,6 +7,7 @@ import { IAppUserInfoRepository } from '../../../repositories/app-user-info.repo
 import { IAppUserDocumentValidationRepository } from '../../../repositories/app-user-document-validation.repository';
 import { IStorage } from '../../../../../../infra/providers/storage/storage';
 import { IDocumentValidatorProvider } from '../../../../../../infra/providers/document-validator/document-validator.provider';
+import { ISlackProvider } from '../../../../../../infra/providers/SlackProvider';
 
 declare module 'express' {
     export interface Request {
@@ -22,6 +23,7 @@ export class CreateDocumentsValidationController {
         private documentsValidationRepository: IAppUserDocumentValidationRepository,
         private storageProvider: IStorage,
         private documentValidatorProvider: IDocumentValidatorProvider,
+        private slackProvider?: ISlackProvider,
     ) { }
 
     async handle(req: Request, res: Response): Promise<Response> {
@@ -41,6 +43,7 @@ export class CreateDocumentsValidationController {
                 this.documentsValidationRepository,
                 this.storageProvider,
                 this.documentValidatorProvider,
+                this.slackProvider,
             );
             const result = await usecase.execute(input);
 
