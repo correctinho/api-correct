@@ -78,7 +78,7 @@ describe('Unit tests: GetByDocumentUsecase', () => {
     expect(result.UserValidation.selfie_status).toBe(UserDocumentValidationStatus.pending_to_send);
   });
 
-  it('should return status: false when documents were submitted and are under_analysis', async () => {
+  it('should return status: true when documents were submitted and are under_analysis', async () => {
     const authRepo = AppUserAuthMockRepository();
     const infoRepo = AppUserInfoMockRepository();
     const valRepo = AppUserValidationMockRepository();
@@ -105,12 +105,43 @@ describe('Unit tests: GetByDocumentUsecase', () => {
     const usecase = new GetByDocumentUsecase(authRepo as any, infoRepo as any, valRepo as any);
     const result = await usecase.execute(validCPF);
 
-    expect(result.status).toBe(false);
+    expect(result.status).toBe(true);
     expect(result.UserAuth).toBe(true);
     expect(result.UserInfo).toBe(true);
     expect(result.Address).toBe(true);
     expect(result.UserValidation.document_front_status).toBe(UserDocumentValidationStatus.under_analysis);
     expect(result.UserValidation.selfie_status).toBe(UserDocumentValidationStatus.under_analysis);
+  });
+
+  it('should return status: false when documents are denied', async () => {
+    const authRepo = AppUserAuthMockRepository();
+    const infoRepo = AppUserInfoMockRepository();
+    const valRepo = AppUserValidationMockRepository();
+
+    authRepo.findByDocument.mockResolvedValue({
+      uuid: 'auth-123',
+      user_info_uuid: 'info-123',
+      document: validCPF,
+    });
+
+    infoRepo.find.mockResolvedValue({
+      uuid: 'info-123',
+      address_uuid: 'addr-123',
+      user_document_validation_uuid: 'val-123',
+    });
+
+    valRepo.findStatuses.mockResolvedValue({
+      document_front_status: UserDocumentValidationStatus.denied,
+      document_back_status: UserDocumentValidationStatus.pending_to_send,
+      selfie_status: UserDocumentValidationStatus.denied,
+      document_selfie_status: UserDocumentValidationStatus.pending_to_send,
+    });
+
+    const usecase = new GetByDocumentUsecase(authRepo as any, infoRepo as any, valRepo as any);
+    const result = await usecase.execute(validCPF);
+
+    expect(result.status).toBe(false);
+    expect(result.UserValidation.document_front_status).toBe(UserDocumentValidationStatus.denied);
   });
 
   it('should return status: true when both document_front and selfie are APPROVED', async () => {

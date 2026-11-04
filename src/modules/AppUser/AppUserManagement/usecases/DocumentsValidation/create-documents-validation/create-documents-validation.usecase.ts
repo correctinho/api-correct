@@ -6,6 +6,7 @@ import { IAppUserInfoRepository } from '../../../repositories/app-user-info.repo
 import { IAppUserDocumentValidationRepository } from '../../../repositories/app-user-document-validation.repository';
 import { IStorage } from '../../../../../../infra/providers/storage/storage';
 import { IDocumentValidatorProvider } from '../../../../../../infra/providers/document-validator/document-validator.provider';
+import { ISlackProvider } from '../../../../../../infra/providers/SlackProvider';
 import { DocumentValidationEntity } from '../../../entities/app-user-document-validation.entity';
 import { InputCreateDocumentValidationDTO, OutputCreateDocumentValidationDTO } from './dto/create-user-validation.dto';
 import { UserDocumentValidationStatus } from '@prisma/client';
@@ -17,6 +18,7 @@ export class CreateDocumentsValidationUsecase {
         private documentsValidationRepository: IAppUserDocumentValidationRepository,
         private storageProvider: IStorage,
         private documentValidatorProvider: IDocumentValidatorProvider,
+        private slackProvider?: ISlackProvider,
     ) {}
 
     async execute(data: InputCreateDocumentValidationDTO): Promise<OutputCreateDocumentValidationDTO> {
@@ -155,26 +157,38 @@ export class CreateDocumentsValidationUsecase {
                     }
                     // document_selfie é dispensado no fluxo automático
                     documentsEntity.changeDocumentSelfieStatus(UserDocumentValidationStatus.approved);
-                } else if (decision.status === 'denied') {
+                } else {
+                    // denied: A AWS identificou erro/divergência. Avisamos o usuário para reenviar na hora.
                     documentsEntity.changeDocumentFrontStatus(UserDocumentValidationStatus.denied);
                     documentsEntity.changeSelfieStatus(UserDocumentValidationStatus.denied);
                     if (data.document_back) {
                         documentsEntity.changeDocumentBackStatus(UserDocumentValidationStatus.denied);
                     }
-                } else {
-                    // under_analysis (inconclusivo ou foto ilegível)
-                    documentsEntity.changeDocumentFrontStatus(UserDocumentValidationStatus.under_analysis);
-                    documentsEntity.changeSelfieStatus(UserDocumentValidationStatus.under_analysis);
-                    if (data.document_back) {
-                        documentsEntity.changeDocumentBackStatus(UserDocumentValidationStatus.under_analysis);
-                    }
-                    if (!data.document_selfie) {
-                        documentsEntity.changeDocumentSelfieStatus(UserDocumentValidationStatus.under_analysis);
-                    }
                 }
             } catch (err: any) {
-                console.error('[CREATE_DOC_VAL] Falha na validação automatizada, mantendo under_analysis:', err?.message || err);
+                // AWS Indisponível (contingência): salvar como under_analysis e notificar no Slack
+                console.error('[CREATE_DOC_VAL] Falha na validação automatizada (AWS indisponível), ativando contingência under_analysis:', err?.message || err);
                 autoValidationStatus = 'under_analysis';
+                documentsEntity.changeDocumentFrontStatus(UserDocumentValidationStatus.under_analysis);
+                documentsEntity.changeSelfieStatus(UserDocumentValidationStatus.under_analysis);
+                if (data.document_back) {
+                    documentsEntity.changeDocumentBackStatus(UserDocumentValidationStatus.under_analysis);
+                }
+                if (!data.document_selfie) {
+                    documentsEntity.changeDocumentSelfieStatus(UserDocumentValidationStatus.under_analysis);
+                }
+
+                if (this.slackProvider) {
+                    try {
+                        await this.slackProvider.sendDocumentAnalysisAlert({
+                            userName: userInfo.full_name,
+                            document: userInfo.document,
+                            reason: `Validação automatizada AWS indisponível (${err?.message || 'Falha de comunicação/timeout'})`,
+                        });
+                    } catch (slackErr) {
+                        console.error('[CREATE_DOC_VAL] Erro ao disparar alerta no Slack:', slackErr);
+                    }
+                }
             }
         }
 

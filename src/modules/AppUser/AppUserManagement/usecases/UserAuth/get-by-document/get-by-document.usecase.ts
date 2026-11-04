@@ -184,11 +184,14 @@ export class GetByDocumentUsecase {
                 };
             }
             
-            const isApproved =
-                userValidations.document_front_status === UserDocumentValidationStatus.approved &&
-                userValidations.selfie_status === UserDocumentValidationStatus.approved;
+            // Usuários com documentos aprovados OU sob análise de contingência podem acessar a plataforma
+            const isApprovedOrUnderAnalysis =
+                (userValidations.document_front_status === UserDocumentValidationStatus.approved ||
+                 userValidations.document_front_status === UserDocumentValidationStatus.under_analysis) &&
+                (userValidations.selfie_status === UserDocumentValidationStatus.approved ||
+                 userValidations.selfie_status === UserDocumentValidationStatus.under_analysis);
 
-            status = isApproved;
+            status = isApprovedOrUnderAnalysis;
 
             return {
                 status: status,
